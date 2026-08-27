@@ -26,7 +26,9 @@ import com.example.ui.viewmodel.ToolboxViewModel
  * 4. 挂载 [MainScreen] 核心主页面。
  */
 class MainActivity : ComponentActivity() {
-    private val viewModel: ToolboxViewModel by viewModels()
+    private val viewModel: ToolboxViewModel by viewModels {
+        ToolboxViewModel.factory(application as JizhangApplication)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

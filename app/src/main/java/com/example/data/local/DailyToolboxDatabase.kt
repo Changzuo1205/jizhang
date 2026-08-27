@@ -4,114 +4,72 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
+import com.example.data.local.dao.AccountDaoV2
+import com.example.data.local.dao.BalanceHistoryDao
+import com.example.data.local.dao.BookDao
+import com.example.data.local.dao.CategoryDao
+import com.example.data.local.dao.TransactionDao
+import com.example.data.local.dao.UserDao
+import com.example.data.local.entity.AccountEntityV2
+import com.example.data.local.entity.BalanceHistoryEntity
+import com.example.data.local.entity.BookEntity
+import com.example.data.local.entity.CategoryEntity
+import com.example.data.local.entity.TransactionEntity
+import com.example.data.local.entity.UserEntity
 
 /**
- * 记账工具核心 Room 本地数据库
+ * 记账工具核心 Room 本地数据库（v11，规范化六表结构）。
  *
- * 维护系统内部两个关键核心数据表：
- * 1. [ExpenseEntity] - 记账交易明细表 (expenses)
- * 2. [AccountEntity] - 资产账户表 (accounts)
- *
- * 具备双重单例保障与开箱即用的自动数据初始化机制 (Auto Pre-population)。
+ * 与 v10 的关系（见交接包 02-数据库设计.md）：
+ * - 存储层完全替换：expenses/accounts 两表 → user/book/account/category/transactions/balance_history 六表
+ * - 金额 Double 元 → Int 分；时间戳统一 Unix 毫秒；软删除 isDeleted 取代物理删除
+ * - [exportSchema] 开启且 schema 落盘到 app/schemas/，此后任何版本升级必须编写正式 Migration
+ *   （旧版 fallbackToDestructiveMigration 已移除——升级即清库是明令禁止的行为）
+ * - 老库文件由 [com.example.data.migration.LegacyBackup] 在首次启动时备份后清理
  */
 @Database(
-    entities = [ExpenseEntity::class, AccountEntity::class],
-    version = 10,
-    exportSchema = false
+    entities = [
+        UserEntity::class,
+        BookEntity::class,
+        AccountEntityV2::class,
+        CategoryEntity::class,
+        TransactionEntity::class,
+        BalanceHistoryEntity::class
+    ],
+    version = 11,
+    exportSchema = true
 )
+@TypeConverters(DailyToolboxDatabase.Converters::class)
 abstract class DailyToolboxDatabase : RoomDatabase() {
-    /** 交易明细 DAO */
-    abstract fun expenseDao(): ExpenseDao
-    /** 资产账户 DAO */
-    abstract fun accountDao(): AccountDao
+
+    abstract fun userDao(): UserDao
+    abstract fun bookDao(): BookDao
+    abstract fun accountDao(): AccountDaoV2
+    abstract fun categoryDao(): CategoryDao
+    abstract fun transactionDao(): TransactionDao
+    abstract fun balanceHistoryDao(): BalanceHistoryDao
+
+    /** 枚举类型与 TEXT 列的互转 */
+    class Converters {
+        @TypeConverter
+        fun transactionTypeToString(type: TransactionType): String = type.name
+
+        @TypeConverter
+        fun stringToTransactionType(raw: String): TransactionType =
+            runCatching { TransactionType.valueOf(raw) }.getOrDefault(TransactionType.EXPENSE)
+    }
 
     companion object {
-        @Volatile
-        private var INSTANCE: DailyToolboxDatabase? = null
+        const val DB_NAME = "daily_expense_v11.db"
 
         /**
-         * 获取单例数据库实例 (线程安全 Double-checked Locking)
-         *
-         * @param context 应用程序 Context
-         * @param scope 用于后台异步执行预置数据初始化的 CoroutineScope
+         * 构建 Room 实例。不再持有双检锁单例（生命周期由 AppContainer 管理），
+         * 也不注册任何破坏性迁移策略。
          */
-        fun getDatabase(context: Context, scope: CoroutineScope): DailyToolboxDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    DailyToolboxDatabase::class.java,
-                    "daily_expense_v10.db"
-                ).fallbackToDestructiveMigration().build()
-                INSTANCE = instance
-                
-                // 确保在冷启动或首次安装时，异步安全检查并批量灌入预置账目与账户数据
-                scope.launch(Dispatchers.IO) {
-                    populateIfEmpty(context.applicationContext, instance)
-                }
-                
-                instance
-            }
-        }
-
-        /**
-         * 检测数据库是否为空；若为空，则从 assets/initial_expenses.json 读取预置历史账目并初始化资产账户
-         */
-        private suspend fun populateIfEmpty(context: Context, db: DailyToolboxDatabase) {
-            try {
-                // 1. 初始化 8 个默认资产账户
-                val accountCount = db.accountDao().getAccountCount()
-                if (accountCount == 0) {
-                    val accounts = listOf(
-                        AccountEntity(id = 1, name = "币安", type = "OTHER", balance = 0.0, cardSuffix = "", colorHex = "#F3BA2F", note = ""),
-                        AccountEntity(id = 2, name = "现金", type = "CASH", balance = 0.0, cardSuffix = "", colorHex = "#F59E0B", note = ""),
-                        AccountEntity(id = 3, name = "农业银行储蓄卡", type = "BANK_CARD", balance = 0.0, cardSuffix = "", colorHex = "#009688", note = ""),
-                        AccountEntity(id = 4, name = "微信钱包", type = "WECHAT", balance = 0.0, cardSuffix = "", colorHex = "#07C160", note = ""),
-                        AccountEntity(id = 5, name = "黄金", type = "OTHER", balance = 0.0, cardSuffix = "", colorHex = "#FFC107", note = ""),
-                        AccountEntity(id = 6, name = "招商银行储蓄卡", type = "BANK_CARD", balance = 0.0, cardSuffix = "", colorHex = "#E60012", note = ""),
-                        AccountEntity(id = 7, name = "基金", type = "OTHER", balance = 0.0, cardSuffix = "", colorHex = "#3F51B5", note = ""),
-                        AccountEntity(id = 8, name = "支付宝", type = "ALIPAY", balance = 0.0, cardSuffix = "", colorHex = "#1677FF", note = "")
-                    )
-                    db.accountDao().insertAccounts(accounts)
-                }
-
-                // 2. 批量解析并写入历史初始账目数据 (800+ 笔真实历史收支)
-                val expenseCount = db.expenseDao().getExpenseCount()
-                if (expenseCount == 0) {
-                    val jsonString = context.assets.open("initial_expenses.json").bufferedReader().use { it.readText() }
-                    val jsonArray = org.json.JSONArray(jsonString)
-                    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-                    val expenseList = mutableListOf<ExpenseEntity>()
-
-                    for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
-                        val dateStr = obj.getString("date_str")
-                        val timestamp = dateFormat.parse(dateStr)?.time ?: System.currentTimeMillis()
-                        
-                        expenseList.add(
-                            ExpenseEntity(
-                                type = obj.getString("type"),
-                                category = obj.getString("category"),
-                                subCategory = obj.optString("subCategory", ""),
-                                amount = obj.getDouble("amount"),
-                                note = obj.optString("note", ""),
-                                dateTimestamp = timestamp,
-                                accountId = obj.getLong("accountId"),
-                                accountName = obj.getString("accountName")
-                            )
-                        )
-                    }
-
-                    if (expenseList.isNotEmpty()) {
-                        db.expenseDao().insertExpenses(expenseList)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        fun build(context: Context): DailyToolboxDatabase =
+            Room.databaseBuilder(context.applicationContext, DailyToolboxDatabase::class.java, DB_NAME)
+                .build()
     }
 }
-

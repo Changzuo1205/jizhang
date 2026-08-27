@@ -3,16 +3,24 @@ package com.example.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AccountEntity
-import com.example.data.local.DailyToolboxDatabase
 import com.example.data.local.ExpenseEntity
-import com.example.data.repository.ToolboxRepository
+import com.example.data.local.TransactionType
+import com.example.data.local.entity.AccountEntityV2
+import com.example.data.local.entity.CategoryEntity
+import com.example.data.local.entity.TransactionEntity
+import com.example.data.repository.ToolboxRepositoryV2
+import com.example.di.AppContainer
+import com.example.JizhangApplication
+import com.example.model.AmountFormatter
 import com.example.ui.theme.BackgroundConfig
 import com.example.ui.theme.BackgroundOptionType
 import com.example.ui.theme.ColorSchemeOption
 import com.example.ui.theme.FontScaleOption
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -102,19 +110,98 @@ data class BudgetProgressInfo(
  * 4. 统计图表（饼图扇区占比、周/月/年收支趋势折线）流式派生计算。
  * 5. 全局个性化设置（6大主题色、5大背景壁纸体系、字体缩放大小）持久化。
  */
-class ToolboxViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository: ToolboxRepository
+class ToolboxViewModel(application: Application, container: AppContainer) : AndroidViewModel(application) {
+    private val repository: ToolboxRepositoryV2
+
+    /** 六表种子完成信号：任何依赖默认账本的写操作须先 await（种子在 Application 启动即灌入） */
+    private val seedReady: Deferred<Unit> = container.seedCompleted
 
     init {
-        val database = DailyToolboxDatabase.getDatabase(application, viewModelScope)
-        repository = ToolboxRepository(database.expenseDao(), database.accountDao())
+        repository = container.repository
     }
 
-    val allExpenses: StateFlow<List<ExpenseEntity>> = repository.allExpenses
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    /** 手动注入工厂（Hilt 不可用时代的等价物，见 JizhangApplication 注释） */
+    companion object {
+        fun factory(app: JizhangApplication): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T =
+                    ToolboxViewModel(app, app.container) as T
+            }
+    }
 
-    val allAccounts: StateFlow<List<AccountEntity>> = repository.allAccounts
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    /** 存储层行数据（规范化实体，金额为分） */
+    private val transactionRows: StateFlow<List<TransactionEntity>> =
+        repository.observeActiveTransactions()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val accountRows: StateFlow<List<AccountEntityV2>> =
+        repository.observeActiveAccounts()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val categoryRows: StateFlow<List<CategoryEntity>> =
+        repository.observeActiveCategories()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /**
+     * 过渡期映射层：TransactionEntity（分/外键）→ ExpenseEntity DTO（元/显示名）。
+     * 一级分类 = 行分类或其父级；二级分类 = 子级自身；未命中落「其他」。
+     * Phase 3 拆分后 UI 直接消费结构化模型，本适配层退役。
+     */
+    val allExpenses: StateFlow<List<ExpenseEntity>> =
+        combine(transactionRows, categoryRows, accountRows) { txs, cats, accs ->
+            val catById = cats.associateBy { it.id }
+            val accById = accs.associateBy { it.id }
+            txs.map { tx ->
+                val cat = tx.categoryId?.let { catById[it] }
+                val parent = cat?.parentId?.let { catById[it] }
+                ExpenseEntity(
+                    id = tx.id,
+                    type = tx.type.name,
+                    category = when {
+                        parent != null -> parent.name
+                        cat != null -> cat.name
+                        else -> "其他"
+                    },
+                    subCategory = if (parent != null && cat != null) cat.name else "",
+                    amount = AmountFormatter.centsToYuan(tx.amount),
+                    note = tx.note.orEmpty(),
+                    dateTimestamp = tx.occurredAt,
+                    accountId = tx.accountId,
+                    accountName = accById[tx.accountId]?.name ?: ""
+                )
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /**
+     * 账户展示余额＝ initial_balance ± Σ未删除交易（含转账两端对冲），派生值。
+     * 映射回旧版 AccountEntity DTO 形态供现有页面渲染。
+     */
+    val allAccounts: StateFlow<List<AccountEntity>> =
+        combine(accountRows, transactionRows) { rows, txs ->
+            rows.map { a ->
+                var inc = 0; var exp = 0; var out = 0; var inn = 0
+                for (tx in txs) {
+                    when (tx.type) {
+                        TransactionType.INCOME -> if (tx.accountId == a.id) inc += tx.amount
+                        TransactionType.EXPENSE -> if (tx.accountId == a.id) exp += tx.amount
+                        TransactionType.TRANSFER -> {
+                            if (tx.accountId == a.id) out += tx.amount
+                            if (tx.transferToAccountId == a.id) inn += tx.amount
+                        }
+                    }
+                }
+                AccountEntity(
+                    id = a.id,
+                    name = a.name,
+                    type = ToolboxRepositoryV2.v2TypeToLegacy(a.type),
+                    balance = AmountFormatter.centsToYuan(a.initialBalance + inc - exp - out + inn),
+                    cardSuffix = "",
+                    colorHex = a.color ?: "#3B82F6",
+                    note = ""
+                )
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Budget Settings with SharedPreferences persistence
     private val budgetPrefs = application.getSharedPreferences("app_budget_prefs", Context.MODE_PRIVATE)
@@ -395,13 +482,13 @@ class ToolboxViewModel(application: Application) : AndroidViewModel(application)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Overall Totals (using SQL aggregation)
-    val totalExpense: StateFlow<Double> = repository.getTotalExpenseFlow("EXPENSE")
-        .map { it ?: 0.0 }
+    // Overall Totals（由过渡期 DTO 列表派生；数据量大时可下探 DAO SQL 聚合）
+    val totalExpense: StateFlow<Double> = allExpenses
+        .map { list -> list.filter { it.type == "EXPENSE" }.sumOf { it.amount } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val totalIncome: StateFlow<Double> = repository.getTotalExpenseFlow("INCOME")
-        .map { it ?: 0.0 }
+    val totalIncome: StateFlow<Double> = allExpenses
+        .map { list -> list.filter { it.type == "INCOME" }.sumOf { it.amount } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val todayExpense: StateFlow<Double> = allExpenses.map { list ->
@@ -700,32 +787,47 @@ class ToolboxViewModel(application: Application) : AndroidViewModel(application)
         timestamp: Long = System.currentTimeMillis()
     ) {
         viewModelScope.launch {
-            repository.insertExpense(
-                ExpenseEntity(
-                    type = type,
-                    category = category,
-                    subCategory = subCategory,
-                    amount = amount,
-                    note = note,
-                    dateTimestamp = timestamp,
-                    accountId = accountId,
-                    accountName = accountName
-                )
+            seedReady.await()
+            repository.insertLegacyExpense(
+                type = type,
+                category = category,
+                subCategory = subCategory,
+                amountYuan = amount,
+                note = note,
+                accountId = accountId,
+                timestamp = timestamp
             )
         }
     }
 
     fun updateExpense(oldExpense: ExpenseEntity, newExpense: ExpenseEntity) {
         viewModelScope.launch {
-            repository.updateExpense(oldExpense, newExpense)
+            seedReady.await()
+            repository.updateLegacyExpense(
+                old = oldExpense.toSnapshot(),
+                new = newExpense.toSnapshot()
+            )
         }
     }
 
+    /** 软删除：物理行保留，余额由派生公式自动守恒，无需手工回滚 */
     fun deleteExpense(expense: ExpenseEntity) {
         viewModelScope.launch {
-            repository.deleteExpense(expense)
+            seedReady.await()
+            repository.softDeleteTransaction(expense.id)
         }
     }
+
+    private fun ExpenseEntity.toSnapshot() = ToolboxRepositoryV2.ExpenseSnapshot(
+        id = id,
+        type = type,
+        category = category,
+        subCategory = subCategory,
+        amount = amount,
+        note = note,
+        dateTimestamp = dateTimestamp,
+        accountId = accountId
+    )
 
     // Account Actions
     fun addAccount(
@@ -737,32 +839,40 @@ class ToolboxViewModel(application: Application) : AndroidViewModel(application)
         note: String = ""
     ) {
         viewModelScope.launch {
-            repository.insertAccount(
-                AccountEntity(
-                    name = name,
-                    type = type,
-                    balance = initialBalance,
-                    cardSuffix = cardSuffix,
-                    colorHex = colorHex,
-                    note = note
-                )
-            )
+            seedReady.await()
+            repository.addAccount(name, type, initialBalance, colorHex, note)
         }
     }
 
+    /**
+     * 更新账户元信息并处理余额校准：
+     * 新旧展示余额不一致时插入「漏记款」调整记录，保持派生守恒。
+     * [saveAsMissedRecord] 为旧 API 兼容参数，当前统一按可见记录口径实现。
+     */
     fun updateAccount(
         account: AccountEntity,
         saveAsMissedRecord: Boolean = false,
         oldBalance: Double = account.balance
     ) {
         viewModelScope.launch {
-            repository.updateAccountWithDiscrepancy(account, oldBalance, saveAsMissedRecord)
+            seedReady.await()
+            repository.updateAccountMeta(
+                accountId = account.id,
+                name = account.name,
+                legacyType = account.type,
+                colorHex = account.colorHex,
+                note = account.note,
+                targetBalanceYuan = account.balance,
+                previousBalanceYuan = oldBalance
+            )
         }
     }
 
+    /** 归档账户（v2 语义：保留行以保护历史交易外键，不再物理删除） */
     fun deleteAccount(account: AccountEntity) {
         viewModelScope.launch {
-            repository.deleteAccount(account)
+            seedReady.await()
+            repository.archiveAccount(account.id)
         }
     }
 
@@ -859,6 +969,7 @@ class ToolboxViewModel(application: Application) : AndroidViewModel(application)
         var successCount = 0
 
         viewModelScope.launch {
+            seedReady.await()
             for (line in lines) {
                 // Skip header lines
                 if (line.contains("收支类型") || line.contains("一级分类") || line.startsWith("ID,") || line.startsWith("ID，")) {
@@ -941,17 +1052,14 @@ class ToolboxViewModel(application: Application) : AndroidViewModel(application)
                     val accId = matchedAcc?.id ?: 1L
                     val safeAccName = matchedAcc?.name ?: accountName
 
-                    repository.insertExpense(
-                        ExpenseEntity(
-                            type = type,
-                            category = category,
-                            subCategory = subCategory,
-                            amount = amount,
-                            note = note,
-                            dateTimestamp = dateTimestamp,
-                            accountId = accId,
-                            accountName = safeAccName
-                        )
+                    repository.insertLegacyExpense(
+                        type = type,
+                        category = category,
+                        subCategory = subCategory,
+                        amountYuan = amount,
+                        note = note,
+                        accountId = accId,
+                        timestamp = dateTimestamp
                     )
                     successCount++
                 } catch (e: Exception) {
