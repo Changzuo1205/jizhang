@@ -1,0 +1,934 @@
+package com.example.ui.viewmodel
+
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.data.local.AccountEntity
+import com.example.data.local.DailyToolboxDatabase
+import com.example.data.local.ExpenseEntity
+import com.example.data.repository.ToolboxRepository
+import com.example.ui.theme.BackgroundConfig
+import com.example.ui.theme.BackgroundOptionType
+import com.example.ui.theme.ColorSchemeOption
+import com.example.ui.theme.FontScaleOption
+import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+
+data class CategoryStat(
+    val category: String,
+    val totalAmount: Double,
+    val count: Int,
+    val percentage: Float,
+    val type: String
+)
+
+data class TrendPoint(
+    val label: String,
+    val expense: Double,
+    val income: Double,
+    val timestamp: Long
+)
+
+enum class BudgetPeriod(val title: String, val shortName: String) {
+    MONTH("月度", "月"),
+    QUARTER("季度", "季"),
+    YEAR("年度", "年")
+}
+
+data class BudgetConfig(
+    val monthlyLimit: Double = 5000.0,
+    val quarterlyLimit: Double = 15000.0,
+    val yearlyLimit: Double = 60000.0,
+    val activePeriod: BudgetPeriod = BudgetPeriod.MONTH
+)
+
+data class BudgetProgressInfo(
+    val period: BudgetPeriod,
+    val budgetLimit: Double,
+    val spentAmount: Double,
+    val remainingAmount: Double,
+    val isOverBudget: Boolean,
+    val overAmount: Double,
+    val progressPercent: Float,
+    val remainingDailyAverage: Double = 0.0,
+    val remainingDays: Int = 1
+)
+
+
+class ToolboxViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository: ToolboxRepository
+
+    init {
+        val database = DailyToolboxDatabase.getDatabase(application, viewModelScope)
+        repository = ToolboxRepository(database.expenseDao(), database.accountDao())
+    }
+
+    val allExpenses: StateFlow<List<ExpenseEntity>> = repository.allExpenses
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allAccounts: StateFlow<List<AccountEntity>> = repository.allAccounts
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Budget Settings with SharedPreferences persistence
+    private val budgetPrefs = application.getSharedPreferences("app_budget_prefs", Context.MODE_PRIVATE)
+
+    private val _budgetConfig = MutableStateFlow(
+        BudgetConfig(
+            monthlyLimit = budgetPrefs.getFloat("budget_monthly", 5000.0f).toDouble(),
+            quarterlyLimit = budgetPrefs.getFloat("budget_quarterly", 15000.0f).toDouble(),
+            yearlyLimit = budgetPrefs.getFloat("budget_yearly", 60000.0f).toDouble(),
+            activePeriod = try {
+                BudgetPeriod.valueOf(budgetPrefs.getString("budget_active_period", "MONTH") ?: "MONTH")
+            } catch (e: Exception) {
+                BudgetPeriod.MONTH
+            }
+        )
+    )
+    val budgetConfig: StateFlow<BudgetConfig> = _budgetConfig.asStateFlow()
+
+    fun setActiveBudgetPeriod(period: BudgetPeriod) {
+        val current = _budgetConfig.value.copy(activePeriod = period)
+        _budgetConfig.value = current
+        budgetPrefs.edit().putString("budget_active_period", period.name).apply()
+    }
+
+    fun updateBudgetLimits(monthly: Double, quarterly: Double, yearly: Double) {
+        val current = _budgetConfig.value.copy(
+            monthlyLimit = monthly,
+            quarterlyLimit = quarterly,
+            yearlyLimit = yearly
+        )
+        _budgetConfig.value = current
+        budgetPrefs.edit()
+            .putFloat("budget_monthly", monthly.toFloat())
+            .putFloat("budget_quarterly", quarterly.toFloat())
+            .putFloat("budget_yearly", yearly.toFloat())
+            .apply()
+    }
+
+    // Settings
+    private val settingsPrefs = application.getSharedPreferences("app_settings_prefs", Context.MODE_PRIVATE)
+
+    private val _colorScheme = MutableStateFlow(
+        try {
+            ColorSchemeOption.valueOf(settingsPrefs.getString("color_scheme", ColorSchemeOption.INTERNATIONAL.name) ?: ColorSchemeOption.INTERNATIONAL.name)
+        } catch (e: Exception) { ColorSchemeOption.INTERNATIONAL }
+    )
+    val colorScheme: StateFlow<ColorSchemeOption> = _colorScheme.asStateFlow()
+
+    private val _fontScale = MutableStateFlow(
+        try {
+            FontScaleOption.valueOf(settingsPrefs.getString("font_scale", FontScaleOption.STANDARD.name) ?: FontScaleOption.STANDARD.name)
+        } catch (e: Exception) { FontScaleOption.STANDARD }
+    )
+    val fontScale: StateFlow<FontScaleOption> = _fontScale.asStateFlow()
+
+    private fun loadBackgroundConfig(): BackgroundConfig {
+        val hasSaved = settingsPrefs.getBoolean("bg_has_saved", false)
+        if (!hasSaved) {
+            return BackgroundConfig()
+        }
+        val typeStr = settingsPrefs.getString("bg_type", BackgroundOptionType.PURE_WHITE.name) ?: BackgroundOptionType.PURE_WHITE.name
+        val type = try { BackgroundOptionType.valueOf(typeStr) } catch(e: Exception) { BackgroundOptionType.PURE_WHITE }
+        val title = settingsPrefs.getString("bg_title", "极简纯白 (默认)") ?: "极简纯白 (默认)"
+        val subtitle = settingsPrefs.getString("bg_subtitle", "极致纯粹净白，无暇纯色") ?: "极致纯粹净白，无暇纯色"
+        val customHex = settingsPrefs.getString("bg_customHex", "#FFFFFF") ?: "#FFFFFF"
+        val isLight = settingsPrefs.getBoolean("bg_isLight", true)
+        val imageUri = settingsPrefs.getString("bg_imageUri", null)
+        val cardAlpha = settingsPrefs.getFloat("bg_cardAlpha", 0.95f)
+        val blurRadius = settingsPrefs.getFloat("bg_blurRadius", 0f)
+        val frostAlpha = settingsPrefs.getFloat("bg_frostAlpha", 0.0f)
+        val solidColorInt = try { android.graphics.Color.parseColor(customHex) } catch(e: Exception) { android.graphics.Color.WHITE }
+        return BackgroundConfig(
+            type = type, title = title, subtitle = subtitle, solidColor = Color(solidColorInt),
+            isLight = isLight, customHex = customHex, imageUri = imageUri,
+            cardAlpha = cardAlpha, blurRadius = blurRadius, frostAlpha = frostAlpha
+        )
+    }
+
+    private fun saveBackgroundConfig(config: BackgroundConfig) {
+        settingsPrefs.edit()
+            .putBoolean("bg_has_saved", true)
+            .putString("bg_type", config.type.name)
+            .putString("bg_title", config.title)
+            .putString("bg_subtitle", config.subtitle)
+            .putString("bg_customHex", config.customHex)
+            .putBoolean("bg_isLight", config.isLight)
+            .putString("bg_imageUri", config.imageUri)
+            .putFloat("bg_cardAlpha", config.cardAlpha)
+            .putFloat("bg_blurRadius", config.blurRadius)
+            .putFloat("bg_frostAlpha", config.frostAlpha)
+            .apply()
+    }
+
+    private val _backgroundConfig = MutableStateFlow(loadBackgroundConfig())
+    val backgroundConfig: StateFlow<BackgroundConfig> = _backgroundConfig.asStateFlow()
+
+    fun setColorScheme(option: ColorSchemeOption) {
+        _colorScheme.value = option
+        settingsPrefs.edit().putString("color_scheme", option.name).apply()
+    }
+
+    fun setFontScale(option: FontScaleOption) {
+        _fontScale.value = option
+        settingsPrefs.edit().putString("font_scale", option.name).apply()
+    }
+
+    fun setBackgroundConfig(config: BackgroundConfig) {
+        _backgroundConfig.value = config
+        saveBackgroundConfig(config)
+    }
+
+    fun setCustomBackgroundImage(uriString: String, isLight: Boolean = false) {
+        val current = _backgroundConfig.value
+        val newConfig = current.copy(
+            type = BackgroundOptionType.CUSTOM_IMAGE,
+            title = "自定义背景图片",
+            subtitle = "个性化壁纸与毛玻璃卡片",
+            imageUri = uriString,
+            isLight = isLight
+        )
+        setBackgroundConfig(newConfig)
+    }
+
+    fun setCardAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0.10f, 0.98f)
+        val current = _backgroundConfig.value
+        setBackgroundConfig(current.copy(cardAlpha = clamped))
+    }
+
+    fun setBlurRadius(radius: Float) {
+        val clamped = radius.coerceIn(0f, 30f)
+        val current = _backgroundConfig.value
+        setBackgroundConfig(current.copy(blurRadius = clamped))
+    }
+
+    fun setFrostAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0f, 0.85f)
+        val current = _backgroundConfig.value
+        setBackgroundConfig(current.copy(frostAlpha = clamped))
+    }
+
+    fun setIsLightBackground(isLight: Boolean) {
+        val current = _backgroundConfig.value
+        setBackgroundConfig(current.copy(isLight = isLight))
+    }
+
+    fun setCustomBackgroundColor(hex: String, name: String = "自定义纯色") {
+        try {
+            val cleanHex = if (hex.startsWith("#")) hex else "#$hex"
+            val parsed = android.graphics.Color.parseColor(cleanHex)
+            val color = Color(parsed)
+            val r = ((parsed shr 16) and 0xFF) / 255f
+            val g = ((parsed shr 8) and 0xFF) / 255f
+            val b = (parsed and 0xFF) / 255f
+            val lum = 0.299f * r + 0.587f * g + 0.114f * b
+            val isLight = lum > 0.45f
+
+            val newConfig = BackgroundConfig(
+                type = BackgroundOptionType.CUSTOM_SOLID,
+                title = name,
+                subtitle = "自定义色值: $cleanHex",
+                solidColor = color,
+                isLight = isLight,
+                customHex = cleanHex
+            )
+            setBackgroundConfig(newConfig)
+        } catch (e: Exception) {
+            // Ignore format error
+        }
+    }
+
+    // Filter states
+    private val _filterType = MutableStateFlow("ALL") // "ALL", "EXPENSE", "INCOME"
+    val filterType: StateFlow<String> = _filterType.asStateFlow()
+
+    private val _filterTime = MutableStateFlow("ALL") // "ALL", "MONTH", "WEEK", "TODAY"
+    val filterTime: StateFlow<String> = _filterTime.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow("ALL")
+    val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
+
+    private val _selectedAccountFilter = MutableStateFlow<Long?>(null)
+    val selectedAccountFilter: StateFlow<Long?> = _selectedAccountFilter.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    fun setFilterType(type: String) {
+        _filterType.value = type
+    }
+
+    fun setFilterTime(time: String) {
+        _filterTime.value = time
+    }
+
+    fun setSelectedCategory(category: String) {
+        _selectedCategory.value = category
+    }
+
+    fun setSelectedAccountFilter(accountId: Long?) {
+        _selectedAccountFilter.value = accountId
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun resetFilters() {
+        _filterType.value = "ALL"
+        _filterTime.value = "ALL"
+        _selectedCategory.value = "ALL"
+        _selectedAccountFilter.value = null
+        _searchQuery.value = ""
+    }
+
+    // Combined filter params
+    private data class FilterParams(
+        val type: String,
+        val time: String,
+        val category: String,
+        val accountId: Long?,
+        val query: String
+    )
+
+    private val filterParams = combine(
+        _filterType,
+        _filterTime,
+        _selectedCategory,
+        _selectedAccountFilter,
+        _searchQuery
+    ) { type, time, category, accountId, query ->
+        FilterParams(type, time, category, accountId, query)
+    }
+
+    // Filtered Expenses for Home & Transactions
+    val filteredExpenses: StateFlow<List<ExpenseEntity>> = combine(
+        allExpenses,
+        filterParams
+    ) { list, params ->
+        val now = System.currentTimeMillis()
+        val calendar = Calendar.getInstance()
+
+        // Today start
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startOfToday = calendar.timeInMillis
+        val startOfWeek = now - 7 * 86400000L
+        val startOfMonth = now - 30 * 86400000L
+
+        list.filter { item ->
+            val matchesType = when (params.type) {
+                "EXPENSE" -> item.type == "EXPENSE"
+                "INCOME" -> item.type == "INCOME"
+                else -> true
+            }
+
+            val matchesTime = when (params.time) {
+                "TODAY" -> item.dateTimestamp >= startOfToday
+                "WEEK" -> item.dateTimestamp >= startOfWeek
+                "MONTH" -> item.dateTimestamp >= startOfMonth
+                else -> true
+            }
+
+            val matchesCategory = (params.category == "ALL" || item.category == params.category)
+            val matchesAccount = (params.accountId == null || item.accountId == params.accountId)
+
+            val matchesQuery = if (params.query.isBlank()) true else {
+                item.category.contains(params.query, ignoreCase = true) ||
+                item.subCategory.contains(params.query, ignoreCase = true) ||
+                item.note.contains(params.query, ignoreCase = true) ||
+                item.accountName.contains(params.query, ignoreCase = true) ||
+                item.amount.toString().contains(params.query)
+            }
+
+            matchesType && matchesTime && matchesCategory && matchesAccount && matchesQuery
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Overall Totals (using SQL aggregation)
+    val totalExpense: StateFlow<Double> = repository.getTotalExpenseFlow("EXPENSE")
+        .map { it ?: 0.0 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalIncome: StateFlow<Double> = repository.getTotalExpenseFlow("INCOME")
+        .map { it ?: 0.0 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val todayExpense: StateFlow<Double> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val calendar = Calendar.getInstance()
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            val startOfToday = calendar.timeInMillis
+            list.filter { it.type == "EXPENSE" && it.dateTimestamp >= startOfToday }.sumOf { it.amount }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // Current Month Expense (1st of this month to end of this month)
+    val thisMonthExpense: StateFlow<Double> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val startOfMonth = cal.timeInMillis
+            cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+            cal.set(Calendar.HOUR_OF_DAY, 23)
+            cal.set(Calendar.MINUTE, 59)
+            cal.set(Calendar.SECOND, 59)
+            cal.set(Calendar.MILLISECOND, 999)
+            val endOfMonth = cal.timeInMillis
+
+            list.filter { it.type == "EXPENSE" && it.dateTimestamp in startOfMonth..endOfMonth }.sumOf { it.amount }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // Current Month Income
+    val thisMonthIncome: StateFlow<Double> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val startOfMonth = cal.timeInMillis
+            cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+            cal.set(Calendar.HOUR_OF_DAY, 23)
+            cal.set(Calendar.MINUTE, 59)
+            cal.set(Calendar.SECOND, 59)
+            cal.set(Calendar.MILLISECOND, 999)
+            val endOfMonth = cal.timeInMillis
+
+            list.filter { it.type == "INCOME" && it.dateTimestamp in startOfMonth..endOfMonth }.sumOf { it.amount }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // Current Quarter Expense
+    val thisQuarterExpense: StateFlow<Double> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val cal = Calendar.getInstance()
+            val currentMonth = cal.get(Calendar.MONTH)
+            val quarterStartMonth = (currentMonth / 3) * 3
+            cal.set(Calendar.MONTH, quarterStartMonth)
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val startOfQuarter = cal.timeInMillis
+
+            cal.set(Calendar.MONTH, quarterStartMonth + 2)
+            cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+            cal.set(Calendar.HOUR_OF_DAY, 23)
+            cal.set(Calendar.MINUTE, 59)
+            cal.set(Calendar.SECOND, 59)
+            cal.set(Calendar.MILLISECOND, 999)
+            val endOfQuarter = cal.timeInMillis
+
+            list.filter { it.type == "EXPENSE" && it.dateTimestamp in startOfQuarter..endOfQuarter }.sumOf { it.amount }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // Current Year Expense
+    val thisYearExpense: StateFlow<Double> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.DAY_OF_YEAR, 1)
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val startOfYear = cal.timeInMillis
+
+            cal.set(Calendar.MONTH, Calendar.DECEMBER)
+            cal.set(Calendar.DAY_OF_MONTH, 31)
+            cal.set(Calendar.HOUR_OF_DAY, 23)
+            cal.set(Calendar.MINUTE, 59)
+            cal.set(Calendar.SECOND, 59)
+            cal.set(Calendar.MILLISECOND, 999)
+            val endOfYear = cal.timeInMillis
+
+            list.filter { it.type == "EXPENSE" && it.dateTimestamp in startOfYear..endOfYear }.sumOf { it.amount }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // Dynamic Budget Progress State
+    val budgetProgress: StateFlow<BudgetProgressInfo> = combine(
+        _budgetConfig,
+        thisMonthExpense,
+        thisQuarterExpense,
+        thisYearExpense
+    ) { config, mExp, qExp, yExp ->
+        val (limit, spent) = when (config.activePeriod) {
+            BudgetPeriod.MONTH -> Pair(config.monthlyLimit, mExp)
+            BudgetPeriod.QUARTER -> Pair(config.quarterlyLimit, qExp)
+            BudgetPeriod.YEAR -> Pair(config.yearlyLimit, yExp)
+        }
+
+        val remaining = limit - spent
+        val isOver = spent > limit
+        val overAmt = if (isOver) spent - limit else 0.0
+        val percent = if (limit <= 0) 1.0f else (spent / limit).toFloat().coerceAtLeast(0f)
+
+        val remainingDays = when (config.activePeriod) {
+            BudgetPeriod.MONTH -> {
+                val cal = Calendar.getInstance()
+                val currentDay = cal.get(Calendar.DAY_OF_MONTH)
+                val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+                (maxDays - currentDay + 1).coerceAtLeast(1)
+            }
+            BudgetPeriod.QUARTER -> {
+                val cal = Calendar.getInstance()
+                val currentMonth = cal.get(Calendar.MONTH)
+                val quarterStartMonth = (currentMonth / 3) * 3
+                val endCal = Calendar.getInstance()
+                endCal.set(Calendar.MONTH, quarterStartMonth + 2)
+                endCal.set(Calendar.DAY_OF_MONTH, endCal.getActualMaximum(Calendar.DAY_OF_MONTH))
+                val currentDayOfYear = cal.get(Calendar.DAY_OF_YEAR)
+                val endDayOfYear = endCal.get(Calendar.DAY_OF_YEAR)
+                (endDayOfYear - currentDayOfYear + 1).coerceAtLeast(1)
+            }
+            BudgetPeriod.YEAR -> {
+                val cal = Calendar.getInstance()
+                val currentDayOfYear = cal.get(Calendar.DAY_OF_YEAR)
+                val maxDaysOfYear = cal.getActualMaximum(Calendar.DAY_OF_YEAR)
+                (maxDaysOfYear - currentDayOfYear + 1).coerceAtLeast(1)
+            }
+        }
+
+        val dailyAvg = if (!isOver && remaining > 0) remaining / remainingDays else 0.0
+
+        BudgetProgressInfo(
+            period = config.activePeriod,
+            budgetLimit = limit,
+            spentAmount = spent,
+            remainingAmount = remaining,
+            isOverBudget = isOver,
+            overAmount = overAmt,
+            progressPercent = percent,
+            remainingDailyAverage = dailyAvg,
+            remainingDays = remainingDays
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        BudgetProgressInfo(BudgetPeriod.MONTH, 5000.0, 0.0, 5000.0, false, 0.0, 0f, 5000.0 / 30, 30)
+    )
+
+
+    // Account Asset Aggregations
+    val totalNetAssets: StateFlow<Double> = allAccounts.combine(allAccounts) { accounts, _ ->
+        accounts.sumOf { it.balance }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalPositiveAssets: StateFlow<Double> = allAccounts.combine(allAccounts) { accounts, _ ->
+        accounts.filter { it.balance > 0 }.sumOf { it.balance }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalDebts: StateFlow<Double> = allAccounts.combine(allAccounts) { accounts, _ ->
+        accounts.filter { it.balance < 0 }.sumOf { -it.balance }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // Category Expense Breakdown
+    val categoryStats: StateFlow<List<CategoryStat>> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val expenseList = list.filter { it.type == "EXPENSE" }
+            val sum = expenseList.sumOf { it.amount }
+            if (sum == 0.0) {
+                emptyList()
+            } else {
+                expenseList.groupBy { it.category }
+                    .map { (cat, items) ->
+                        val catSum = items.sumOf { it.amount }
+                        CategoryStat(
+                            category = cat,
+                            totalAmount = catSum,
+                            count = items.size,
+                            percentage = (catSum / sum).toFloat(),
+                            type = "EXPENSE"
+                        )
+                    }
+                    .sortedByDescending { it.totalAmount }
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Category Income Breakdown
+    val incomeCategoryStats: StateFlow<List<CategoryStat>> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val incomeList = list.filter { it.type == "INCOME" }
+            val sum = incomeList.sumOf { it.amount }
+            if (sum == 0.0) {
+                emptyList()
+            } else {
+                incomeList.groupBy { it.category }
+                    .map { (cat, items) ->
+                        val catSum = items.sumOf { it.amount }
+                        CategoryStat(
+                            category = cat,
+                            totalAmount = catSum,
+                            count = items.size,
+                            percentage = (catSum / sum).toFloat(),
+                            type = "INCOME"
+                        )
+                    }
+                    .sortedByDescending { it.totalAmount }
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 7-day Trend Points
+    val weekTrendPoints: StateFlow<List<TrendPoint>> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val sdf = SimpleDateFormat("MM-dd", Locale.CHINA)
+            val points = mutableListOf<TrendPoint>()
+
+            for (i in 6 downTo 0) {
+                val cal = Calendar.getInstance()
+                cal.add(Calendar.DAY_OF_YEAR, -i)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val start = cal.timeInMillis
+                val end = start + 86400000L
+
+                val dayExpenses = list.filter { it.dateTimestamp in start until end }
+                val expSum = dayExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                val incSum = dayExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
+
+                val label = if (i == 0) "今日" else sdf.format(Date(start))
+                points.add(TrendPoint(label, expSum, incSum, start))
+            }
+            points
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 6-Month Trend Points
+    val monthTrendPoints: StateFlow<List<TrendPoint>> = allExpenses.map { list ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val labelSdf = SimpleDateFormat("M月", Locale.CHINA)
+            val points = mutableListOf<TrendPoint>()
+
+            for (i in 5 downTo 0) {
+                val cal = Calendar.getInstance()
+                cal.add(Calendar.MONTH, -i)
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val start = cal.timeInMillis
+
+                cal.add(Calendar.MONTH, 1)
+                val end = cal.timeInMillis
+
+                val monthExpenses = list.filter { it.dateTimestamp in start until end }
+                val expSum = monthExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                val incSum = monthExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
+
+                points.add(TrendPoint(labelSdf.format(Date(start)), expSum, incSum, start))
+            }
+            points
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Expense Actions
+    fun addExpense(
+        type: String,
+        category: String,
+        subCategory: String = "",
+        amount: Double,
+        note: String,
+        accountId: Long = 1L,
+        accountName: String = "默认账户",
+        timestamp: Long = System.currentTimeMillis()
+    ) {
+        viewModelScope.launch {
+            repository.insertExpense(
+                ExpenseEntity(
+                    type = type,
+                    category = category,
+                    subCategory = subCategory,
+                    amount = amount,
+                    note = note,
+                    dateTimestamp = timestamp,
+                    accountId = accountId,
+                    accountName = accountName
+                )
+            )
+        }
+    }
+
+    fun updateExpense(oldExpense: ExpenseEntity, newExpense: ExpenseEntity) {
+        viewModelScope.launch {
+            repository.updateExpense(oldExpense, newExpense)
+        }
+    }
+
+    fun deleteExpense(expense: ExpenseEntity) {
+        viewModelScope.launch {
+            repository.deleteExpense(expense)
+        }
+    }
+
+    // Account Actions
+    fun addAccount(
+        name: String,
+        type: String,
+        initialBalance: Double,
+        cardSuffix: String = "",
+        colorHex: String = "#3B82F6",
+        note: String = ""
+    ) {
+        viewModelScope.launch {
+            repository.insertAccount(
+                AccountEntity(
+                    name = name,
+                    type = type,
+                    balance = initialBalance,
+                    cardSuffix = cardSuffix,
+                    colorHex = colorHex,
+                    note = note
+                )
+            )
+        }
+    }
+
+    fun updateAccount(
+        account: AccountEntity,
+        saveAsMissedRecord: Boolean = false,
+        oldBalance: Double = account.balance
+    ) {
+        viewModelScope.launch {
+            repository.updateAccountWithDiscrepancy(account, oldBalance, saveAsMissedRecord)
+        }
+    }
+
+    fun deleteAccount(account: AccountEntity) {
+        viewModelScope.launch {
+            repository.deleteAccount(account)
+        }
+    }
+
+    // Generate CSV data for export
+    fun generateCsvData(): String {
+        val list = allExpenses.value
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
+        val sb = StringBuilder()
+        sb.append("ID,日期时间,收支类型,一级分类,二级细分,账户,金额(元),备注说明\n")
+        list.forEach { item ->
+            val dateStr = sdf.format(Date(item.dateTimestamp))
+            val typeStr = if (item.type == "EXPENSE") "支出" else "收入"
+            val safeNote = item.note.replace(",", "，").replace("\"", "'")
+            val safeAccount = item.accountName.replace(",", "，")
+            val safeCat = item.category.replace(",", "，")
+            val safeSubCat = item.subCategory.replace(",", "，")
+            sb.append("${item.id},\"$dateStr\",$typeStr,\"$safeCat\",\"$safeSubCat\",\"$safeAccount\",${String.format(Locale.US, "%.2f", item.amount)},\"$safeNote\"\n")
+        }
+        return sb.toString()
+    }
+
+    // Import CSV / text data for ledger
+    fun importCsvData(csvContent: String): Pair<Int, String> {
+        if (csvContent.isBlank()) {
+            return Pair(0, "导入内容为空，请输入或选择有效的数据")
+        }
+
+        val lines = csvContent.lines().map { it.trim() }.filter { it.isNotBlank() }
+        if (lines.isEmpty()) {
+            return Pair(0, "未检测到有效数据行")
+        }
+
+        val currentAccounts = allAccounts.value.toMutableList()
+        val sdfFull = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
+        val sdfDateTime = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA)
+        val sdfDateOnly = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA)
+        val sdfSlashFull = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.CHINA)
+        val sdfSlash = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.CHINA)
+        val sdfSlashDate = SimpleDateFormat("yyyy/MM/dd", Locale.CHINA)
+
+        fun parseTimestamp(str: String): Long {
+            val clean = str.replace("\"", "").trim()
+            return try {
+                sdfFull.parse(clean)?.time
+                    ?: sdfDateTime.parse(clean)?.time
+                    ?: sdfSlashFull.parse(clean)?.time
+                    ?: sdfSlash.parse(clean)?.time
+                    ?: sdfDateOnly.parse(clean)?.time
+                    ?: sdfSlashDate.parse(clean)?.time
+                    ?: System.currentTimeMillis()
+            } catch (e: Exception) {
+                System.currentTimeMillis()
+            }
+        }
+
+        fun splitCsvRow(line: String): List<String> {
+            val result = mutableListOf<String>()
+            var inQuotes = false
+            val sb = StringBuilder()
+            for (ch in line) {
+                when (ch) {
+                    '\"' -> inQuotes = !inQuotes
+                    ',' -> {
+                        if (inQuotes) {
+                            sb.append(ch)
+                        } else {
+                            result.add(sb.toString().trim())
+                            sb.clear()
+                        }
+                    }
+                    '，' -> {
+                        if (inQuotes) {
+                            sb.append(ch)
+                        } else {
+                            result.add(sb.toString().trim())
+                            sb.clear()
+                        }
+                    }
+                    '\t' -> {
+                        if (inQuotes) {
+                            sb.append(ch)
+                        } else {
+                            result.add(sb.toString().trim())
+                            sb.clear()
+                        }
+                    }
+                    else -> sb.append(ch)
+                }
+            }
+            result.add(sb.toString().trim())
+            return result.map { it.removeSurrounding("\"").trim() }
+        }
+
+        var successCount = 0
+
+        viewModelScope.launch {
+            for (line in lines) {
+                // Skip header lines
+                if (line.contains("收支类型") || line.contains("一级分类") || line.startsWith("ID,") || line.startsWith("ID，")) {
+                    continue
+                }
+
+                val tokens = splitCsvRow(line)
+                if (tokens.size < 3) continue
+
+                var dateTimestamp = System.currentTimeMillis()
+                var type = "EXPENSE"
+                var category = "餐饮"
+                var subCategory = "午餐"
+                var accountName = "默认账户"
+                var amount = 0.0
+                var note = ""
+
+                try {
+                    if (tokens.size >= 8) {
+                        // ID, 日期时间, 收支类型, 一级分类, 二级细分, 账户, 金额, 备注
+                        dateTimestamp = parseTimestamp(tokens[1])
+                        type = if (tokens[2].contains("收") || tokens[2].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
+                        category = tokens[3].ifBlank { "其他" }
+                        subCategory = tokens[4].ifBlank { "默认" }
+                        accountName = tokens[5].ifBlank { "默认账户" }
+                        amount = tokens[6].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                        note = tokens[7]
+                    } else if (tokens.size == 7) {
+                        // 日期时间, 收支类型, 一级分类, 二级细分, 账户, 金额, 备注
+                        dateTimestamp = parseTimestamp(tokens[0])
+                        type = if (tokens[1].contains("收") || tokens[1].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
+                        category = tokens[2].ifBlank { "其他" }
+                        subCategory = tokens[3].ifBlank { "默认" }
+                        accountName = tokens[4].ifBlank { "默认账户" }
+                        amount = tokens[5].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                        note = tokens[6]
+                    } else if (tokens.size == 6) {
+                        // 日期时间, 收支类型, 一级分类, 账户, 金额, 备注
+                        dateTimestamp = parseTimestamp(tokens[0])
+                        type = if (tokens[1].contains("收") || tokens[1].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
+                        category = tokens[2].ifBlank { "其他" }
+                        subCategory = "默认"
+                        accountName = tokens[3].ifBlank { "默认账户" }
+                        amount = tokens[4].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                        note = tokens[5]
+                    } else if (tokens.size == 5) {
+                        // 日期, 分类, 账户, 金额, 备注
+                        if (tokens[0].contains("20") || tokens[0].contains("-") || tokens[0].contains("/")) {
+                            dateTimestamp = parseTimestamp(tokens[0])
+                            category = tokens[1].ifBlank { "餐饮" }
+                            accountName = tokens[2].ifBlank { "默认账户" }
+                            amount = tokens[3].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                            note = tokens[4]
+                            type = if (amount > 0 && (category.contains("工资") || category.contains("奖金") || category.contains("收入"))) "INCOME" else "EXPENSE"
+                        } else {
+                            type = if (tokens[0].contains("收")) "INCOME" else "EXPENSE"
+                            category = tokens[1].ifBlank { "其他" }
+                            accountName = tokens[2].ifBlank { "默认账户" }
+                            amount = tokens[3].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                            note = tokens[4]
+                        }
+                    } else if (tokens.size == 4) {
+                        category = tokens[0].ifBlank { "餐饮" }
+                        amount = tokens[1].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                        accountName = tokens[2].ifBlank { "默认账户" }
+                        note = tokens[3]
+                        type = if (category.contains("工资") || category.contains("奖金") || category.contains("收入")) "INCOME" else "EXPENSE"
+                    } else if (tokens.size == 3) {
+                        category = tokens[0].ifBlank { "餐饮" }
+                        amount = tokens[1].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                        note = tokens[2]
+                        type = if (category.contains("工资") || category.contains("奖金") || category.contains("收入")) "INCOME" else "EXPENSE"
+                    }
+
+                    if (amount <= 0.0) continue
+
+                    val matchedAcc = currentAccounts.find { it.name.equals(accountName, ignoreCase = true) }
+                        ?: currentAccounts.firstOrNull()
+
+                    val accId = matchedAcc?.id ?: 1L
+                    val safeAccName = matchedAcc?.name ?: accountName
+
+                    repository.insertExpense(
+                        ExpenseEntity(
+                            type = type,
+                            category = category,
+                            subCategory = subCategory,
+                            amount = amount,
+                            note = note,
+                            dateTimestamp = dateTimestamp,
+                            accountId = accId,
+                            accountName = safeAccName
+                        )
+                    )
+                    successCount++
+                } catch (e: Exception) {
+                    // Skip malformed item
+                }
+            }
+        }
+
+        return if (successCount > 0) {
+            Pair(successCount, "已成功导入 $successCount 笔账目记录！")
+        } else {
+            Pair(0, "未解析到符合格式的有效账目记录，请核对格式")
+        }
+    }
+}

@@ -1,0 +1,35 @@
+--- app/src/main/java/com/example/ui/screens/ExpenseScreen.kt
++++ app/src/main/java/com/example/ui/screens/ExpenseScreen.kt
+@@ -947,6 +947,15 @@
+     }
+ }
+ 
++private val itemDateFormatter = object : ThreadLocal<SimpleDateFormat>() {
++    override fun initialValue(): SimpleDateFormat {
++        return SimpleDateFormat("MM-dd HH:mm", Locale.CHINA)
++    }
++}
++
++private fun formatAmount(amount: Double): String {
++    return String.format(Locale.CHINA, "%.2f", amount)
++}
++
+ @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+ @Composable
+ fun GlassExpenseItemCard(
+@@ -962,8 +971,7 @@
+     val isExpense = expense.type == "EXPENSE"
+     val formattedDate = remember(expense.dateTimestamp) {
+-        val sdf = SimpleDateFormat("MM-dd HH:mm", Locale.CHINA)
+-        sdf.format(Date(expense.dateTimestamp))
++        itemDateFormatter.get()?.format(Date(expense.dateTimestamp)) ?: ""
+     }
+ 
+@@ -1172,7 +1180,7 @@
+                     // Amount & Quick Edit button
+                     Column(horizontalAlignment = Alignment.End) {
+                         Text(
+-                            text = "${if (isExpense) "-" else "+"} ¥${String.format(Locale.CHINA, "%.2f", expense.amount)}",
++                            text = "${if (isExpense) "-" else "+"} ¥${formatAmount(expense.amount)}",
+                             style = MaterialTheme.typography.titleMedium.copy(
+                                 fontSize = 17.sp,

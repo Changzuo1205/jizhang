@@ -1,0 +1,6242 @@
+[
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-26 18:19:28",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-06-26 17:48:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.5,
+    "note": "",
+    "date_str": "2026-06-26 17:37:15",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 17.0,
+    "note": "",
+    "date_str": "2026-06-26 12:01:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "黄焖鸡",
+    "date_str": "2026-06-25 19:19:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-06-25 19:05:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "矿泉水",
+    "date_str": "2026-06-24 22:47:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "甜筒",
+    "date_str": "2026-06-24 17:40:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.0,
+    "note": "",
+    "date_str": "2026-06-24 15:50:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.5,
+    "note": "",
+    "date_str": "2026-06-24 13:01:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "矿泉水",
+    "date_str": "2026-06-24 11:51:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "滕王阁",
+    "date_str": "2026-06-24 09:52:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "馄饨面",
+    "date_str": "2026-06-24 09:26:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.9,
+    "note": "",
+    "date_str": "2026-06-23 22:40:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 215.79,
+    "note": "",
+    "date_str": "2026-06-23 19:38:57",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "矿泉水",
+    "date_str": "2026-06-23 13:09:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "泡面",
+    "date_str": "2026-06-23 13:09:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.5,
+    "note": "",
+    "date_str": "2026-06-23 09:39:59",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-06-22 20:53:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "滕王阁",
+    "date_str": "2026-06-22 20:46:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "地铁",
+    "date_str": "2026-06-22 19:42:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 267.36,
+    "note": "",
+    "date_str": "2026-06-22 19:41:05",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 267.36,
+    "note": "",
+    "date_str": "2026-06-22 09:40:00",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.5,
+    "note": "矿泉水",
+    "date_str": "2026-06-21 15:00:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 138.0,
+    "note": "",
+    "date_str": "2026-06-19 18:06:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 100.0,
+    "note": "币",
+    "date_str": "2026-06-17 23:55:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.5,
+    "note": "",
+    "date_str": "2026-06-17 17:04:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 21.9,
+    "note": "",
+    "date_str": "2026-06-17 11:03:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 174.75,
+    "note": "父亲节眼罩",
+    "date_str": "2026-06-16 20:16:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.9,
+    "note": "",
+    "date_str": "2026-06-16 19:13:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.94,
+    "note": "",
+    "date_str": "2026-06-16 16:21:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.9,
+    "note": "",
+    "date_str": "2026-06-16 15:58:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-06-16 13:45:32",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.9,
+    "note": "",
+    "date_str": "2026-06-16 11:20:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-06-16 11:20:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "",
+    "date_str": "2026-06-15 17:03:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.0,
+    "note": "",
+    "date_str": "2026-06-15 16:49:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.9,
+    "note": "",
+    "date_str": "2026-06-15 10:19:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-06-14 22:38:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 61.0,
+    "note": "",
+    "date_str": "2026-06-14 22:37:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 74.0,
+    "note": "",
+    "date_str": "2026-06-14 22:37:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-06-14 19:05:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-06-14 12:18:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-06-13 20:52:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-06-13 20:52:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 63.0,
+    "note": "流浪泡泡",
+    "date_str": "2026-06-13 12:15:14",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-06-13 12:05:32",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-13 12:05:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-06-13 12:05:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-13 08:13:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-12 19:11:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.9,
+    "note": "",
+    "date_str": "2026-06-12 15:53:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.9,
+    "note": "",
+    "date_str": "2026-06-12 15:53:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "",
+    "date_str": "2026-06-12 12:38:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.4,
+    "note": "",
+    "date_str": "2026-06-12 10:33:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-06-12 10:33:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.07,
+    "note": "",
+    "date_str": "2026-06-12 10:06:32",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-06-12 07:54:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.5,
+    "note": "",
+    "date_str": "2026-06-11 19:38:15",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.5,
+    "note": "",
+    "date_str": "2026-06-11 18:09:31",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-11 11:26:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.6,
+    "note": "",
+    "date_str": "2026-06-11 10:53:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "手抓饼",
+    "date_str": "2026-06-10 23:09:38",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.0,
+    "note": "",
+    "date_str": "2026-06-10 18:30:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-10 12:01:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-06-10 12:00:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "矿泉水",
+    "date_str": "2026-06-10 02:01:49",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.2,
+    "note": "",
+    "date_str": "2026-06-09 16:16:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-06-09 15:56:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-06-09 13:16:48",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 130.0,
+    "note": "车票",
+    "date_str": "2026-06-09 11:49:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.5,
+    "note": "",
+    "date_str": "2026-06-09 10:38:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 1.5,
+    "note": "",
+    "date_str": "2026-06-08 20:13:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "",
+    "date_str": "2026-06-08 20:12:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "滕王阁",
+    "date_str": "2026-06-08 20:11:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-06-08 17:11:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-06-08 17:03:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-06-08 15:43:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "张雪峰",
+    "date_str": "2026-06-08 11:44:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-08 11:21:49",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-08 09:59:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 26.99,
+    "note": "学术部零食蛋糕",
+    "date_str": "2026-06-07 20:51:12",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.4,
+    "note": "",
+    "date_str": "2026-06-07 18:27:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-06-07 18:25:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-06-07 10:07:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-06-07 08:25:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-06-07 08:25:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "可乐",
+    "date_str": "2026-06-06 21:18:40",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "综述",
+    "date_str": "2026-06-06 17:27:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-06-06 17:17:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-06-06 17:05:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-06-06 12:24:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-06 11:57:18",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 240.0,
+    "note": "",
+    "date_str": "2026-06-06 11:55:38",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-06 08:06:27",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-06-06 07:59:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "",
+    "date_str": "2026-06-05 11:54:18",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-06-05 11:41:19",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 125.0,
+    "note": "车票",
+    "date_str": "2026-06-04 23:17:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.5,
+    "note": "",
+    "date_str": "2026-06-04 21:47:59",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "颜悦",
+    "date_str": "2026-06-04 21:13:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 24.22,
+    "note": "",
+    "date_str": "2026-06-04 19:36:36",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "东方树叶",
+    "date_str": "2026-06-04 18:01:40",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.0,
+    "note": "腊肉拌面",
+    "date_str": "2026-06-04 16:54:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.5,
+    "note": "塔斯汀",
+    "date_str": "2026-06-04 10:26:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "矿泉水",
+    "date_str": "2026-06-04 00:07:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "烤冷面",
+    "date_str": "2026-06-03 21:18:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "东方树叶",
+    "date_str": "2026-06-03 19:43:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 144.28,
+    "note": "",
+    "date_str": "2026-06-03 19:27:48",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.5,
+    "note": "",
+    "date_str": "2026-06-03 17:03:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.8,
+    "note": "",
+    "date_str": "2026-06-03 11:31:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 22.24,
+    "note": "学术部干事笔",
+    "date_str": "2026-06-03 11:16:13",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 53.33,
+    "note": "",
+    "date_str": "2026-06-02 20:10:26",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.5,
+    "note": "巧乐兹",
+    "date_str": "2026-06-02 17:42:50",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.6,
+    "note": "麻辣拌",
+    "date_str": "2026-06-02 17:18:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "东方树叶",
+    "date_str": "2026-06-02 14:26:19",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.9,
+    "note": "",
+    "date_str": "2026-06-02 11:21:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "面包",
+    "date_str": "2026-06-02 09:56:59",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.71,
+    "note": "",
+    "date_str": "2026-06-01 20:29:20",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.8,
+    "note": "",
+    "date_str": "2026-06-01 17:49:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-06-01 15:55:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.2,
+    "note": "",
+    "date_str": "2026-06-01 12:17:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "冰淇淋",
+    "date_str": "2026-06-01 11:39:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-01 11:37:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-06-01 09:52:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "东方树叶",
+    "date_str": "2026-05-31 22:52:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.8,
+    "note": "",
+    "date_str": "2026-05-31 17:38:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "空调电费",
+    "date_str": "2026-05-31 15:49:12",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-31 11:48:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.5,
+    "note": "",
+    "date_str": "2026-05-31 11:13:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-05-30 19:28:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-30 18:20:49",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-05-30 17:43:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-05-30 15:32:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-05-30 11:47:18",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-05-30 11:06:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-30 08:23:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-30 08:06:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-05-30 07:53:57",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-29 21:06:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.0,
+    "note": "",
+    "date_str": "2026-05-29 19:47:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 48.0,
+    "note": "",
+    "date_str": "2026-05-29 19:40:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 4.21,
+    "note": "",
+    "date_str": "2026-05-29 19:38:47",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-29 18:13:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 17.0,
+    "note": "",
+    "date_str": "2026-05-29 12:01:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.2,
+    "note": "",
+    "date_str": "2026-05-29 10:07:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.96,
+    "note": "",
+    "date_str": "2026-05-29 07:59:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 32.65,
+    "note": "",
+    "date_str": "2026-05-28 19:39:12",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.0,
+    "note": "",
+    "date_str": "2026-05-28 19:39:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.8,
+    "note": "",
+    "date_str": "2026-05-28 18:27:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.6,
+    "note": "",
+    "date_str": "2026-05-28 16:48:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-05-28 11:52:12",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 22.8,
+    "note": "",
+    "date_str": "2026-05-28 10:27:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 91.62,
+    "note": "",
+    "date_str": "2026-05-27 19:41:24",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.0,
+    "note": "",
+    "date_str": "2026-05-27 19:38:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.28,
+    "note": "",
+    "date_str": "2026-05-27 17:10:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.79,
+    "note": "",
+    "date_str": "2026-05-27 10:57:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "",
+    "date_str": "2026-05-26 20:55:13",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 27.38,
+    "note": "",
+    "date_str": "2026-05-26 19:37:45",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-26 18:05:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.51,
+    "note": "",
+    "date_str": "2026-05-26 18:05:12",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-05-26 16:05:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-05-26 13:29:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-26 13:22:49",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 30.0,
+    "note": "",
+    "date_str": "2026-05-26 11:40:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-05-26 10:42:37",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 29.86,
+    "note": "",
+    "date_str": "2026-05-25 21:11:53",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.7,
+    "note": "",
+    "date_str": "2026-05-25 18:31:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.88,
+    "note": "",
+    "date_str": "2026-05-25 16:18:52",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-25 15:53:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.2,
+    "note": "",
+    "date_str": "2026-05-25 14:57:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.5,
+    "note": "",
+    "date_str": "2026-05-25 11:57:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 17.5,
+    "note": "",
+    "date_str": "2026-05-25 11:43:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-25 10:13:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-05-24 21:54:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-05-24 20:48:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-05-24 16:36:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-24 13:52:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-05-24 11:12:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-05-24 11:07:59",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-23 19:44:28",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.88,
+    "note": "",
+    "date_str": "2026-05-23 19:12:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-05-23 11:50:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-23 11:25:16",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-05-23 08:05:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-23 08:05:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-05-22 21:28:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-22 19:57:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 38.0,
+    "note": "",
+    "date_str": "2026-05-22 17:39:32",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.0,
+    "note": "",
+    "date_str": "2026-05-22 17:28:38",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-05-22 17:19:31",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.0,
+    "note": "",
+    "date_str": "2026-05-22 17:04:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.99,
+    "note": "",
+    "date_str": "2026-05-22 10:15:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.8,
+    "note": "",
+    "date_str": "2026-05-21 19:29:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-21 17:03:40",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-05-21 11:13:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-05-20 21:55:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-05-20 18:40:12",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-05-20 17:01:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.5,
+    "note": "",
+    "date_str": "2026-05-20 17:01:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.8,
+    "note": "",
+    "date_str": "2026-05-20 17:01:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-20 08:40:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.5,
+    "note": "",
+    "date_str": "2026-05-20 08:28:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 28.9,
+    "note": "",
+    "date_str": "2026-05-19 20:41:40",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-05-19 17:52:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-05-19 11:52:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.9,
+    "note": "",
+    "date_str": "2026-05-19 09:55:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-18 21:06:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 30.0,
+    "note": "",
+    "date_str": "2026-05-18 16:32:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-18 16:32:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 17.42,
+    "note": "",
+    "date_str": "2026-05-18 16:24:18",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-18 11:28:38",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 23.0,
+    "note": "",
+    "date_str": "2026-05-18 11:27:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 26.5,
+    "note": "",
+    "date_str": "2026-05-17 20:52:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-05-17 20:44:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.4,
+    "note": "",
+    "date_str": "2026-05-17 17:48:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.5,
+    "note": "",
+    "date_str": "2026-05-17 16:45:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.16,
+    "note": "",
+    "date_str": "2026-05-17 11:12:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.0,
+    "note": "",
+    "date_str": "2026-05-16 21:36:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 15.55,
+    "note": "",
+    "date_str": "2026-05-16 20:51:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-05-16 18:59:14",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-05-16 13:13:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-16 13:13:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 28.26,
+    "note": "",
+    "date_str": "2026-05-16 10:45:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-15 20:03:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 100.0,
+    "note": "",
+    "date_str": "2026-05-15 19:46:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-05-15 16:50:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.6,
+    "note": "",
+    "date_str": "2026-05-15 15:01:15",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-05-15 13:32:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 17.5,
+    "note": "",
+    "date_str": "2026-05-15 12:04:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.49,
+    "note": "",
+    "date_str": "2026-05-15 10:33:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.9,
+    "note": "",
+    "date_str": "2026-05-14 18:00:14",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "",
+    "date_str": "2026-05-14 17:34:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.81,
+    "note": "",
+    "date_str": "2026-05-14 11:03:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 42.12,
+    "note": "",
+    "date_str": "2026-05-13 17:11:28",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.9,
+    "note": "",
+    "date_str": "2026-05-13 17:11:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-13 16:00:28",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.5,
+    "note": "",
+    "date_str": "2026-05-13 10:42:59",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 7.96,
+    "note": "",
+    "date_str": "2026-05-12 21:58:47",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-05-12 18:27:57",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-12 18:05:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.9,
+    "note": "",
+    "date_str": "2026-05-12 17:20:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-05-12 09:56:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-05-11 18:15:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-05-11 17:52:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 40.55,
+    "note": "",
+    "date_str": "2026-05-11 17:21:00",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.0,
+    "note": "",
+    "date_str": "2026-05-11 10:40:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-10 23:01:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-05-10 19:47:13",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.58,
+    "note": "",
+    "date_str": "2026-05-10 19:04:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.46,
+    "note": "",
+    "date_str": "2026-05-10 11:58:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 88.0,
+    "note": "母亲节",
+    "date_str": "2026-05-10 11:01:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.75,
+    "note": "",
+    "date_str": "2026-05-09 21:43:31",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-05-09 19:56:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-09 18:40:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-05-09 17:15:31",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 30.0,
+    "note": "",
+    "date_str": "2026-05-09 16:10:16",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 30.0,
+    "note": "",
+    "date_str": "2026-05-09 15:35:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-05-09 13:57:16",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 27.9,
+    "note": "",
+    "date_str": "2026-05-09 10:48:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-05-08 20:16:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 41.47,
+    "note": "",
+    "date_str": "2026-05-08 19:59:37",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.9,
+    "note": "",
+    "date_str": "2026-05-08 19:59:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-08 16:51:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-05-08 15:16:40",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 30.0,
+    "note": "",
+    "date_str": "2026-05-08 15:14:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-05-08 11:26:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-05-08 11:26:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 198.0,
+    "note": "",
+    "date_str": "2026-05-08 09:59:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.88,
+    "note": "",
+    "date_str": "2026-05-07 22:55:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 113.4,
+    "note": "",
+    "date_str": "2026-05-07 19:47:13",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.92,
+    "note": "",
+    "date_str": "2026-05-07 19:46:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-05-07 17:30:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-05-07 16:34:49",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-05-07 11:28:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.9,
+    "note": "",
+    "date_str": "2026-05-07 10:25:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-05-06 23:04:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 28.9,
+    "note": "",
+    "date_str": "2026-05-06 22:35:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-05-06 18:41:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-05-06 17:22:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 1.2,
+    "note": "团费",
+    "date_str": "2026-05-06 14:45:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 26.3,
+    "note": "",
+    "date_str": "2026-05-06 11:07:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 54.56,
+    "note": "",
+    "date_str": "2026-05-05 22:51:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-05-05 12:32:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 154.0,
+    "note": "",
+    "date_str": "2026-05-05 12:32:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.0,
+    "note": "",
+    "date_str": "2026-05-04 09:49:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 115.0,
+    "note": "",
+    "date_str": "2026-05-03 19:50:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 63.0,
+    "note": "",
+    "date_str": "2026-05-03 15:44:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-05-02 20:36:28",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "",
+    "date_str": "2026-05-01 21:54:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 400.0,
+    "note": "",
+    "date_str": "2026-05-01 12:31:10",
+    "accountId": 1,
+    "accountName": ""
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-04-30 11:32:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-30 10:43:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 13.0,
+    "note": "",
+    "date_str": "2026-04-30 00:42:37",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 53.0,
+    "note": "",
+    "date_str": "2026-04-29 22:00:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.48,
+    "note": "",
+    "date_str": "2026-04-29 18:45:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.0,
+    "note": "",
+    "date_str": "2026-04-29 11:14:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 0.01,
+    "note": "",
+    "date_str": "2026-04-28 23:19:37",
+    "accountId": 1,
+    "accountName": ""
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-04-28 18:00:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.9,
+    "note": "",
+    "date_str": "2026-04-28 16:52:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-28 13:27:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.1,
+    "note": "",
+    "date_str": "2026-04-28 10:50:31",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 22.0,
+    "note": "",
+    "date_str": "2026-04-27 19:56:27",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-27 19:56:19",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-27 19:38:50",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-04-27 15:44:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.0,
+    "note": "",
+    "date_str": "2026-04-27 15:36:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-27 15:32:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-04-27 10:49:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-26 21:32:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.35,
+    "note": "",
+    "date_str": "2026-04-26 17:57:32",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-26 17:44:37",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 888.0,
+    "note": "姐订婚",
+    "date_str": "2026-04-26 17:17:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-04-26 16:58:10",
+    "accountId": 1,
+    "accountName": ""
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-26 11:31:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.92,
+    "note": "",
+    "date_str": "2026-04-25 22:48:14",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 102.0,
+    "note": "",
+    "date_str": "2026-04-25 22:32:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.0,
+    "note": "",
+    "date_str": "2026-04-25 18:08:19",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.3,
+    "note": "",
+    "date_str": "2026-04-25 16:21:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "",
+    "date_str": "2026-04-25 16:12:28",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-25 11:54:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-04-25 11:36:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-25 11:16:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-04-25 11:15:48",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-25 08:05:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3025.0,
+    "note": "",
+    "date_str": "2026-04-24 18:41:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-24 17:48:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-04-24 17:25:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-24 12:42:59",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "",
+    "date_str": "2026-04-24 12:32:48",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-04-24 04:06:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.0,
+    "note": "",
+    "date_str": "2026-04-24 00:38:15",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 108.0,
+    "note": "",
+    "date_str": "2026-04-24 00:23:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.0,
+    "note": "",
+    "date_str": "2026-04-23 22:49:38",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 23.8,
+    "note": "",
+    "date_str": "2026-04-23 22:30:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 13.74,
+    "note": "",
+    "date_str": "2026-04-23 18:08:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.38,
+    "note": "",
+    "date_str": "2026-04-23 17:16:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-23 15:35:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-04-23 11:47:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "",
+    "date_str": "2026-04-22 21:49:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-04-22 19:39:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-04-22 10:20:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 98.0,
+    "note": "",
+    "date_str": "2026-04-22 07:20:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 99.0,
+    "note": "",
+    "date_str": "2026-04-22 07:18:07",
+    "accountId": 1,
+    "accountName": ""
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-04-21 16:07:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.99,
+    "note": "",
+    "date_str": "2026-04-21 16:07:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-21 13:22:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-04-21 10:02:27",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.5,
+    "note": "",
+    "date_str": "2026-04-21 09:59:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-04-21 08:06:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-20 22:29:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 0.6,
+    "note": "",
+    "date_str": "2026-04-20 16:45:13",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.0,
+    "note": "",
+    "date_str": "2026-04-20 15:30:15",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-20 12:01:48",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-04-20 11:22:14",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-20 09:56:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-04-19 21:01:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-04-19 20:34:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.5,
+    "note": "",
+    "date_str": "2026-04-19 16:02:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-19 12:42:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.9,
+    "note": "",
+    "date_str": "2026-04-19 11:35:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.8,
+    "note": "",
+    "date_str": "2026-04-18 19:47:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-18 13:11:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-04-18 12:01:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.0,
+    "note": "",
+    "date_str": "2026-04-18 11:39:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-18 11:14:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "",
+    "date_str": "2026-04-18 11:06:13",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-18 07:59:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "",
+    "date_str": "2026-04-17 22:19:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.5,
+    "note": "",
+    "date_str": "2026-04-17 21:58:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-04-17 17:27:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.0,
+    "note": "",
+    "date_str": "2026-04-17 17:27:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.94,
+    "note": "",
+    "date_str": "2026-04-17 08:25:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-04-16 21:06:28",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.5,
+    "note": "",
+    "date_str": "2026-04-16 19:43:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-04-16 18:13:48",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-04-16 10:34:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 129.0,
+    "note": "",
+    "date_str": "2026-04-16 09:51:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-15 18:33:32",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 21.3,
+    "note": "",
+    "date_str": "2026-04-15 17:31:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-04-15 11:50:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.0,
+    "note": "",
+    "date_str": "2026-04-15 10:56:19",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-04-14 20:28:52",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.9,
+    "note": "",
+    "date_str": "2026-04-14 16:54:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-14 13:24:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-04-14 09:56:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-04-13 18:40:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-04-13 18:03:32",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "刷课",
+    "date_str": "2026-04-13 14:16:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-13 11:58:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-04-13 10:25:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-13 09:46:15",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-04-12 17:24:28",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.2,
+    "note": "",
+    "date_str": "2026-04-12 10:29:50",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 26.9,
+    "note": "",
+    "date_str": "2026-04-12 10:08:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-04-11 19:27:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 31.39,
+    "note": "",
+    "date_str": "2026-04-11 11:22:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.8,
+    "note": "",
+    "date_str": "2026-04-10 20:14:52",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-10 17:22:57",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 17.9,
+    "note": "",
+    "date_str": "2026-04-10 16:50:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 22.0,
+    "note": "",
+    "date_str": "2026-04-10 10:24:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-09 21:19:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.39,
+    "note": "",
+    "date_str": "2026-04-09 18:46:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.2,
+    "note": "",
+    "date_str": "2026-04-09 14:21:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-09 12:07:13",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.6,
+    "note": "",
+    "date_str": "2026-04-09 11:56:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-04-08 21:49:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-04-08 17:44:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.58,
+    "note": "",
+    "date_str": "2026-04-08 16:41:12",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-08 13:33:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-04-08 11:39:50",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.8,
+    "note": "",
+    "date_str": "2026-04-07 17:57:31",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-07 13:30:40",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-04-07 10:24:40",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-04-07 10:12:16",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-04-06 17:26:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-04-06 15:59:27",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-06 15:40:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-04-06 12:17:59",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "",
+    "date_str": "2026-04-06 12:14:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.04,
+    "note": "",
+    "date_str": "2026-04-05 21:02:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 26.7,
+    "note": "",
+    "date_str": "2026-04-05 14:59:38",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-05 12:48:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-04-05 12:36:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.3,
+    "note": "",
+    "date_str": "2026-04-05 11:57:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-04-05 10:58:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-05 10:26:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-04-04 21:04:49",
+    "accountId": 5,
+    "accountName": "现金"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-04 20:40:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-04-04 20:38:37",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-04 19:44:52",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.0,
+    "note": "",
+    "date_str": "2026-04-04 15:45:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-04 14:15:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "",
+    "date_str": "2026-04-04 12:04:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-04-04 11:37:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-04 11:14:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-04-04 11:14:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-04-04 08:00:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 100.0,
+    "note": "水卡",
+    "date_str": "2026-04-03 23:14:52",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-04-03 21:02:09",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "",
+    "date_str": "2026-04-03 19:01:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 63.9,
+    "note": "",
+    "date_str": "2026-04-03 18:35:59",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-03 17:47:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 75.0,
+    "note": "",
+    "date_str": "2026-04-03 17:39:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-04-03 10:58:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-04-03 07:53:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.5,
+    "note": "",
+    "date_str": "2026-04-02 18:05:18",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-04-02 15:48:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.05,
+    "note": "",
+    "date_str": "2026-04-02 10:29:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "",
+    "date_str": "2026-04-01 20:54:37",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.71,
+    "note": "",
+    "date_str": "2026-04-01 20:17:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.9,
+    "note": "",
+    "date_str": "2026-04-01 18:08:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.9,
+    "note": "",
+    "date_str": "2026-04-01 10:30:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-31 23:02:57",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.85,
+    "note": "",
+    "date_str": "2026-03-31 15:43:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-03-31 13:21:50",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.9,
+    "note": "",
+    "date_str": "2026-03-31 10:40:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-03-31 08:55:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-30 21:09:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-03-30 18:09:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.5,
+    "note": "",
+    "date_str": "2026-03-30 16:22:19",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-30 10:57:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.6,
+    "note": "",
+    "date_str": "2026-03-30 09:59:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-29 21:27:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-03-29 20:50:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-29 20:42:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 23.66,
+    "note": "",
+    "date_str": "2026-03-28 10:21:21",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 50.0,
+    "note": "",
+    "date_str": "2026-03-28 08:31:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-28 08:09:27",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 7.99,
+    "note": "",
+    "date_str": "2026-03-27 21:36:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 17.0,
+    "note": "",
+    "date_str": "2026-03-27 19:23:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "刷课",
+    "date_str": "2026-03-27 17:02:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 19.5,
+    "note": "",
+    "date_str": "2026-03-27 12:47:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.9,
+    "note": "",
+    "date_str": "2026-03-27 12:00:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-03-26 23:13:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.5,
+    "note": "",
+    "date_str": "2026-03-26 16:31:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-26 12:23:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.5,
+    "note": "",
+    "date_str": "2026-03-25 17:14:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.9,
+    "note": "",
+    "date_str": "2026-03-25 10:30:37",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "",
+    "date_str": "2026-03-25 08:49:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-24 19:06:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.4,
+    "note": "",
+    "date_str": "2026-03-24 18:58:57",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.9,
+    "note": "",
+    "date_str": "2026-03-24 18:21:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-24 15:00:15",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-03-24 13:01:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 16.99,
+    "note": "",
+    "date_str": "2026-03-24 11:09:32",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.9,
+    "note": "",
+    "date_str": "2026-03-24 11:04:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "洗衣机",
+    "date_str": "2026-03-23 21:46:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.8,
+    "note": "",
+    "date_str": "2026-03-23 17:58:14",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-03-23 14:08:13",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-03-23 11:53:07",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-03-23 11:18:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.2,
+    "note": "",
+    "date_str": "2026-03-22 22:46:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-03-22 18:45:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.98,
+    "note": "",
+    "date_str": "2026-03-22 18:45:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-22 15:32:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.01,
+    "note": "",
+    "date_str": "2026-03-22 10:51:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.9,
+    "note": "",
+    "date_str": "2026-03-21 17:46:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-03-21 13:07:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.99,
+    "note": "",
+    "date_str": "2026-03-21 12:28:16",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-03-21 11:42:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-03-21 11:18:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-03-21 07:59:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-03-21 07:45:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 9.49,
+    "note": "",
+    "date_str": "2026-03-20 23:01:15",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 500.0,
+    "note": "",
+    "date_str": "2026-03-20 17:59:48",
+    "accountId": 5,
+    "accountName": "现金"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-03-20 17:58:16",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-20 14:29:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.5,
+    "note": "",
+    "date_str": "2026-03-20 10:44:49",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.8,
+    "note": "",
+    "date_str": "2026-03-20 10:18:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-03-20 07:54:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 7.0,
+    "note": "",
+    "date_str": "2026-03-20 07:17:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.0,
+    "note": "",
+    "date_str": "2026-03-19 20:45:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 34.0,
+    "note": "",
+    "date_str": "2026-03-19 19:02:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-19 16:02:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-03-19 12:03:27",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-03-18 19:01:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-18 18:54:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "pbl报告",
+    "date_str": "2026-03-18 14:57:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.0,
+    "note": "",
+    "date_str": "2026-03-18 10:09:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 100.0,
+    "note": "话费",
+    "date_str": "2026-03-18 09:21:52",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 192.0,
+    "note": "",
+    "date_str": "2026-03-17 21:27:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "",
+    "date_str": "2026-03-17 20:50:49",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "",
+    "date_str": "2026-03-17 20:32:56",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-03-17 13:12:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "",
+    "date_str": "2026-03-17 11:50:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-03-17 11:29:24",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "",
+    "date_str": "2026-03-16 21:29:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-03-16 17:30:37",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "",
+    "date_str": "2026-03-16 11:54:18",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "公交",
+    "date_str": "2026-03-16 11:45:43",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 14.0,
+    "note": "",
+    "date_str": "2026-03-16 11:03:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "公交",
+    "date_str": "2026-03-16 09:52:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 91.0,
+    "note": "",
+    "date_str": "2026-03-15 20:14:14",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-03-15 18:40:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.15,
+    "note": "",
+    "date_str": "2026-03-15 18:09:50",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.9,
+    "note": "",
+    "date_str": "2026-03-15 16:17:45",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.75,
+    "note": "",
+    "date_str": "2026-03-15 12:37:48",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.5,
+    "note": "",
+    "date_str": "2026-03-15 11:41:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 43.0,
+    "note": "多又佳",
+    "date_str": "2026-03-14 20:14:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "",
+    "date_str": "2026-03-14 19:49:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-14 13:17:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "颜悦",
+    "date_str": "2026-03-14 13:11:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.9,
+    "note": "",
+    "date_str": "2026-03-14 10:23:16",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.8,
+    "note": "",
+    "date_str": "2026-03-13 17:32:19",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.9,
+    "note": "",
+    "date_str": "2026-03-13 17:26:46",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 4.8,
+    "note": "视听说",
+    "date_str": "2026-03-13 10:31:32",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-12 21:14:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.6,
+    "note": "",
+    "date_str": "2026-03-12 19:41:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.5,
+    "note": "",
+    "date_str": "2026-03-12 13:16:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "滕王阁",
+    "date_str": "2026-03-12 11:53:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-03-12 11:26:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-11 22:38:52",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 13.2,
+    "note": "",
+    "date_str": "2026-03-11 22:38:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.64,
+    "note": "",
+    "date_str": "2026-03-11 22:34:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 1.0,
+    "note": "冰露",
+    "date_str": "2026-03-11 13:08:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.96,
+    "note": "",
+    "date_str": "2026-03-11 11:45:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "细白将",
+    "date_str": "2026-03-11 11:45:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.64,
+    "note": "",
+    "date_str": "2026-03-10 16:38:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "泡面",
+    "date_str": "2026-03-10 12:16:28",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "公交",
+    "date_str": "2026-03-10 11:26:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "讲义",
+    "date_str": "2026-03-10 10:04:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.64,
+    "note": "",
+    "date_str": "2026-03-09 22:35:08",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.5,
+    "note": "蜜雪冰城",
+    "date_str": "2026-03-09 17:46:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 24.9,
+    "note": "网吧",
+    "date_str": "2026-03-09 17:45:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "公交",
+    "date_str": "2026-03-09 12:47:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 16.0,
+    "note": "排骨米饭",
+    "date_str": "2026-03-09 11:52:50",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "公交",
+    "date_str": "2026-03-09 09:45:35",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "",
+    "date_str": "2026-03-08 20:09:29",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "",
+    "date_str": "2026-03-08 17:05:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "报告册",
+    "date_str": "2026-03-08 10:56:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.64,
+    "note": "",
+    "date_str": "2026-03-08 10:46:17",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.0,
+    "note": "",
+    "date_str": "2026-03-07 17:53:02",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-03-07 16:55:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "公交",
+    "date_str": "2026-03-07 13:28:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "泡面",
+    "date_str": "2026-03-07 11:51:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "矿泉水",
+    "date_str": "2026-03-07 11:46:34",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 88.0,
+    "note": "吃饭",
+    "date_str": "2026-03-06 21:15:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "公交",
+    "date_str": "2026-03-06 18:54:01",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "煊赫门",
+    "date_str": "2026-03-06 18:41:03",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "",
+    "date_str": "2026-03-06 11:51:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.57,
+    "note": "",
+    "date_str": "2026-03-06 11:32:19",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "电动车",
+    "date_str": "2026-03-06 07:55:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 3.0,
+    "note": "饮料",
+    "date_str": "2026-03-05 18:16:51",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "兰州拉面",
+    "date_str": "2026-03-05 18:05:14",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "方便面",
+    "date_str": "2026-03-05 12:42:23",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "洗衣服",
+    "date_str": "2026-03-04 19:55:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "尖叫",
+    "date_str": "2026-03-04 19:48:13",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "炸鸡",
+    "date_str": "2026-03-04 17:41:50",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 9.0,
+    "note": "炒河粉",
+    "date_str": "2026-03-04 11:51:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 5.0,
+    "note": "尖叫",
+    "date_str": "2026-03-03 19:44:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 17.95,
+    "note": "笼王焖面",
+    "date_str": "2026-03-03 18:24:20",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 0.96,
+    "note": "",
+    "date_str": "2026-03-03 13:21:26",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 11.5,
+    "note": "泡面",
+    "date_str": "2026-03-03 12:08:58",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "公积金",
+    "subCategory": "",
+    "amount": 500.0,
+    "note": "姐",
+    "date_str": "2026-03-02 23:34:44",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 8.0,
+    "note": "打车",
+    "date_str": "2026-03-02 23:19:05",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 10.5,
+    "note": "打车",
+    "date_str": "2026-03-02 21:14:22",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 7.0,
+    "note": "矿泉水",
+    "date_str": "2026-03-02 21:05:41",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-03-02 21:05:10",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 10.0,
+    "note": "KTV",
+    "date_str": "2026-03-02 21:04:54",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 31.52,
+    "note": "",
+    "date_str": "2026-03-02 21:04:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "",
+    "date_str": "2026-03-02 17:59:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.3,
+    "note": "塔斯汀",
+    "date_str": "2026-03-02 15:41:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 6.5,
+    "note": "方便面",
+    "date_str": "2026-03-02 11:05:30",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 2.0,
+    "note": "矿泉水",
+    "date_str": "2026-03-01 17:44:33",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "",
+    "date_str": "2026-03-01 17:20:11",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 4.0,
+    "note": "",
+    "date_str": "2026-03-01 17:20:06",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 12.0,
+    "note": "腊肉拌面",
+    "date_str": "2026-03-01 13:00:15",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 7.0,
+    "note": "",
+    "date_str": "2026-03-01 12:07:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 58.24,
+    "note": "",
+    "date_str": "2026-02-28 18:49:12",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 18.0,
+    "note": "",
+    "date_str": "2026-02-28 18:48:42",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 46.37,
+    "note": "",
+    "date_str": "2026-02-27 09:00:16",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 20.0,
+    "note": "夸克网盘续费",
+    "date_str": "2026-02-26 08:08:04",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 106.96,
+    "note": "",
+    "date_str": "2026-02-26 08:07:48",
+    "accountId": 2,
+    "accountName": "支付宝"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 15.0,
+    "note": "羽毛球",
+    "date_str": "2026-02-25 14:29:00",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "娘",
+    "date_str": "2026-02-25 14:18:09",
+    "accountId": 5,
+    "accountName": "现金"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 124.42,
+    "note": "大叹号",
+    "date_str": "2026-02-24 18:56:55",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 60.0,
+    "note": "大叹号",
+    "date_str": "2026-02-24 18:56:47",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 2.07,
+    "note": "课本",
+    "date_str": "2026-02-24 08:01:53",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "报销款",
+    "subCategory": "",
+    "amount": 295.74,
+    "note": "课本",
+    "date_str": "2026-02-23 18:33:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "其他",
+    "subCategory": "",
+    "amount": 24.0,
+    "note": "烟水",
+    "date_str": "2026-02-20 16:31:25",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "转账",
+    "subCategory": "",
+    "amount": 200.0,
+    "note": "压岁",
+    "date_str": "2026-02-19 12:26:33",
+    "accountId": 5,
+    "accountName": "现金"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "公积金",
+    "subCategory": "",
+    "amount": 500.0,
+    "note": "还钱",
+    "date_str": "2026-02-17 23:08:39",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  },
+  {
+    "type": "EXPENSE",
+    "category": "应收款",
+    "subCategory": "",
+    "amount": 81.0,
+    "note": "车票",
+    "date_str": "2026-02-17 23:03:36",
+    "accountId": 1,
+    "accountName": "微信钱包"
+  }
+]
