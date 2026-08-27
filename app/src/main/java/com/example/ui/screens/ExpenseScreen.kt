@@ -776,12 +776,20 @@ fun ExpenseScreen(
                                 }
                             }
 
+                            }
 
-                    // Expandable Search Box
+
+                    // Expandable Search Box (sibling of the filter row so the button never moves)
                     AnimatedVisibility(
                         visible = showSearchInput || searchQuery.isNotBlank(),
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
+                        enter = expandVertically(
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
+                            expandFrom = Alignment.Top
+                        ) + fadeIn(tween(200)),
+                        exit = shrinkVertically(
+                            animationSpec = tween(200, easing = FastOutSlowInEasing),
+                            shrinkTowards = Alignment.Top
+                        ) + fadeOut(tween(160))
                     ) {
                         OutlinedTextField(
                             value = searchQuery,
@@ -829,7 +837,6 @@ fun ExpenseScreen(
                                 .testTag("expense_search_field")
                         )
                     }
-                            }
                         }
                     }
                 }
