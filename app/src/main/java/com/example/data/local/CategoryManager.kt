@@ -98,6 +98,11 @@ object CategoryManager {
             defaultSubcategories = listOf("进货采购", "人工支出", "材料辅料", "办公费用", "交通运输", "工程付款", "运营费", "会务费", "营销广告", "店面租金", "注册登记", "生意其他", "其他")
         ),
         CategoryItem(
+            name = "漏记款",
+            type = "EXPENSE",
+            defaultSubcategories = listOf("漏记款")
+        ),
+        CategoryItem(
             name = "资金流转",
             type = "EXPENSE",
             defaultSubcategories = listOf("应收款", "报销款", "公积金", "销售款", "退款返款", "其他")

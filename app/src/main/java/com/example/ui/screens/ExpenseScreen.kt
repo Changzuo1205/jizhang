@@ -34,6 +34,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -633,10 +636,14 @@ fun ExpenseScreen(
                 
                     Column(
                         modifier = Modifier
-                            .requiredWidth(screenWidth)
-                            .offset(x = (-16).dp)
-                            .background(stickyBgColor)
-                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth()
+                            .drawBehind {
+                                drawRect(
+                                    color = stickyBgColor,
+                                    topLeft = Offset(-16.dp.toPx(), 0f),
+                                    size = Size(size.width + 32.dp.toPx(), size.height)
+                                )
+                            }
                     ) {
                         Spacer(modifier = Modifier.statusBarsPadding())
                         
@@ -802,8 +809,8 @@ fun ExpenseScreen(
                                 Text(
                                     "搜索分类、账户、金额或备注说明...",
                                     color = bgConfig.textTertiary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    maxLines = 1
                                 )
                             },
                             singleLine = true,
