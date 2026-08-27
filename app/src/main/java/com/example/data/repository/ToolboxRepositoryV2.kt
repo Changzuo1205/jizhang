@@ -6,6 +6,7 @@ import com.example.data.local.DailyToolboxDatabase
 import com.example.data.local.TransactionType
 import com.example.data.local.entity.AccountEntityV2
 import com.example.data.local.entity.BalanceHistoryEntity
+import com.example.data.local.entity.BookEntity
 import com.example.data.local.entity.CategoryEntity
 import com.example.data.local.entity.TransactionEntity
 import com.example.model.AmountFormatter
@@ -33,6 +34,7 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
     fun observeActiveTransactions(): Flow<List<TransactionEntity>> = transactionDao.observeActive()
     fun observeActiveAccounts(): Flow<List<AccountEntityV2>> = accountDao.observeActive()
     fun observeActiveCategories(): Flow<List<CategoryEntity>> = categoryDao.observeActive()
+    fun observeActiveBooks(): Flow<List<BookEntity>> = bookDao.observeActive()
 
     /** 默认账本（记账/导入的挂靠点）；种子保证存在，缺失视为初始化异常 */
     suspend fun defaultBookId(): Long =
@@ -68,16 +70,26 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         return transactionDao.insert(entity)
     }
 
-    /** 更新旧版编辑对（old/new 均为过渡 DTO），保留行 uuid 与创建信息 */
+    /**
+     * 更新旧版编辑对（old/new 均为过渡 DTO），保留行 uuid 与创建信息。
+     * 转账类型：分类字段保持为空，以 [ExpenseSnapshot.transferToAccountId] 维护对端账户。
+     */
     suspend fun updateLegacyExpense(old: ExpenseSnapshot, new: ExpenseSnapshot) {
         val existing = transactionDao.getById(old.id) ?: return
         val txType = runCatching { TransactionType.valueOf(new.type) }.getOrDefault(existing.type)
-        val categoryId = resolveCategoryId(txType, new.category, new.subCategory)
+        val isTransfer = txType == TransactionType.TRANSFER
+        val categoryId =
+            if (isTransfer) null else resolveCategoryId(txType, new.category, new.subCategory)
+        val targetAccountId =
+            if (isTransfer && new.transferToAccountId != 0L) new.transferToAccountId
+            else if (isTransfer) existing.transferToAccountId
+            else null
         transactionDao.update(
             existing.copy(
                 type = txType,
                 amount = AmountFormatter.yuanToCents(new.amount),
                 categoryId = categoryId,
+                transferToAccountId = targetAccountId,
                 note = new.note.ifBlank { null },
                 accountId = new.accountId,
                 occurredAt = new.dateTimestamp,
@@ -89,6 +101,32 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
     /** 软删除交易 */
     suspend fun softDeleteTransaction(id: Long) {
         transactionDao.softDelete(id, System.currentTimeMillis())
+    }
+
+    /**
+     * 落一笔账户间转账：双端复用同一条记录（amount 恒为正数），
+     * 出账端为 [accountId]、入账端记入 transferToAccountId，分类置空。
+     * 余额派生公式（基准 ± Σ交易 含转账对冲）保证两端自动守恒，无需手工改余额。
+     */
+    suspend fun addTransfer(
+        fromAccountId: Long,
+        toAccountId: Long,
+        amountYuan: Double,
+        note: String?,
+        timestamp: Long = System.currentTimeMillis()
+    ): Long {
+        val entity = TransactionEntity(
+            userId = USER_ID_LOCAL,
+            bookId = defaultBookId(),
+            accountId = fromAccountId,
+            transferToAccountId = toAccountId,
+            type = TransactionType.TRANSFER,
+            amount = AmountFormatter.yuanToCents(amountYuan),
+            categoryId = null,
+            note = note?.takeIf { it.isNotBlank() },
+            occurredAt = timestamp
+        )
+        return transactionDao.insert(entity)
     }
 
     // ---------- 账户操作 ----------
@@ -142,6 +180,129 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
     suspend fun archiveAccount(accountId: Long) = accountDao.archive(accountId, System.currentTimeMillis())
 
     suspend fun getAccountById(accountId: Long): AccountEntityV2? = accountDao.getById(accountId)
+
+    // ---------- 分类管理（Phase 2 可视化维护入口） ----------
+
+    /**
+     * 新增分类：[parentName] 为空即一级分类；否则挂靠到同名一级（支出/收入内）。
+     * type 使用 "expense"/"income"（大小写不敏感）。uuid 复用种子的
+     * nameUUIDFromBytes 方案，同名同级自动去重复用既有行。
+     *
+     * @return 新插入或已存在分类的 id；参数非法（空名/父级缺失）返回 -1
+     */
+    suspend fun insertCategory(
+        parentName: String?,
+        name: String,
+        type: String,
+        colorHex: String? = null
+    ): Long = db.withTransaction {
+        val cleanName = name.trim()
+        if (cleanName.isEmpty()) return@withTransaction -1L
+        val dbType = type.trim().lowercase().ifBlank { "expense" }
+            .takeIf { it == "expense" || it == "income" } ?: return@withTransaction -1L
+
+        val parentId = if (parentName.isNullOrBlank()) {
+            null
+        } else {
+            categoryDao.findParentByName(parentName.trim(), dbType)?.id ?: return@withTransaction -1L
+        }
+
+        // 幂等：同名同级已存在（含种子内置与历史导入）直接复用
+        val existing = if (parentId != null) {
+            categoryDao.findChildByName(cleanName, parentId)
+        } else {
+            categoryDao.findParentByName(cleanName, dbType)
+        }
+        if (existing != null) return@withTransaction existing.id
+
+        val uuidSeed = if (parentId != null) {
+            "$dbType-${parentName!!.trim()}-$cleanName"
+        } else {
+            "$dbType-$cleanName"
+        }
+        categoryDao.insert(
+            CategoryEntity(
+                uuid = java.util.UUID.nameUUIDFromBytes(uuidSeed.toByteArray()).toString().replace("-", ""),
+                userId = USER_ID_LOCAL,
+                bookId = defaultBookId(),
+                name = cleanName,
+                parentId = parentId,
+                type = dbType,
+                color = colorHex?.takeIf { it.isNotBlank() },
+                sortOrder = categoryDao.count()
+            )
+        )
+    }
+
+    /** 归档分类（软删除：历史交易外键经由 SET_NULL 仍可追溯，不再物理清除） */
+    suspend fun archiveCategory(categoryId: Long) = db.withTransaction {
+        categoryDao.archive(categoryId)
+    }
+
+    /** 更新分类元信息；传 null 表示保持对应字段不变 */
+    suspend fun updateCategoryMeta(
+        categoryId: Long,
+        name: String? = null,
+        colorHex: String? = null
+    ) = db.withTransaction {
+        val row = categoryDao.getById(categoryId) ?: return@withTransaction
+        categoryDao.update(
+            row.copy(
+                name = name?.trim()?.takeIf { it.isNotEmpty() } ?: row.name,
+                color = colorHex?.takeIf { it.isNotBlank() } ?: row.color
+            )
+        )
+    }
+
+    // ---------- 账本管理（Phase 2 多账本入口） ----------
+
+    /** 观察未归档账本（默认账本置顶） */
+    fun observeBooks(): Flow<List<BookEntity>> = bookDao.observeActive()
+
+    /** 新建账本（默认挂单机用户；sortOrder 追加在队尾） */
+    suspend fun insertBook(name: String, currency: String = "CNY"): Long = db.withTransaction {
+        val cleanName = name.trim()
+        require(cleanName.isNotEmpty()) { "账本名称不能为空" }
+        bookDao.insert(
+            BookEntity(
+                uuid = java.util.UUID.randomUUID().toString().replace("-", ""),
+                userId = USER_ID_LOCAL,
+                name = cleanName,
+                currency = currency.ifBlank { "CNY" },
+                sortOrder = bookDao.count()
+            )
+        )
+    }
+
+    /** 更新账本元信息；传 null 表示保持对应字段不变 */
+    suspend fun updateBookMeta(bookId: Long, name: String? = null, currency: String? = null) =
+        db.withTransaction {
+            val row = bookDao.getById(bookId) ?: return@withTransaction
+            bookDao.update(
+                row.copy(
+                    name = name?.trim()?.takeIf { it.isNotEmpty() } ?: row.name,
+                    currency = currency?.takeIf { it.isNotBlank() } ?: row.currency,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
+
+    /** 切换默认账本：事务内先清旧默认再置位，保证任意时刻仅一个默认 */
+    suspend fun setDefaultBook(bookId: Long) = db.withTransaction {
+        val now = System.currentTimeMillis()
+        bookDao.clearDefaultFlag(now)
+        bookDao.setDefault(bookId, now)
+    }
+
+    /**
+     * 归档账本。默认账本是记账/导入的必选挂靠点，禁止归档；
+     * 归档不影响其下既有交易（外键保留），余额统计仍以交易事实为准。
+     */
+    suspend fun archiveBook(bookId: Long): Boolean = db.withTransaction {
+        if (bookDao.getDefault()?.id == bookId) return@withTransaction false
+        bookDao.archive(bookId, System.currentTimeMillis())
+        true
+    }
 
     // ---------- 内部工具 ----------
 
@@ -229,7 +390,9 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         val amount: Double,
         val note: String,
         val dateTimestamp: Long,
-        val accountId: Long
+        val accountId: Long,
+        /** 转账对端账户 id；0 表示非转账或未指定（保持原值） */
+        val transferToAccountId: Long = 0L
     )
 
     companion object {

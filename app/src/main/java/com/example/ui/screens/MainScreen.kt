@@ -42,7 +42,9 @@ import com.example.ui.viewmodel.ToolboxViewModel
 enum class ActiveSubScreen {
     NONE,
     BILL_CALENDAR,     // 账单日历视图
-    BUDGET_SETTINGS    // 预算配置管理视图
+    BUDGET_SETTINGS,   // 预算配置管理视图
+    BOOKS,             // 账本管理视图（Phase 2）
+    CATEGORIES         // 分类管理视图（Phase 2）
 }
 
 /**
@@ -87,6 +89,10 @@ fun MainScreen(
     val incomeCategoryStats by viewModel.incomeCategoryStats.collectAsState()
     val weekTrendPoints by viewModel.weekTrendPoints.collectAsState()
     val monthTrendPoints by viewModel.monthTrendPoints.collectAsState()
+
+    // Phase 2 管理页数据源
+    val books by viewModel.books.collectAsState()
+    val categories by viewModel.categories.collectAsState()
 
     val filterType by viewModel.filterType.collectAsState()
     val filterTime by viewModel.filterTime.collectAsState()
@@ -153,8 +159,8 @@ fun MainScreen(
                                 BillCalendarScreen(
                                     allExpenses = allExpenses,
                                     accounts = accounts,
-                                    onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp ->
-                                        viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp)
+                                    onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
+                                        viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
                                     },
                                     onUpdateExpense = { oldExp, newExp ->
                                         viewModel.updateExpense(oldExp, newExp)
@@ -171,6 +177,28 @@ fun MainScreen(
                                     thisMonthExpense = thisMonthExpense,
                                     onSelectPeriod = { viewModel.setActiveBudgetPeriod(it) },
                                     onUpdateBudgetLimits = { m, q, y -> viewModel.updateBudgetLimits(m, q, y) },
+                                    onBack = { activeSubScreen = ActiveSubScreen.NONE }
+                                )
+                            }
+
+                            ActiveSubScreen.BOOKS -> {
+                                BooksScreen(
+                                    books = books,
+                                    onCreateBook = { name -> viewModel.saveBook(name) },
+                                    onRenameBook = { id, name -> viewModel.updateBook(id, name) },
+                                    onSetDefaultBook = { viewModel.setDefaultBook(it) },
+                                    onArchiveBook = { viewModel.archiveBook(it) },
+                                    onBack = { activeSubScreen = ActiveSubScreen.NONE }
+                                )
+                            }
+
+                            ActiveSubScreen.CATEGORIES -> {
+                                CategoryManageScreen(
+                                    categories = categories,
+                                    onCreateCategory = { parentName, name, type ->
+                                        viewModel.addCategory(parentName, name, type)
+                                    },
+                                    onArchiveCategory = { viewModel.archiveCategory(it) },
                                     onBack = { activeSubScreen = ActiveSubScreen.NONE }
                                 )
                             }
@@ -210,8 +238,8 @@ fun MainScreen(
                                             onUpdateBudgetLimits = { m, q, y -> viewModel.updateBudgetLimits(m, q, y) },
                                             onOpenBillCalendar = { activeSubScreen = ActiveSubScreen.BILL_CALENDAR },
                                             onOpenBudgetSettings = { activeSubScreen = ActiveSubScreen.BUDGET_SETTINGS },
-                                            onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp ->
-                                                viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp)
+                                            onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
+                                                viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
                                             },
                                             onUpdateExpense = { oldExp, newExp ->
                                                 viewModel.updateExpense(oldExp, newExp)
@@ -269,7 +297,9 @@ fun MainScreen(
                                             onGenerateCsv = { viewModel.generateCsvData() },
                                             onImportCsv = { viewModel.importCsvData(it) },
                                             onUpdateExpense = { oldExp, newExp -> viewModel.updateExpense(oldExp, newExp) },
-                                            onDeleteExpense = { viewModel.deleteExpense(it) }
+                                            onDeleteExpense = { viewModel.deleteExpense(it) },
+                                            onOpenBooks = { activeSubScreen = ActiveSubScreen.BOOKS },
+                                            onOpenCategories = { activeSubScreen = ActiveSubScreen.CATEGORIES }
                                         )
                                     }
                                 }

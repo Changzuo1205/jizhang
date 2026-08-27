@@ -48,6 +48,8 @@ class AppContainerImpl(context: Context) : AppContainer {
 
         seedCompleted = applicationScope.async {
             DatabaseSeeder.seedIfEmpty(appContext, database)
+            // 独立迁移分支：老用户（库已存在）的自定义分类一次性补插，幂等标记在 seeder 内维护
+            DatabaseSeeder.importLegacyCustomCategoriesIfPending(appContext, database)
         }
     }
 

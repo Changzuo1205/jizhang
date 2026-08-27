@@ -9,6 +9,7 @@ import com.example.data.local.AccountEntity
 import com.example.data.local.ExpenseEntity
 import com.example.data.local.TransactionType
 import com.example.data.local.entity.AccountEntityV2
+import com.example.data.local.entity.BookEntity
 import com.example.data.local.entity.CategoryEntity
 import com.example.data.local.entity.TransactionEntity
 import com.example.data.repository.ToolboxRepositoryV2
@@ -143,6 +144,14 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         repository.observeActiveCategories()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** 分类表原始树（一级+二级混合平面，parentId 关联），供分类管理页自行组树 */
+    val categories: StateFlow<List<CategoryEntity>> get() = categoryRows
+
+    /** 账本观察流（默认账本置顶），供账本管理页渲染 */
+    val books: StateFlow<List<BookEntity>> =
+        repository.observeActiveBooks()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     /**
      * 过渡期映射层：TransactionEntity（分/外键）→ ExpenseEntity DTO（元/显示名）。
      * 一级分类 = 行分类或其父级；二级分类 = 子级自身；未命中落「其他」。
@@ -168,7 +177,10 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     note = tx.note.orEmpty(),
                     dateTimestamp = tx.occurredAt,
                     accountId = tx.accountId,
-                    accountName = accById[tx.accountId]?.name ?: ""
+                    accountName = accById[tx.accountId]?.name ?: "",
+                    transferToAccountId = tx.transferToAccountId ?: 0L,
+                    transferToAccountName =
+                        tx.transferToAccountId?.let { accById[it]?.name }.orEmpty()
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -776,6 +788,14 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Expense Actions
+
+    /**
+     * 记一笔账（统一入口）。
+     *
+     * [transferToAccountId] 非空且 type 为 TRANSFER 时走转账路径：
+     * 双端复用一条记录、amount 恒为正数，分类字段忽略；
+     * 否则按旧版支出/收入语义落库。
+     */
     fun addExpense(
         type: String,
         category: String,
@@ -784,19 +804,53 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         note: String,
         accountId: Long = 1L,
         accountName: String = "默认账户",
-        timestamp: Long = System.currentTimeMillis()
+        timestamp: Long = System.currentTimeMillis(),
+        transferToAccountId: Long? = null
     ) {
         viewModelScope.launch {
             seedReady.await()
-            repository.insertLegacyExpense(
-                type = type,
-                category = category,
-                subCategory = subCategory,
-                amountYuan = amount,
-                note = note,
-                accountId = accountId,
-                timestamp = timestamp
+            val isTransfer = transferToAccountId != null &&
+                (type.equals("TRANSFER", ignoreCase = true) || transferToAccountId != accountId)
+            if (isTransfer && transferToAccountId != null && transferToAccountId != accountId) {
+                repository.addTransfer(
+                    fromAccountId = accountId,
+                    toAccountId = transferToAccountId,
+                    amountYuan = amount,
+                    note = note.ifBlank { null },
+                    timestamp = timestamp
+                )
+            } else {
+                repository.insertLegacyExpense(
+                    type = type,
+                    category = category,
+                    subCategory = subCategory,
+                    amountYuan = amount,
+                    note = note,
+                    accountId = accountId,
+                    timestamp = timestamp
+                )
+            }
+        }
+    }
+
+    /** 账户间转账独立入口（弹窗「转账」Tab 直连；[onSuccess] 供 UI 关闭动画衔接） */
+    fun addTransfer(
+        fromId: Long,
+        toId: Long,
+        amountYuan: Double,
+        note: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            seedReady.await()
+            if (fromId == toId || amountYuan <= 0.0) return@launch
+            repository.addTransfer(
+                fromAccountId = fromId,
+                toAccountId = toId,
+                amountYuan = amountYuan,
+                note = note.ifBlank { null }
             )
+            onSuccess()
         }
     }
 
@@ -826,8 +880,82 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         amount = amount,
         note = note,
         dateTimestamp = dateTimestamp,
-        accountId = accountId
+        accountId = accountId,
+        transferToAccountId = transferToAccountId
     )
+
+    // ---------- 分类管理（Phase 2） ----------
+
+    /**
+     * 新增分类：[parentName] 为空即一级，否则挂靠到对应一级之下。
+     * [type] 传 "expense"/"income"（大小写不敏感）。
+     */
+    fun addCategory(
+        parentName: String?,
+        name: String,
+        type: String,
+        colorHex: String? = null,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            seedReady.await()
+            repository.insertCategory(parentName, name, type, colorHex)
+            onSuccess()
+        }
+    }
+
+    /** 归档分类（软删除语义） */
+    fun archiveCategory(categoryId: Long) {
+        viewModelScope.launch {
+            seedReady.await()
+            repository.archiveCategory(categoryId)
+        }
+    }
+
+    /** 更新分类元信息；传 null 表示保持不变 */
+    fun updateCategoryMeta(categoryId: Long, name: String? = null, colorHex: String? = null) {
+        viewModelScope.launch {
+            seedReady.await()
+            repository.updateCategoryMeta(categoryId, name, colorHex)
+        }
+    }
+
+    // ---------- 账本管理（Phase 2） ----------
+
+    /** 新建账本 */
+    fun saveBook(name: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            seedReady.await()
+            if (name.isNotBlank()) {
+                repository.insertBook(name)
+                onSuccess()
+            }
+        }
+    }
+
+    /** 重命名账本 */
+    fun updateBook(bookId: Long, name: String) {
+        viewModelScope.launch {
+            seedReady.await()
+            repository.updateBookMeta(bookId, name = name)
+        }
+    }
+
+    /** 设为默认账本（事务内先清旧默认再置位） */
+    fun setDefaultBook(bookId: Long) {
+        viewModelScope.launch {
+            seedReady.await()
+            repository.setDefaultBook(bookId)
+        }
+    }
+
+    /** 归档账本（默认账本会被 Repository 层拒绝，UI 不必预判） */
+    fun archiveBook(bookId: Long) {
+        viewModelScope.launch {
+            seedReady.await()
+            repository.archiveBook(bookId)
+        }
+    }
 
     // Account Actions
     fun addAccount(

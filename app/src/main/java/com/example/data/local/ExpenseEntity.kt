@@ -9,7 +9,7 @@ import androidx.compose.runtime.Immutable
  * （金额存分、软删除、账本/转账支持）。本类型仅作为 ViewModel→UI 的映射载体保留，
  * 字段与旧版完全一致以避免大规模 UI 改动；将在 Phase 3 视图层统一后退役。
  *
- * @property type "EXPENSE"/"INCOME"
+ * @property type "EXPENSE"/"INCOME"/"TRANSFER"
  * @property amount 元（Double，显示口径；分↔元换算统一走 AmountFormatter）
  */
 @Deprecated("过渡期 DTO：由 TransactionEntity 映射而来，Phase 3 后由 UI 模型取代")
@@ -23,5 +23,9 @@ data class ExpenseEntity(
     val note: String = "",
     val dateTimestamp: Long = System.currentTimeMillis(),
     val accountId: Long = 1L,
-    val accountName: String = "默认账户"
+    val accountName: String = "默认账户",
+    /** 转账对端账户 id（type=TRANSFER 时由映射层填充）；0 表示非转账 */
+    val transferToAccountId: Long = 0L,
+    /** 转账对端账户名（仅用于展示） */
+    val transferToAccountName: String = ""
 )

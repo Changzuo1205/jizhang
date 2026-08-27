@@ -317,7 +317,12 @@ object CategoryManager {
         }
     }
 
-    private fun getCustomSubcategoriesMap(context: Context): Map<String, List<String>> {
+    /**
+     * 读取全部「自定义二级细分」映射（分类名 → 细分列表，JSON 原始口径）。
+     * Phase 2 起由 [com.example.data.local.DatabaseSeeder] 的导入分支消费；
+     * 注意键不区分收支类型，导入时需对两端父级做归并。
+     */
+    fun getCustomSubcategoriesMap(context: Context): Map<String, List<String>> {
         val prefs = getPrefs(context)
         val result = mutableMapOf<String, List<String>>()
         try {
@@ -365,7 +370,11 @@ object CategoryManager {
         }
     }
 
-    private fun getCustomCategories(context: Context, type: String): List<CategoryItem> {
+    /**
+     * 读取指定类型下的全部用户自定义一级分类（JSON 原始口径，供 v11 迁移导入复用）。
+     * Phase 2 起由 [com.example.data.local.DatabaseSeeder] 的导入分支消费。
+     */
+    fun getCustomCategories(context: Context, type: String): List<CategoryItem> {
         val prefs = getPrefs(context)
         val list = mutableListOf<CategoryItem>()
         try {

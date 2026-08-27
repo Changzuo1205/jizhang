@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileOpen
@@ -45,6 +46,7 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.FormatPaint
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -131,6 +133,9 @@ fun MineScreen(
     onImportCsv: (String) -> Pair<Int, String>,
     onUpdateExpense: (ExpenseEntity, ExpenseEntity) -> Unit,
     onDeleteExpense: (ExpenseEntity) -> Unit,
+    // Phase 2 子页入口（MainScreen 注入；默认空实现以减小调用方改动面）
+    onOpenBooks: () -> Unit = {},
+    onOpenCategories: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -417,6 +422,30 @@ fun MineScreen(
                     subtitle = "当前：${currentColorScheme.title} (${currentColorScheme.description})",
                     onClick = { showColorDialog = true },
                     modifier = Modifier.testTag("mine_item_color_scheme")
+                )
+            }
+
+            // 7. 账本管理（Phase 2 多账本入口）
+            item {
+                MineMenuItemCard(
+                    icon = Icons.Default.MenuBook,
+                    iconColor = GlowEmerald,
+                    title = "账本管理",
+                    subtitle = "多场景账本切换 · 新建 / 设为默认 / 归档",
+                    onClick = onOpenBooks,
+                    modifier = Modifier.testTag("mine_item_books")
+                )
+            }
+
+            // 8. 分类管理（Phase 2 分类树维护入口）
+            item {
+                MineMenuItemCard(
+                    icon = Icons.Default.Category,
+                    iconColor = Color(0xFF3B82F6),
+                    title = "分类管理",
+                    subtitle = "支出/收入两级分类树 · 新增与归档",
+                    onClick = onOpenCategories,
+                    modifier = Modifier.testTag("mine_item_categories")
                 )
             }
 

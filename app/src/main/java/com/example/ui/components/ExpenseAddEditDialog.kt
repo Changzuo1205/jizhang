@@ -104,7 +104,8 @@ fun ExpenseAddEditDialog(
         note: String,
         accountId: Long,
         accountName: String,
-        timestamp: Long
+        timestamp: Long,
+        transferToAccountId: Long? // 转账目标账户；仅 type=TRANSFER 时非空
     ) -> Unit
 ) {
     val context = LocalContext.current
@@ -115,12 +116,44 @@ fun ExpenseAddEditDialog(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Segmented Type (0 = EXPENSE, 1 = INCOME)
+    // Segmented Type (0 = EXPENSE, 1 = INCOME, 2 = TRANSFER)
     var selectedTypeIndex by remember {
-        mutableIntStateOf(if (expenseToEdit?.type == "INCOME") 1 else 0)
+        mutableIntStateOf(
+            when (expenseToEdit?.type) {
+                "INCOME" -> 1
+                "TRANSFER" -> 2
+                else -> 0
+            }
+        )
     }
     val isExpense = selectedTypeIndex == 0
-    val currentType = if (isExpense) "EXPENSE" else "INCOME"
+    val isTransfer = selectedTypeIndex == 2
+    val currentType = if (selectedTypeIndex == 1) "INCOME" else "EXPENSE"
+
+    // 转账 Tab 专属的紫罗兰语义色（与分类发光映射中「转账」一致）
+    val transferColor = Color(0xFF8B5CF6)
+    val activeColor = when (selectedTypeIndex) {
+        1 -> colorScheme.incomeColor
+        2 -> transferColor
+        else -> colorScheme.expenseColor
+    }
+
+    // 转账对端账户（转入账户）；编辑既有转账回填，新建默认取与转出不同的第一个账户
+    var transferToAccountId by remember {
+        mutableLongStateOf(
+            expenseToEdit?.transferToAccountId?.takeIf { it != 0L }
+                ?: accounts.firstOrNull { it.id != (expenseToEdit?.accountId ?: accounts.firstOrNull()?.id) }?.id
+                ?: accounts.firstOrNull()?.id
+                ?: 1L
+        )
+    }
+
+    /** 更换转出端后保证对端有效且不等于转出端 */
+    fun ensureTransferTargetValid(fromId: Long) {
+        if (!accounts.any { it.id == transferToAccountId } || transferToAccountId == fromId) {
+            transferToAccountId = accounts.firstOrNull { it.id != fromId }?.id ?: fromId
+        }
+    }
 
     var categoriesRefreshKey by remember { mutableIntStateOf(0) }
     val allCategories = remember(currentType, categoriesRefreshKey, allExpenses) {
@@ -217,8 +250,6 @@ fun ExpenseAddEditDialog(
     var showCategoryPickerSheet by remember { mutableStateOf(false) }
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showAddSubCategoryDialog by remember { mutableStateOf(false) }
-
-    val activeColor = if (isExpense) colorScheme.expenseColor else colorScheme.incomeColor
 
     Dialog(onDismissRequest = onDismiss) {
         GlassCard(
@@ -322,6 +353,26 @@ fun ExpenseAddEditDialog(
                             color = if (selectedTypeIndex == 1) Color.White else bgConfig.textSecondary
                         )
                     }
+
+                    // Transfer Tab（账户间资金划转：隐藏分类，双端一条记录）
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (selectedTypeIndex == 2) transferColor else Color.Transparent)
+                            .clickable {
+                                selectedTypeIndex = 2
+                                ensureTransferTargetValid(selectedAccountId)
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "转账 (⇌)",
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectedTypeIndex == 2) Color.White else bgConfig.textSecondary
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -408,27 +459,96 @@ fun ExpenseAddEditDialog(
                     SelectorOptionCard(
                         icon = accTypeIcon,
                         iconTint = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald,
-                        label = "账户",
+                        label = if (isTransfer) "转出账户" else "账户",
                         value = accountDisplay,
                         subValue = if (selectedAccount != null) "余额 ¥${String.format(Locale.CHINA, "%,.2f", selectedAccount.balance)}" else null,
                         onClick = { showAccountPickerSheet = true }
                     )
 
-                    // Option 3: 【类别 · 细分类别】
-                    val catGlow = CategoryManager.getCategoryGlowColor(selectedCategory)
-                    val catCombinedDisplay = if (selectedSubCategory.isNotBlank()) {
-                        "$selectedCategory · $selectedSubCategory"
-                    } else {
-                        selectedCategory
+                    // 转账专属：转入账户横滑选择器（复用玻璃 Chip 样式）
+                    if (isTransfer) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "转入账户",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = bgConfig.textPrimary
+                                )
+                                if (!accounts.any { it.id == transferToAccountId && it.id != selectedAccountId }) {
+                                    Text(
+                                        text = if (accounts.size < 2) "需要至少两个不同账户" else "请选择收款账户",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFFEF4444)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                items(accounts.filter { it.id != selectedAccountId }) { acc ->
+                                    val isTargetSelected = acc.id == transferToAccountId
+                                    GlassChip(
+                                        selected = isTargetSelected,
+                                        onClick = { transferToAccountId = acc.id },
+                                        selectedGlowColor = transferColor
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = when (acc.type) {
+                                                    "WECHAT" -> Icons.Default.Payment
+                                                    "ALIPAY" -> Icons.Default.CreditCard
+                                                    "BANK_CARD", "BANK" -> Icons.Default.AccountBalance
+                                                    else -> Icons.Default.AccountBalanceWallet
+                                                },
+                                                contentDescription = null,
+                                                tint = if (isTargetSelected) {
+                                                    (if (bgConfig.isLight) Color(0xFF6D28D9) else Color.White)
+                                                } else bgConfig.textTertiary,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(5.dp))
+                                            Text(
+                                                text = acc.name,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (isTargetSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isTargetSelected) {
+                                                    (if (bgConfig.isLight) Color(0xFF6D28D9) else Color.White)
+                                                } else bgConfig.textSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    SelectorOptionCard(
-                        icon = CategoryManager.getCategoryIcon(selectedCategory),
-                        iconTint = catGlow,
-                        label = "类别·细分",
-                        value = catCombinedDisplay,
-                        onClick = { showCategoryPickerSheet = true }
-                    )
+                    // Option 3: 【类别 · 细分类别】（转账无分类语义，隐藏）
+                    if (!isTransfer) {
+                        val catGlow = CategoryManager.getCategoryGlowColor(selectedCategory)
+                        val catCombinedDisplay = if (selectedSubCategory.isNotBlank()) {
+                            "$selectedCategory · $selectedSubCategory"
+                        } else {
+                            selectedCategory
+                        }
+
+                        SelectorOptionCard(
+                            icon = CategoryManager.getCategoryIcon(selectedCategory),
+                            iconTint = catGlow,
+                            label = "类别·细分",
+                            value = catCombinedDisplay,
+                            onClick = { showCategoryPickerSheet = true }
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -459,10 +579,20 @@ fun ExpenseAddEditDialog(
 
                 // Replaced Save Button with CustomNumpad
                 val isAccountSelected = selectedAccount != null
+                val transferTargetValid = !isTransfer ||
+                    (transferToAccountId != selectedAccountId &&
+                        accounts.any { it.id == transferToAccountId })
 
                 if (!isAccountSelected && accounts.isNotEmpty()) {
                     Text(
                         text = "⚠️ 请先选择一个结算账户",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFEF4444),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                } else if (isTransfer && !transferTargetValid) {
+                    Text(
+                        text = "⚠️ " + if (accounts.size < 2) "转账需要至少两个不同账户" else "请选择与转出不同的转入账户",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFEF4444),
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -474,19 +604,24 @@ fun ExpenseAddEditDialog(
                     onExpressionChange = { amountInput = it },
                     onConfirm = {
                         val amount = amountInput.toDoubleOrNull() ?: 0.0
-                        if (amount > 0 && selectedAccount != null) {
-                            if (selectedSubCategory.isNotBlank()) {
+                        if (amount > 0 && isAccountSelected && transferTargetValid) {
+                            if (!isTransfer && selectedSubCategory.isNotBlank()) {
                                 CategoryManager.saveLastSelectedSubcategory(context, selectedCategory, selectedSubCategory)
                             }
                             onConfirm(
-                                if (isExpense) "EXPENSE" else "INCOME",
-                                selectedCategory,
-                                selectedSubCategory,
+                                when (selectedTypeIndex) {
+                                    1 -> "INCOME"
+                                    2 -> "TRANSFER"
+                                    else -> "EXPENSE"
+                                },
+                                if (isTransfer) "" else selectedCategory,
+                                if (isTransfer) "" else selectedSubCategory,
                                 amount,
                                 noteInput.trim(),
                                 selectedAccount!!.id,
                                 selectedAccount!!.name,
-                                selectedTimestamp
+                                selectedTimestamp,
+                                if (isTransfer) transferToAccountId else null
                             )
                         }
                     },
@@ -517,6 +652,7 @@ fun ExpenseAddEditDialog(
             onDismiss = { showAccountPickerSheet = false },
             onSelectAccount = { acc ->
                 selectedAccountId = acc.id
+                if (isTransfer) ensureTransferTargetValid(acc.id)
                 showAccountPickerSheet = false
             }
         )

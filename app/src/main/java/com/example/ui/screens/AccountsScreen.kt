@@ -950,11 +950,11 @@ fun AddOrEditAccountDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Current Balance
+                // Current Balance（v2 语义：此处输入的是基准余额 initial_balance，实时余额由交易派生）
                 OutlinedTextField(
                     value = balanceInput,
                     onValueChange = { balanceInput = it },
-                    label = { Text("账户当前余额 (¥)", color = bgConfig.textSecondary) },
+                    label = { Text("基准余额 (¥)", color = bgConfig.textSecondary) },
                     placeholder = { Text("0.00 (负数代表信用卡已透支)", color = bgConfig.textTertiary) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

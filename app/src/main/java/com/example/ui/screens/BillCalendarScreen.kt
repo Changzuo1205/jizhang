@@ -80,7 +80,7 @@ import java.util.Locale
 fun BillCalendarScreen(
     allExpenses: List<ExpenseEntity>,
     accounts: List<AccountEntity>,
-    onAddExpense: (type: String, category: String, subCategory: String, amount: Double, note: String, accountId: Long, accountName: String, timestamp: Long) -> Unit,
+    onAddExpense: (type: String, category: String, subCategory: String, amount: Double, note: String, accountId: Long, accountName: String, timestamp: Long, transferToAccountId: Long?) -> Unit,
     onUpdateExpense: (ExpenseEntity, ExpenseEntity) -> Unit,
     onDeleteExpense: (ExpenseEntity) -> Unit,
     onBack: () -> Unit,
@@ -798,8 +798,8 @@ fun BillCalendarScreen(
             accounts = accounts,
             initialTimestamp = presetTimestamp,
             onDismiss = { showAddDialog = false },
-            onConfirm = { type, category, subCategory, amount, note, accountId, accountName, timestamp ->
-                onAddExpense(type, category, subCategory, amount, note, accountId, accountName, timestamp)
+            onConfirm = { type, category, subCategory, amount, note, accountId, accountName, timestamp, transferToAccountId ->
+                onAddExpense(type, category, subCategory, amount, note, accountId, accountName, timestamp, transferToAccountId)
                 showAddDialog = false
             }
         )
@@ -812,7 +812,7 @@ fun BillCalendarScreen(
             accounts = accounts,
             initialTimestamp = expenseToEdit!!.dateTimestamp,
             onDismiss = { expenseToEdit = null },
-            onConfirm = { type, category, subCategory, amount, note, accountId, accountName, timestamp ->
+            onConfirm = { type, category, subCategory, amount, note, accountId, accountName, timestamp, transferToAccountId ->
                 onUpdateExpense(
                     expenseToEdit!!,
                     expenseToEdit!!.copy(
@@ -823,7 +823,8 @@ fun BillCalendarScreen(
                         note = note,
                         accountId = accountId,
                         accountName = accountName,
-                        dateTimestamp = timestamp
+                        dateTimestamp = timestamp,
+                        transferToAccountId = transferToAccountId ?: 0L
                     )
                 )
                 expenseToEdit = null
