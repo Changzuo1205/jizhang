@@ -36,12 +36,23 @@ import com.example.ui.theme.LocalAppColorScheme
 import com.example.ui.theme.LocalAppFontScale
 import com.example.ui.viewmodel.ToolboxViewModel
 
+/**
+ * 次级全屏页面路由枚举
+ */
 enum class ActiveSubScreen {
     NONE,
-    BILL_CALENDAR,
-    BUDGET_SETTINGS
+    BILL_CALENDAR,     // 账单日历视图
+    BUDGET_SETTINGS    // 预算配置管理视图
 }
 
+/**
+ * 应用程序根级 Composable 容器 (MainScreen)
+ *
+ * 核心架构特性：
+ * 1. 提供 CompositionLocal 注入全局主题色、字体缩放因子与动态壁纸配置。
+ * 2. 管理底部四大主 Tab（首页、账户、图表统计、我的）与次级全屏子页面（账单日历、预算设置）之间的平滑转场切换。
+ * 3. 承载悬浮半透明玻璃态底部导航栏 ([GlassBottomNavBar])。
+ */
 @Composable
 fun MainScreen(
     viewModel: ToolboxViewModel,

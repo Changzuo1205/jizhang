@@ -37,6 +37,14 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
 
+/**
+ * 记账分类数据模型
+ *
+ * @property name 分类名称（如："餐饮"、"交通"、"购物"）
+ * @property type 分类所属类型："EXPENSE" (支出) 或 "INCOME" (收入)
+ * @property defaultSubcategories 该分类下的默认二级子分类列表
+ * @property isCustom 是否为用户自定义添加的分类
+ */
 data class CategoryItem(
     val name: String,
     val type: String = "EXPENSE", // "EXPENSE" or "INCOME"
@@ -44,13 +52,19 @@ data class CategoryItem(
     val isCustom: Boolean = false
 )
 
+/**
+ * 记账分类管理器 (单例)
+ *
+ * 集中管理系统预置的一级分类、二级子分类、用户自定义分类扩展、
+ * 智能餐饮按时段推荐（早/中/晚/夜宵）、记忆上次选择，以及分类图标与发光色彩映射。
+ */
 object CategoryManager {
     private const val PREFS_NAME = "category_preferences"
     private const val KEY_CUSTOM_CATEGORIES = "custom_categories_v1"
     private const val KEY_CUSTOM_SUBCATEGORIES = "custom_subcategories_v1"
     private const val KEY_LAST_SELECTED_SUBCAT = "last_selected_subcategories_v1"
 
-    // 1. Built-in Expense Categories & Subcategories as explicitly specified
+    // 1. 系统预置支出一级分类及二级分类
     val DEFAULT_EXPENSE_CATEGORIES = listOf(
         CategoryItem(
             name = "餐饮",
@@ -114,7 +128,7 @@ object CategoryManager {
         )
     )
 
-    // 2. Built-in Income Categories & Subcategories
+    // 2. 系统预置收入一级分类及二级分类
     val DEFAULT_INCOME_CATEGORIES = listOf(
         CategoryItem(name = "工资薪水", type = "INCOME", defaultSubcategories = listOf("其他")),
         CategoryItem(name = "利息", type = "INCOME", defaultSubcategories = listOf("其他")),
@@ -147,11 +161,11 @@ object CategoryManager {
     }
 
     /**
-     * Get default meal subcategory for 餐饮 based on time of day:
-     * 04:00 - 10:00 -> 早餐
-     * 10:00 - 16:30 -> 午餐
-     * 16:30 - 20:30 -> 晚餐
-     * 20:30 - 04:00 -> 宵夜
+     * 根据当前具体时间，智能推荐餐饮二级分类：
+     * - 04:00 - 10:00 -> 早餐
+     * - 10:00 - 16:30 -> 午餐
+     * - 16:30 - 20:30 -> 晚餐
+     * - 20:30 - 次日04:00 -> 宵夜
      */
     fun getTimeBasedDiningSubcategory(timestamp: Long = System.currentTimeMillis()): String {
         val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
@@ -168,8 +182,7 @@ object CategoryManager {
     }
 
     /**
-     * Get list of all categories for given type (including custom ones).
-     * Custom categories are placed before "其他", keeping "其他" at the very end.
+     * 获取指定类型（支出/收入）下的全部一级分类列表（含用户自定义分类），并保证“其他”始终固定置底
      */
     fun getCategories(context: Context, type: String): List<CategoryItem> {
         val defaultList = if (type == "EXPENSE") DEFAULT_EXPENSE_CATEGORIES else DEFAULT_INCOME_CATEGORIES
@@ -187,15 +200,14 @@ object CategoryManager {
     }
 
     /**
-     * Get all subcategories for a given category name (built-in + custom additions).
-     * Custom subcategories are placed before "其他", keeping "其他" at the very end.
+     * 获取指定分类下的全部二级细分列表（合并预置与自定义扩展），保证“其他”置底
      */
     fun getSubcategories(context: Context, categoryName: String, type: String): List<String> {
         val allCats = getCategories(context, type)
         val matched = allCats.find { it.name == categoryName }
         val baseSubs = matched?.defaultSubcategories ?: listOf("其他")
 
-        // Merge custom subcategories added to this category
+        // 合并用户针对该分类扩展的自定义子分类
         val customSubsMap = getCustomSubcategoriesMap(context)
         val extraSubs = customSubsMap[categoryName] ?: emptyList()
 
@@ -210,9 +222,9 @@ object CategoryManager {
     }
 
     /**
-     * Get default subcategory for a category:
-     * - For 餐饮: dynamically calculated based on current time (早餐/午餐/晚餐/宵夜) unless user previously chose a specific subcategory or during fresh creation
-     * - For others: uses the latest chosen subcategory, or falls back to the first available subcategory
+     * 智能计算默认选中的二级分类：
+     * - 餐饮分类：新建时按当前时间段智能推荐（早餐/午餐/晚餐/夜宵）
+     * - 其余分类：优先使用用户上次选择的历史偏好，若无则回退至该分类的首个二级项
      */
     fun getDefaultSubcategory(
         context: Context,
@@ -231,13 +243,12 @@ object CategoryManager {
             }
         }
 
-        // Check if there is a recorded latest selection
+        // 检查是否有最近的历史偏好记录
         val lastSelected = getLastSelectedSubcategory(context, categoryName)
         if (lastSelected.isNotBlank() && subcategories.contains(lastSelected)) {
             return lastSelected
         }
 
-        // If 餐饮 and no previous selection, return time-based meal
         if (categoryName == "餐饮" && type == "EXPENSE") {
             val timeMeal = getTimeBasedDiningSubcategory(timestamp)
             if (subcategories.contains(timeMeal)) return timeMeal
@@ -247,7 +258,7 @@ object CategoryManager {
     }
 
     /**
-     * Save the last selected subcategory for a category
+     * 保存用户对特定分类最后选中的二级子分类
      */
     fun saveLastSelectedSubcategory(context: Context, categoryName: String, subcategory: String) {
         if (categoryName.isBlank() || subcategory.isBlank()) return
@@ -262,6 +273,9 @@ object CategoryManager {
         }
     }
 
+    /**
+     * 读取用户对特定分类最后选中的二级子分类
+     */
     fun getLastSelectedSubcategory(context: Context, categoryName: String): String {
         val prefs = getPrefs(context)
         return try {
@@ -274,7 +288,7 @@ object CategoryManager {
     }
 
     /**
-     * Add a custom subcategory to an existing or custom category
+     * 为已有或自定义分类动态追加自定义二级分类
      */
     fun addCustomSubcategory(context: Context, categoryName: String, newSubcategory: String) {
         val cleanName = newSubcategory.trim()
@@ -296,7 +310,7 @@ object CategoryManager {
                 json.put(categoryName, array)
                 prefs.edit().putString(KEY_CUSTOM_SUBCATEGORIES, json.toString()).apply()
             }
-            // Automatically set as last selected
+            // 自动设为当前分类的首选偏好
             saveLastSelectedSubcategory(context, categoryName, cleanName)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -326,7 +340,7 @@ object CategoryManager {
     }
 
     /**
-     * Add a custom Major Category with optional initial subcategories
+     * 添加自定义一级大分类
      */
     fun addCustomCategory(context: Context, name: String, type: String, subcategories: List<String>) {
         val cleanName = name.trim()
@@ -377,6 +391,9 @@ object CategoryManager {
         return list
     }
 
+    /**
+     * 根据分类名称智能匹配 Material Design 图标矢量资源
+     */
     fun getCategoryIcon(category: String): ImageVector {
         return when {
             category.contains("餐饮") || category.contains("早餐") || category.contains("午餐") || category.contains("晚餐") || category.contains("宵夜") || category.contains("美食") -> Icons.Default.Restaurant
@@ -398,6 +415,9 @@ object CategoryManager {
         }
     }
 
+    /**
+     * 根据分类名称智能匹配赛博朋克/极光玻璃风格的发光主题色彩 (Glow Color)
+     */
     fun getCategoryGlowColor(category: String): Color {
         return when {
             category.contains("餐饮") -> GlowAmber
@@ -419,3 +439,4 @@ object CategoryManager {
         }
     }
 }
+

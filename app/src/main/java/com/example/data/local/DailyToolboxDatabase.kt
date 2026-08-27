@@ -8,19 +8,36 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * 记账工具核心 Room 本地数据库
+ *
+ * 维护系统内部两个关键核心数据表：
+ * 1. [ExpenseEntity] - 记账交易明细表 (expenses)
+ * 2. [AccountEntity] - 资产账户表 (accounts)
+ *
+ * 具备双重单例保障与开箱即用的自动数据初始化机制 (Auto Pre-population)。
+ */
 @Database(
     entities = [ExpenseEntity::class, AccountEntity::class],
     version = 10,
     exportSchema = false
 )
 abstract class DailyToolboxDatabase : RoomDatabase() {
+    /** 交易明细 DAO */
     abstract fun expenseDao(): ExpenseDao
+    /** 资产账户 DAO */
     abstract fun accountDao(): AccountDao
 
     companion object {
         @Volatile
         private var INSTANCE: DailyToolboxDatabase? = null
 
+        /**
+         * 获取单例数据库实例 (线程安全 Double-checked Locking)
+         *
+         * @param context 应用程序 Context
+         * @param scope 用于后台异步执行预置数据初始化的 CoroutineScope
+         */
         fun getDatabase(context: Context, scope: CoroutineScope): DailyToolboxDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -30,7 +47,7 @@ abstract class DailyToolboxDatabase : RoomDatabase() {
                 ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 
-                // Ensure initial data is populated if database is empty
+                // 确保在冷启动或首次安装时，异步安全检查并批量灌入预置账目与账户数据
                 scope.launch(Dispatchers.IO) {
                     populateIfEmpty(context.applicationContext, instance)
                 }
@@ -39,8 +56,12 @@ abstract class DailyToolboxDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * 检测数据库是否为空；若为空，则从 assets/initial_expenses.json 读取预置历史账目并初始化资产账户
+         */
         private suspend fun populateIfEmpty(context: Context, db: DailyToolboxDatabase) {
             try {
+                // 1. 初始化 8 个默认资产账户
                 val accountCount = db.accountDao().getAccountCount()
                 if (accountCount == 0) {
                     val accounts = listOf(
@@ -56,6 +77,7 @@ abstract class DailyToolboxDatabase : RoomDatabase() {
                     db.accountDao().insertAccounts(accounts)
                 }
 
+                // 2. 批量解析并写入历史初始账目数据 (800+ 笔真实历史收支)
                 val expenseCount = db.expenseDao().getExpenseCount()
                 if (expenseCount == 0) {
                     val jsonString = context.assets.open("initial_expenses.json").bufferedReader().use { it.readText() }
@@ -92,3 +114,4 @@ abstract class DailyToolboxDatabase : RoomDatabase() {
         }
     }
 }
+

@@ -26,6 +26,15 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+/**
+ * 分类消费/收入统计汇总模型
+ *
+ * @property category 分类名称
+ * @property totalAmount 该分类总计金额
+ * @property count 交易笔数
+ * @property percentage 占总收支的比例 (0.0 ~ 1.0)
+ * @property type "EXPENSE" 或 "INCOME"
+ */
 data class CategoryStat(
     val category: String,
     val totalAmount: Double,
@@ -34,6 +43,14 @@ data class CategoryStat(
     val type: String
 )
 
+/**
+ * 趋势折线图/柱状图数据点模型
+ *
+ * @property label X 轴标签（如："08/21"、"周三"、"8月"）
+ * @property expense 当期支出总额
+ * @property income 当期收入总额
+ * @property timestamp 时间点时间戳
+ */
 data class TrendPoint(
     val label: String,
     val expense: Double,
@@ -41,12 +58,18 @@ data class TrendPoint(
     val timestamp: Long
 )
 
+/**
+ * 预算统计周期枚举
+ */
 enum class BudgetPeriod(val title: String, val shortName: String) {
     MONTH("月度", "月"),
     QUARTER("季度", "季"),
     YEAR("年度", "年")
 }
 
+/**
+ * 预算配置参数模型
+ */
 data class BudgetConfig(
     val monthlyLimit: Double = 5000.0,
     val quarterlyLimit: Double = 15000.0,
@@ -54,6 +77,9 @@ data class BudgetConfig(
     val activePeriod: BudgetPeriod = BudgetPeriod.MONTH
 )
 
+/**
+ * 预算执行进度与预警信息
+ */
 data class BudgetProgressInfo(
     val period: BudgetPeriod,
     val budgetLimit: Double,
@@ -66,7 +92,16 @@ data class BudgetProgressInfo(
     val remainingDays: Int = 1
 )
 
-
+/**
+ * 核心业务 ViewModel (ToolboxViewModel)
+ *
+ * 聚合应用全部状态与业务流：
+ * 1. 记账 CRUD、日历筛选、月份筛选、类型过滤、模糊搜索。
+ * 2. 资产账户余额联动计算、净资产/总负债/正资产聚合。
+ * 3. 月度/季度/年度预算监控与超支智能预警、每日建议可支配预算推算。
+ * 4. 统计图表（饼图扇区占比、周/月/年收支趋势折线）流式派生计算。
+ * 5. 全局个性化设置（6大主题色、5大背景壁纸体系、字体缩放大小）持久化。
+ */
 class ToolboxViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: ToolboxRepository
 

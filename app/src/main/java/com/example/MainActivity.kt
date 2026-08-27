@@ -16,6 +16,15 @@ import com.example.ui.screens.MainScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.ToolboxViewModel
 
+/**
+ * 应用程序主入口 Activity
+ *
+ * 核心职责：
+ * 1. 开启沉浸式 Edge-to-Edge 视觉渲染。
+ * 2. 注入全局 [ToolboxViewModel] 实例。
+ * 3. 根据壁纸方案（深色/浅色），动态自适应状态栏与导航栏文字图标对比度。
+ * 4. 挂载 [MainScreen] 核心主页面。
+ */
 class MainActivity : ComponentActivity() {
     private val viewModel: ToolboxViewModel by viewModels()
 
@@ -25,7 +34,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val bgConfig by viewModel.backgroundConfig.collectAsState()
 
-            // Dynamic status bar and nav bar icon color adaptation
+            // 动态适配系统状态栏和底部导航栏的文字/图标色彩
             DisposableEffect(bgConfig.isLight) {
                 val insetsController = WindowCompat.getInsetsController(window, window.decorView)
                 insetsController.isAppearanceLightStatusBars = bgConfig.isLight
