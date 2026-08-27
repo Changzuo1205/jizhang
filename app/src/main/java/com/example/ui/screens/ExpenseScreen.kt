@@ -1240,6 +1240,10 @@ fun GlassExpenseItemCard(
     }
 }
 
+/**
+ * [已废弃] 无调用方，Phase 4 清理候选。
+ */
+@Deprecated("无调用方，Phase 4 清理候选")
 @Composable
 fun GlassAddOrEditExpenseDialog(
     expenseToEdit: ExpenseEntity?,
@@ -1519,7 +1523,7 @@ fun GlassAddOrEditExpenseDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(accounts) { acc ->
+                        items(accounts, key = { it.id }) { acc ->
                             val isSelected = acc.id == selectedAccountId
                             GlassChip(
                                 selected = isSelected,
@@ -1585,7 +1589,7 @@ fun GlassAddOrEditExpenseDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(accounts.filter { it.id != selectedAccountId }) { acc ->
+                        items(accounts.filter { it.id != selectedAccountId }, key = { it.id }) { acc ->
                             val isTargetSelected = acc.id == transferToAccountId
                             GlassChip(
                                 selected = isTargetSelected,
@@ -1650,7 +1654,7 @@ fun GlassAddOrEditExpenseDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(allCategories) { catItem ->
+                    items(allCategories, key = { it.name }) { catItem ->
                         val isSelected = selectedCategory == catItem.name
                         val catGlow = getCategoryGlowColor(catItem.name)
                         GlassChip(
@@ -1717,7 +1721,7 @@ fun GlassAddOrEditExpenseDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(currentSubcategories) { sub ->
+                    items(currentSubcategories, key = { it }) { sub ->
                         val isSelected = selectedSubCategory == sub
                         val catGlow = getCategoryGlowColor(selectedCategory)
                         GlassChip(

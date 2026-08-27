@@ -12,6 +12,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -24,7 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -853,6 +854,7 @@ fun AccountCardItem(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddOrEditAccountDialog(
     accountToEdit: AccountEntity?,
@@ -1061,11 +1063,14 @@ fun AddOrEditAccountDialog(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
-                LazyRow(
+                // 账户类型 Chip：条目固定有限，改用 FlowRow 平铺换行，
+                // 消除外层可滚动 Column 内嵌套 Lazy 横向滚动容器的嵌套滚动反模式
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(accountTypes) { (typeKey, typeLabel) ->
+                    accountTypes.forEach { (typeKey, typeLabel) ->
                         val isSelected = selectedType == typeKey
                         GlassChip(
                             selected = isSelected,

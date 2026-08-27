@@ -670,16 +670,16 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     )
 
 
-    // Account Asset Aggregations
-    val totalNetAssets: StateFlow<Double> = allAccounts.combine(allAccounts) { accounts, _ ->
+    // Account Asset Aggregations（单数据源聚合，直接 map 计算，无需冗余 combine）
+    val totalNetAssets: StateFlow<Double> = allAccounts.map { accounts ->
         accounts.sumOf { it.balance }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val totalPositiveAssets: StateFlow<Double> = allAccounts.combine(allAccounts) { accounts, _ ->
+    val totalPositiveAssets: StateFlow<Double> = allAccounts.map { accounts ->
         accounts.filter { it.balance > 0 }.sumOf { it.balance }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val totalDebts: StateFlow<Double> = allAccounts.combine(allAccounts) { accounts, _ ->
+    val totalDebts: StateFlow<Double> = allAccounts.map { accounts ->
         accounts.filter { it.balance < 0 }.sumOf { -it.balance }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 

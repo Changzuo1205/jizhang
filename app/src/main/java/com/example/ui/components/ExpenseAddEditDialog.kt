@@ -492,7 +492,7 @@ fun ExpenseAddEditDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                items(accounts.filter { it.id != selectedAccountId }) { acc ->
+                                items(accounts.filter { it.id != selectedAccountId }, key = { it.id }) { acc ->
                                     val isTargetSelected = acc.id == transferToAccountId
                                     GlassChip(
                                         selected = isTargetSelected,
@@ -1119,7 +1119,7 @@ private fun AccountPickerSheet(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(accounts) { acc ->
+                        items(accounts, key = { it.id }) { acc ->
                             val isSelected = acc.id == selectedAccountId
                             val accIcon = when (acc.type) {
                                 "WECHAT" -> Icons.Default.Payment
@@ -1290,7 +1290,7 @@ private fun CategoryPickerSheet(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(allCategories) { cat ->
+                    items(allCategories, key = { it.name }) { cat ->
                         val isSelected = tempMajorCategory == cat.name
                         val catGlow = CategoryManager.getCategoryGlowColor(cat.name)
                         GlassChip(

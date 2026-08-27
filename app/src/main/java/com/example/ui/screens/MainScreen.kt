@@ -20,7 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,39 +64,39 @@ fun MainScreen(
     var activeSubScreen by remember { mutableStateOf(ActiveSubScreen.NONE) }
     var triggerAddExpenseInHome by remember { mutableStateOf(false) }
 
-    val colorScheme by viewModel.colorScheme.collectAsState()
-    val fontScale by viewModel.fontScale.collectAsState()
-    val backgroundConfig by viewModel.backgroundConfig.collectAsState()
+    val colorScheme by viewModel.colorScheme.collectAsStateWithLifecycle()
+    val fontScale by viewModel.fontScale.collectAsStateWithLifecycle()
+    val backgroundConfig by viewModel.backgroundConfig.collectAsStateWithLifecycle()
 
     // Data States
-    val expenses by viewModel.filteredExpenses.collectAsState()
-    val allExpenses by viewModel.allExpenses.collectAsState()
-    val accounts by viewModel.allAccounts.collectAsState()
+    val expenses by viewModel.filteredExpenses.collectAsStateWithLifecycle()
+    val allExpenses by viewModel.allExpenses.collectAsStateWithLifecycle()
+    val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
 
-    val totalExpense by viewModel.totalExpense.collectAsState()
-    val totalIncome by viewModel.totalIncome.collectAsState()
-    val todayExpense by viewModel.todayExpense.collectAsState()
-    val thisMonthExpense by viewModel.thisMonthExpense.collectAsState()
-    val thisMonthIncome by viewModel.thisMonthIncome.collectAsState()
-    val budgetConfig by viewModel.budgetConfig.collectAsState()
-    val budgetProgress by viewModel.budgetProgress.collectAsState()
+    val totalExpense by viewModel.totalExpense.collectAsStateWithLifecycle()
+    val totalIncome by viewModel.totalIncome.collectAsStateWithLifecycle()
+    val todayExpense by viewModel.todayExpense.collectAsStateWithLifecycle()
+    val thisMonthExpense by viewModel.thisMonthExpense.collectAsStateWithLifecycle()
+    val thisMonthIncome by viewModel.thisMonthIncome.collectAsStateWithLifecycle()
+    val budgetConfig by viewModel.budgetConfig.collectAsStateWithLifecycle()
+    val budgetProgress by viewModel.budgetProgress.collectAsStateWithLifecycle()
 
-    val totalNetAssets by viewModel.totalNetAssets.collectAsState()
-    val totalPositiveAssets by viewModel.totalPositiveAssets.collectAsState()
-    val totalDebts by viewModel.totalDebts.collectAsState()
+    val totalNetAssets by viewModel.totalNetAssets.collectAsStateWithLifecycle()
+    val totalPositiveAssets by viewModel.totalPositiveAssets.collectAsStateWithLifecycle()
+    val totalDebts by viewModel.totalDebts.collectAsStateWithLifecycle()
 
-    val categoryStats by viewModel.categoryStats.collectAsState()
-    val incomeCategoryStats by viewModel.incomeCategoryStats.collectAsState()
-    val weekTrendPoints by viewModel.weekTrendPoints.collectAsState()
-    val monthTrendPoints by viewModel.monthTrendPoints.collectAsState()
+    val categoryStats by viewModel.categoryStats.collectAsStateWithLifecycle()
+    val incomeCategoryStats by viewModel.incomeCategoryStats.collectAsStateWithLifecycle()
+    val weekTrendPoints by viewModel.weekTrendPoints.collectAsStateWithLifecycle()
+    val monthTrendPoints by viewModel.monthTrendPoints.collectAsStateWithLifecycle()
 
     // Phase 2 管理页数据源
-    val books by viewModel.books.collectAsState()
-    val categories by viewModel.categories.collectAsState()
+    val books by viewModel.books.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
 
-    val filterType by viewModel.filterType.collectAsState()
-    val filterTime by viewModel.filterTime.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val filterType by viewModel.filterType.collectAsStateWithLifecycle()
+    val filterTime by viewModel.filterTime.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     // Dynamic scaled typography based on fontScale setting
     val baseTypography = MaterialTheme.typography

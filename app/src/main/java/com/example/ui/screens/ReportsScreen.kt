@@ -903,7 +903,7 @@ fun ReportsScreen(
                     }
                 }
             } else {
-                items(activeColoredCategoryStats) { item ->
+                items(activeColoredCategoryStats, key = { it.stat.category }) { item ->
                     val stat = item.stat
                     val color = item.color
                     GlassCard(

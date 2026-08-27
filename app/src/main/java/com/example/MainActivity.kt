@@ -8,7 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val bgConfig by viewModel.backgroundConfig.collectAsState()
+            val bgConfig by viewModel.backgroundConfig.collectAsStateWithLifecycle()
 
             // 动态适配系统状态栏和底部导航栏的文字/图标色彩
             DisposableEffect(bgConfig.isLight) {
