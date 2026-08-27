@@ -180,7 +180,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     accountName = accById[tx.accountId]?.name ?: "",
                     transferToAccountId = tx.transferToAccountId ?: 0L,
                     transferToAccountName =
-                        tx.transferToAccountId?.let { accById[it]?.name }.orEmpty()
+                        tx.transferToAccountId?.let { accById[it]?.name }.orEmpty(),
+                    uuid = tx.uuid
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -1005,19 +1006,40 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     }
 
     // Generate CSV data for export
+    /**
+     * v2 版本化导出：首列为格式版本号，导入端据此分派定位解析器。
+     * 列序：v2,uuid,日期时间,类型,一级分类,二级分类,账户,对方账户,金额(元),备注,状态
+     * 注：allExpenses 为未删除流，状态恒「有效」；导出已删除数据属回收站功能范围。
+     */
     fun generateCsvData(): String {
         val list = allExpenses.value
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
         val sb = StringBuilder()
-        sb.append("ID,日期时间,收支类型,一级分类,二级细分,账户,金额(元),备注说明\n")
+        sb.append("v2,uuid,日期时间,类型,一级分类,二级分类,账户,对方账户,金额(元),备注,状态\n")
+        fun esc(raw: String): String =
+            "\"" + raw.replace(",", "，").replace("\"", "'") + "\""
         list.forEach { item ->
             val dateStr = sdf.format(Date(item.dateTimestamp))
-            val typeStr = if (item.type == "EXPENSE") "支出" else "收入"
-            val safeNote = item.note.replace(",", "，").replace("\"", "'")
-            val safeAccount = item.accountName.replace(",", "，")
-            val safeCat = item.category.replace(",", "，")
-            val safeSubCat = item.subCategory.replace(",", "，")
-            sb.append("${item.id},\"$dateStr\",$typeStr,\"$safeCat\",\"$safeSubCat\",\"$safeAccount\",${String.format(Locale.US, "%.2f", item.amount)},\"$safeNote\"\n")
+            val typeStr = when (item.type) {
+                "INCOME" -> "收入"
+                "TRANSFER" -> "转账"
+                else -> "支出"
+            }
+            sb.append(
+                listOf(
+                    "v2",
+                    esc(item.uuid),
+                    esc(dateStr),
+                    typeStr,
+                    esc(item.category),
+                    esc(item.subCategory),
+                    esc(item.accountName),
+                    esc(item.transferToAccountName),
+                    String.format(Locale.US, "%.2f", item.amount),
+                    esc(item.note),
+                    "有效"
+                ).joinToString(",") + "\n"
+            )
         }
         return sb.toString()
     }
@@ -1114,9 +1136,27 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                 var accountName = "默认账户"
                 var amount = 0.0
                 var note = ""
+                var transferToAccountId: Long? = null
 
                 try {
-                    if (tokens.size >= 8) {
+                    if (tokens.size >= 11 && tokens[0].equals("v2", ignoreCase = true)) {
+                        // v2 定位解析：v2,uuid,日期时间,类型,一级,二级,账户,对方账户,金额,备注,状态
+                        dateTimestamp = parseTimestamp(tokens[2])
+                        type = when {
+                            tokens[3].contains("收") || tokens[3].equals("INCOME", ignoreCase = true) -> "INCOME"
+                            tokens[3].contains("转") || tokens[3].equals("TRANSFER", ignoreCase = true) -> "TRANSFER"
+                            else -> "EXPENSE"
+                        }
+                        category = tokens[4].ifBlank { "其他" }
+                        subCategory = tokens[5]
+                        accountName = tokens[6].ifBlank { "默认账户" }
+                        amount = tokens[8].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                        note = tokens[9]
+                        if ((tokens[10]).contains("删")) {
+                            // v2 导出的均为有效行；若手工置为已删除则跳过导入
+                            continue
+                        }
+                    } else if (tokens.size >= 8) {
                         // ID, 日期时间, 收支类型, 一级分类, 二级细分, 账户, 金额, 备注
                         dateTimestamp = parseTimestamp(tokens[1])
                         type = if (tokens[2].contains("收") || tokens[2].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
@@ -1180,6 +1220,13 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     val accId = matchedAcc?.id ?: 1L
                     val safeAccName = matchedAcc?.name ?: accountName
 
+                    if (type == "TRANSFER") {
+                        // 对端账户按名称回查 id；找不到则放弃本行
+                        val targetId = currentAccounts.find { it.name.equals(tokens.getOrNull(7)?.trim() ?: "", ignoreCase = true) }?.id
+                        if (targetId == null || targetId == accId) continue
+                        transferToAccountId = targetId
+                    }
+
                     repository.insertLegacyExpense(
                         type = type,
                         category = category,
@@ -1187,7 +1234,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         amountYuan = amount,
                         note = note,
                         accountId = accId,
-                        timestamp = dateTimestamp
+                        timestamp = dateTimestamp,
+                        transferToAccountId = transferToAccountId
                     )
                     successCount++
                 } catch (e: Exception) {

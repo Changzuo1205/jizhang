@@ -70,7 +70,7 @@ class GreetingScreenshotTest {
           onSetFilterType = {},
           onSetFilterTime = {},
           onSetSearchQuery = {},
-          onAddExpense = { _, _, _, _, _, _, _, _ -> },
+          onAddExpense = { _, _, _, _, _, _, _, _, _ -> },
           onUpdateExpense = { _, _ -> },
           onDeleteExpense = {}
         )

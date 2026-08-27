@@ -5,6 +5,7 @@ import androidx.room.withTransaction
 import com.example.data.local.entity.AccountEntityV2
 import com.example.data.local.entity.BookEntity
 import com.example.data.local.entity.CategoryEntity
+import com.example.data.local.entity.TransactionEntity
 import com.example.data.local.entity.UserEntity
 import java.util.UUID
 
@@ -15,12 +16,17 @@ import java.util.UUID
  * - 全部包进 [withTransaction]，并发双开不会重复种入
  * - 内置分类树从 CategoryManager 同步写入 category 表，
  *   使过渡期的分类名解析可以直接 JOIN 获得
- * - Phase 4 将把 assets 的真实 803 笔样本并入本流程（另行实现转换管线）
+ * - 真实历史流水由 [seedRealTransactionsIfEmpty] 从 assets/seed_transactions.json
+ *   灌入（该文件由 tools/seed_converter.py 从交接包真实样本转换生成，
+ *   含挖财 6 个月 803 笔实际账目与软删除标记）
  */
 object DatabaseSeeder {
 
     /** 默认账本（「日常账本」）的固定 uuid，保证跨重装可识别 */
     const val DEFAULT_BOOK_UUID = "seed-book-default-000000000001"
+
+    /** 转换器产出的真实流水种子文件名 */
+    private const val REAL_SEED_ASSET = "seed_transactions.json"
 
     /** 老用户自定义分类是否已完成 v11 导入的幂等标记（存于 category_preferences） */
     private const val LEGACY_CUSTOM_IMPORT_FLAG = "custom_imported_v11"
@@ -118,6 +124,108 @@ object DatabaseSeeder {
                     }
                 }
             }
+
+            // 5. 真实历史流水（tools/seed_converter.py 的产物；无则保持空库）
+            seedRealTransactionsIfEmpty(context, db, book)
+        }
+    }
+
+    /**
+     * 从 assets/[REAL_SEED_ASSET] 灌入真实历史交易。
+     *
+     * 规则（对应 tools/seed_converter.py）：
+     * - 金额为 Int 分、时间戳 Unix 毫秒、isDeleted 原样保留
+     * - account 名称直配种子账户；空缺回退「现金」
+     * - 分类按 一级+二级 在内存索引解析外键；「漏记款」类调整行 category 为空、
+     *   仅二级，以二级名作为一级命中
+     * - TRANSFER 行的 counterAccount 解析为 transfer_to_account_id
+     * 资产文件缺失或解析失败时静默跳过（不影响其余种子）。
+     */
+    private suspend fun seedRealTransactionsIfEmpty(context: Context, db: DailyToolboxDatabase, book: BookEntity) {
+        if (db.transactionDao().activeCount() > 0) return
+
+        val raw = try {
+            context.assets.open(REAL_SEED_ASSET).bufferedReader().use { it.readText() }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
+
+        try {
+            val root = org.json.JSONObject(raw)
+            val rows = root.optJSONArray("transactions") ?: return
+
+            // ---- 内存索引：账户 / 分类树 ----
+            val accounts = db.accountDao().getActive()
+            val accByName = accounts.associateBy { it.name }
+
+            val catById = mutableMapOf<Long, CategoryEntity>()
+            for (type in listOf("expense", "income")) {
+                db.categoryDao().getByType(book.id, type).forEach { catById[it.id] = it }
+            }
+            val parentIdIdx = mutableMapOf<String, Long>()
+            val childIdIdx = mutableMapOf<String, Long>()
+            for (cat in catById.values) {
+                val parent = cat.parentId?.let { catById[it] }
+                if (cat.parentId == null) {
+                    parentIdIdx["${cat.type}|${cat.name}"] = cat.id
+                } else if (parent != null) {
+                    childIdIdx["${cat.type}|${parent.name}|${cat.name}"] = cat.id
+                }
+            }
+
+            fun resolveCategoryId(typeLower: String, categoryName: String, subName: String): Long? =
+                when {
+                    subName.isNotBlank() && categoryName.isNotBlank() ->
+                        childIdIdx["$typeLower|$categoryName|$subName"]
+                            ?: parentIdIdx["$typeLower|$categoryName"]
+                    subName.isNotBlank() ->
+                        parentIdIdx["$typeLower|$subName"]              // 漏记款类调整行：category 空、二级承载名称
+                    categoryName.isNotBlank() ->
+                        parentIdIdx["$typeLower|$categoryName"]
+                    else -> null
+                }
+
+            fun rawTypeToEnum(raw: String): TransactionType =
+                runCatching { TransactionType.valueOf(raw.trim()) }.getOrDefault(TransactionType.EXPENSE)
+
+            val entities = mutableListOf<TransactionEntity>()
+            var insertedIndex = 0L
+            for (i in 0 until rows.length()) {
+                val o = rows.getJSONObject(i)
+                insertedIndex += 1
+                val txType = rawTypeToEnum(o.optString("type", "EXPENSE"))
+                val typeLower = txType.name.lowercase()
+                val categoryName = o.optString("category", "")
+                val subName = o.optString("subCategory", "")
+                val account = accByName[o.optString("account")] ?: accByName["现金"] ?: continue
+                val counterRaw = if (o.isNull("counterAccount")) null else o.optString("counterAccount")
+                val counterId = if (txType == TransactionType.TRANSFER && !counterRaw.isNullOrBlank()) {
+                    accByName[counterRaw]?.id
+                } else null
+
+                entities.add(
+                    TransactionEntity(
+                        uuid = o.optString("uuid") ?: "seed-$insertedIndex",
+                        userId = 1L,
+                        bookId = book.id,
+                        accountId = account.id,
+                        transferToAccountId = counterId,
+                        type = txType,
+                        amount = o.getInt("amount_cents"),
+                        categoryId = resolveCategoryId(typeLower, categoryName, subName),
+                        note = if (o.isNull("note")) null else o.optString("note"),
+                        occurredAt = o.getLong("occurredAt"),
+                        isDeleted = o.optBoolean("isDeleted", false),
+                        source = o.optString("source", "manual")
+                    )
+                )
+            }
+
+            // 分批插入避免单语句过大
+            entities.chunked(400).forEach { chunk -> db.transactionDao().insertAll(chunk) }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

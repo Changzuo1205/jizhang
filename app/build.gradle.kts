@@ -129,6 +129,8 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
+  // 纯 JVM 单测使用真实 org.json（android.jar 中该包为运行时 stub）
+  testImplementation(libs.json.org)
   testImplementation(libs.roborazzi)
   testImplementation(libs.roborazzi.compose)
   testImplementation(libs.roborazzi.junit.rule)

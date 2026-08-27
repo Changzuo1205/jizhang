@@ -22,6 +22,10 @@ interface AccountDaoV2 {
     @Query("SELECT * FROM account WHERE name = :name AND is_archived = 0 ORDER BY id ASC LIMIT 1")
     suspend fun getByName(name: String): AccountEntityV2?
 
+    /** 一次性取全部未归档账户（种子/批量解析用） */
+    @Query("SELECT * FROM account WHERE is_archived = 0 ORDER BY sort_order ASC, id ASC")
+    suspend fun getActive(): List<AccountEntityV2>
+
     @Query("SELECT COUNT(*) FROM account")
     suspend fun count(): Int
 

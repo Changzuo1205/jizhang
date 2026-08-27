@@ -1,7 +1,6 @@
 package com.example.model
 
 import kotlin.math.abs
-import kotlin.math.round
 
 /**
  * 金额唯一换算入口。
@@ -11,9 +10,13 @@ import kotlin.math.round
  */
 object AmountFormatter {
 
-    /** 元 → 分（四舍五入），并防御性钳制到 Int 安全范围 */
-    fun yuanToCents(yuan: Double): Int =
-        round(yuan * 100).toInt().coerceIn(Int.MIN_VALUE / 4, Int.MAX_VALUE / 4)
+    /** 元 → 分（十进制 HALF_UP；经 BigDecimal 规避二进制浮点尾差，如 1.005→101 分） */
+    fun yuanToCents(yuan: Double): Int {
+        val scaled = java.math.BigDecimal(yuan.toString())
+            .multiply(java.math.BigDecimal(100))
+            .setScale(0, java.math.RoundingMode.HALF_UP)
+        return scaled.toInt().coerceIn(Int.MIN_VALUE / 4, Int.MAX_VALUE / 4)
+    }
 
     /** 分 → 元 */
     fun centsToYuan(cents: Int): Double = cents / 100.0

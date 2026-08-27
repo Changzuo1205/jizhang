@@ -53,14 +53,20 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         amountYuan: Double,
         note: String,
         accountId: Long,
-        timestamp: Long
+        timestamp: Long,
+        transferToAccountId: Long? = null
     ): Long {
         val txType = runCatching { TransactionType.valueOf(type) }.getOrDefault(TransactionType.EXPENSE)
-        val categoryId = resolveCategoryId(txType, category, subCategory)
+        val categoryId = if (txType == TransactionType.TRANSFER) {
+            null
+        } else {
+            resolveCategoryId(txType, category, subCategory)
+        }
         val entity = TransactionEntity(
             userId = USER_ID_LOCAL,
             bookId = defaultBookId(),
             accountId = accountId,
+            transferToAccountId = if (txType == TransactionType.TRANSFER) transferToAccountId?.takeIf { it != accountId } else null,
             type = txType,
             amount = AmountFormatter.yuanToCents(amountYuan),
             categoryId = categoryId,

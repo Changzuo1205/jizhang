@@ -27,5 +27,7 @@ data class ExpenseEntity(
     /** 转账对端账户 id（type=TRANSFER 时由映射层填充）；0 表示非转账 */
     val transferToAccountId: Long = 0L,
     /** 转账对端账户名（仅用于展示） */
-    val transferToAccountName: String = ""
+    val transferToAccountName: String = "",
+    /** 业务唯一标识（v2 CSV 导出用；由映射层从 TransactionEntity.uuid 回填） */
+    val uuid: String = ""
 )
