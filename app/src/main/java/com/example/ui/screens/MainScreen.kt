@@ -75,6 +75,7 @@ fun MainScreen(
     val totalIncome by viewModel.totalIncome.collectAsState()
     val todayExpense by viewModel.todayExpense.collectAsState()
     val thisMonthExpense by viewModel.thisMonthExpense.collectAsState()
+    val thisMonthIncome by viewModel.thisMonthIncome.collectAsState()
     val budgetConfig by viewModel.budgetConfig.collectAsState()
     val budgetProgress by viewModel.budgetProgress.collectAsState()
 
@@ -191,6 +192,7 @@ fun MainScreen(
                                             accounts = accounts,
                                             allExpenses = allExpenses,
                                             thisMonthExpense = thisMonthExpense,
+                                            thisMonthIncome = thisMonthIncome,
                                             totalExpense = totalExpense,
                                             totalIncome = totalIncome,
                                             todayExpense = todayExpense,

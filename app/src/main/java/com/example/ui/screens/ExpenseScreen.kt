@@ -155,6 +155,7 @@ fun ExpenseScreen(
     accounts: List<AccountEntity>,
     allExpenses: List<ExpenseEntity> = expenses,
     thisMonthExpense: Double = 0.0,
+    thisMonthIncome: Double = 0.0,
     totalExpense: Double,
     totalIncome: Double,
     todayExpense: Double,
@@ -433,27 +434,18 @@ fun ExpenseScreen(
 
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            // Budget Info Row: Budget Limit & Percentage on Left, Remaining Daily Avg / Overspend on Right
+                            // Budget Info Row: Budget Limit on Left, Remaining Daily Avg / Overspend on Right
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "${budgetProgress.period.title}预算 ¥${String.format(Locale.CHINA, "%,.2f", budgetProgress.budgetLimit)}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = bgConfig.textSecondary
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "已用 ${(budgetProgress.progressPercent * 100).toInt()}%",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = budgetBarColor
-                                    )
-                                }
+                                Text(
+                                    text = "${budgetProgress.period.title}预算 ¥${String.format(Locale.CHINA, "%,.2f", budgetProgress.budgetLimit)}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = bgConfig.textSecondary
+                                )
 
                                 if (!isBudgetOver) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -488,14 +480,21 @@ fun ExpenseScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Start,
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val monthNetBalance = thisMonthIncome - thisMonthExpense
                                 Text(
-                                    text = "本月结余 ¥${String.format(java.util.Locale.CHINA, "%,.2f", budgetProgress.budgetLimit - budgetProgress.spentAmount)}",
+                                    text = "本月结余 ¥${String.format(java.util.Locale.CHINA, "%,.2f", monthNetBalance)}",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Medium,
-                                    color = bgConfig.textSecondary
+                                    color = if (monthNetBalance < 0) budgetWarningColor else bgConfig.textSecondary
+                                )
+                                Text(
+                                    text = "已用 ${(budgetProgress.progressPercent * 100).toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = budgetBarColor
                                 )
                             }
                         }
