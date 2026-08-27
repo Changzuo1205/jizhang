@@ -39,15 +39,19 @@ from datetime import datetime, timezone, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 TZ8 = timezone(timedelta(hours=8))
-CST_EPOCH = datetime(1970, 1, 1, tzinfo=TZ8)
+UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 def yuan_to_cents(text):
     d = Decimal(str(text).strip().replace("¥", "").replace(",", "") or "0")
     return int((d * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 def to_millis(date_str, time_str):
+    """CSV时间 (Asia/Shanghai) → UTC Unix毫秒
+
+    关键：dt 带 TZ8 时区信息后，timestamp() 返回正确的 UTC 毫秒。
+    """
     dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ8)
-    return round((dt - CST_EPOCH).total_seconds() * 1000)
+    return round(dt.timestamp() * 1000)
 
 def map_account(raw_name):
     name = (raw_name or "").strip()
@@ -111,13 +115,25 @@ def main(csv_path, json_path, out_dir="."):
                 "book": "__DEFAULT_BOOK__",
                 "source": "wacai-import",
             }
-            # 资产调整笔强制归漏记款口径
+            # 转账无对方账户的智能分类映射（保留一级分类语义）
+            INCOME_CAT_MAP = {
+                "基金": "基金",
+                "红包": "红包",
+                "兼职外快": "兼职外快",
+                "娱乐": "娱乐",
+                "余额宝": "余额宝",
+                "人情": "人情",
+                # 其余无法识别的归漏记款：居家/医教/交通/生意/购物/餐饮/其他
+            }
             if warn:
                 tx_type = "INCOME"
                 entry["type"] = "INCOME"
-                entry["category"], entry["subCategory"] = "", "漏记款"
+                cat1_orig = row.get("一级分类", "").strip()
+                mapped_cat = INCOME_CAT_MAP.get(cat1_orig, "漏记款")
+                entry["category"] = mapped_cat
+                entry["subCategory"] = "漏记款"
                 stats["adjust_as_income"] += 1
-                audit_lines.append(f"L{i} 转账(无对方)按入账处理: {row.get('日期')} {entry['amount_cents']/100:.2f}元 → {account_name}")
+                audit_lines.append(f"L{i} 转账(无对方)按入账处理: {row.get('日期')} {entry['amount_cents']/100:.2f}元 → {mapped_cat}·漏记款")
 
             if tx_type == "EXPENSE":
                 stats["expense"] += 1

@@ -30,4 +30,16 @@ data class ExpenseEntity(
     val transferToAccountName: String = "",
     /** 业务唯一标识（v2 CSV 导出用；由映射层从 TransactionEntity.uuid 回填） */
     val uuid: String = ""
-)
+) {
+    /** 显示用分类名称（处理空值和未分类情况） */
+    val displayCategory: String get() = category.takeIf { it.isNotBlank() } ?: "未分类"
+    
+    /** 显示用子分类名称（处理空值情况） */
+    val displaySubCategory: String get() = subCategory.takeIf { it.isNotBlank() } ?: ""
+    
+    /** 完整分类路径显示（主分类 > 子分类） */
+    val fullCategoryPath: String get() = when {
+        displaySubCategory.isNotBlank() -> "$displayCategory > $displaySubCategory"
+        else -> displayCategory
+    }
+}

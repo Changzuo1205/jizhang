@@ -161,18 +161,56 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         combine(transactionRows, categoryRows, accountRows) { txs, cats, accs ->
             val catById = cats.associateBy { it.id }
             val accById = accs.associateBy { it.id }
+            
+            // 添加分类映射日志
+            val missingCategories = mutableListOf<Long>()
+            val fallbackCategories = mutableListOf<String>()
+            
             txs.map { tx ->
                 val cat = tx.categoryId?.let { catById[it] }
                 val parent = cat?.parentId?.let { catById[it] }
+                
+                // 分类映射逻辑：优先显示父级名称（二级分类），否则显示自身名称（一级分类）
+                val resolvedCategory = when {
+                    parent != null -> {
+                        // 二级分类：显示父级名称
+                        parent.name
+                    }
+                    cat != null -> {
+                        // 一级分类：显示自身名称
+                        cat.name
+                    }
+                    else -> {
+                        // 未找到分类：记录日志并使用回退分类
+                        tx.categoryId?.let { missingCategories.add(it) }
+                        "未分类"
+                    }
+                }
+                
+                // 子分类逻辑：只有存在父级和子级时才显示子级名称
+                val resolvedSubCategory = when {
+                    parent != null && cat != null -> cat.name
+                    else -> ""
+                }
+                
+                // 如果原始分类ID存在但映射失败，尝试使用回退分类
+                val finalCategory = if (tx.categoryId != null && resolvedCategory == "未分类") {
+                    val fallbackCat = findFallbackCategory(tx.type.name)
+                    if (fallbackCat != null) {
+                        fallbackCategories.add("${tx.type.name}:${fallbackCat.name}")
+                        fallbackCat.name
+                    } else {
+                        resolvedCategory
+                    }
+                } else {
+                    resolvedCategory
+                }
+                
                 ExpenseEntity(
                     id = tx.id,
                     type = tx.type.name,
-                    category = when {
-                        parent != null -> parent.name
-                        cat != null -> cat.name
-                        else -> "其他"
-                    },
-                    subCategory = if (parent != null && cat != null) cat.name else "",
+                    category = finalCategory,
+                    subCategory = resolvedSubCategory,
                     amount = AmountFormatter.centsToYuan(tx.amount),
                     note = tx.note.orEmpty(),
                     dateTimestamp = tx.occurredAt,
@@ -183,6 +221,14 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         tx.transferToAccountId?.let { accById[it]?.name }.orEmpty(),
                     uuid = tx.uuid
                 )
+            }.also { result ->
+                // 输出分类映射统计信息（仅在开发环境）
+                if (missingCategories.isNotEmpty()) {
+                    println("分类映射警告：${missingCategories.size} 个交易记录的分类ID未找到映射: $missingCategories")
+                }
+                if (fallbackCategories.isNotEmpty()) {
+                    println("分类回退统计：${fallbackCategories.size} 个交易使用回退分类: $fallbackCategories")
+                }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -1248,6 +1294,19 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
             Pair(successCount, "已成功导入 $successCount 笔账目记录！")
         } else {
             Pair(0, "未解析到符合格式的有效账目记录，请核对格式")
+        }
+    }
+
+    /**
+     * 查找回退分类：当分类映射失败时使用的备用分类
+     */
+    private suspend fun findFallbackCategory(transactionType: String): CategoryEntity? {
+        return try {
+            // 查找任意未归档分类作为回退
+            repository.findFallbackCategory(transactionType)
+        } catch (e: Exception) {
+            println("查找回退分类失败: ${e.message}")
+            null
         }
     }
 }

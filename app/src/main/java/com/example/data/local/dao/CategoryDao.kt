@@ -31,6 +31,14 @@ interface CategoryDao {
     @Query("SELECT * FROM category WHERE name = :name AND parent_id = :parentId LIMIT 1")
     suspend fun findChildByName(name: String, parentId: Long): CategoryEntity?
 
+    /** 查找默认分类（当找不到匹配分类时的回退选项） */
+    @Query("SELECT * FROM category WHERE name = :name AND parent_id IS NULL AND type = :type AND is_archived = 0 LIMIT 1")
+    suspend fun findDefaultCategory(name: String, type: String): CategoryEntity?
+
+    /** 查找任意未归档分类（作为最后的回退选项） */
+    @Query("SELECT * FROM category WHERE type = :type AND is_archived = 0 ORDER BY sort_order ASC, id ASC LIMIT 1")
+    suspend fun findFallbackCategory(type: String): CategoryEntity?
+
     @Query("SELECT COUNT(*) FROM category")
     suspend fun count(): Int
 

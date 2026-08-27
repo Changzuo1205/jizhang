@@ -98,7 +98,7 @@ fun ReportsScreen(
     val bgConfig = LocalAppBackgroundConfig.current
 
     var chartMode by remember { mutableStateOf("TREND") } // "TREND" or "PIE"
-    var timeFilter by remember { mutableStateOf("THIS_MONTH") } // "ALL", "THIS_WEEK", "THIS_MONTH", "LAST_MONTH", "THIS_YEAR", "CUSTOM"
+    var timeFilter by remember { mutableStateOf("THIS_MONTH") } // "ALL", "THIS_WEEK", "THIS_MONTH", "LAST_6_MONTHS", "THIS_YEAR", "CUSTOM"
     var typeFilter by remember { mutableStateOf("ALL") } // "ALL", "EXPENSE", "INCOME"
     var pieType by remember { mutableStateOf("EXPENSE") } // "EXPENSE" or "INCOME"
     var categoryLevel by remember { mutableStateOf("MAJOR") } // "MAJOR" (大类) or "SUB" (小类)
@@ -342,7 +342,7 @@ fun ReportsScreen(
                             val timeOptions = listOf(
                                 "THIS_MONTH" to "本月",
                                 "THIS_WEEK" to "近7天",
-                                "LAST_MONTH" to "上月",
+                                "LAST_6_MONTHS" to "近半年",
                                 "THIS_YEAR" to "本年",
                                 "ALL" to "全部历史",
                                 "CUSTOM" to "自定义 📅"
@@ -1369,9 +1369,9 @@ private fun getTimeRangeBounds(
             cal.set(Calendar.MILLISECOND, 999)
             Pair(start, cal.timeInMillis)
         }
-        "LAST_MONTH" -> {
+        "LAST_6_MONTHS" -> {
             cal.timeInMillis = now
-            cal.add(Calendar.MONTH, -1)
+            cal.add(Calendar.MONTH, -6) // 改为近半年
             cal.set(Calendar.DAY_OF_MONTH, 1)
             cal.set(Calendar.HOUR_OF_DAY, 0)
             cal.set(Calendar.MINUTE, 0)
@@ -1379,6 +1379,7 @@ private fun getTimeRangeBounds(
             cal.set(Calendar.MILLISECOND, 0)
             val start = cal.timeInMillis
 
+            cal.timeInMillis = now // 重置到当前时间
             cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
             cal.set(Calendar.HOUR_OF_DAY, 23)
             cal.set(Calendar.MINUTE, 59)
@@ -1435,7 +1436,7 @@ private fun getTimeRangeDisplayLabel(
     return when (timeFilter) {
         "THIS_WEEK" -> "本周收支"
         "THIS_MONTH" -> "本月收支"
-        "LAST_MONTH" -> "上月收支"
+        "LAST_6_MONTHS" -> "近半年收支"
         "THIS_YEAR" -> "本年度全景"
         "CUSTOM" -> "${sdf.format(Date(customStartMs))} ~ ${sdf.format(Date(customEndMs))}"
         else -> "全部历史数据"
@@ -1480,7 +1481,7 @@ private fun generateDynamicTrendPoints(
             }
             return points
         }
-        "THIS_MONTH", "LAST_MONTH" -> {
+        "THIS_MONTH" -> {
             val cal = Calendar.getInstance().apply { timeInMillis = startMs }
             val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
             val points = mutableListOf<TrendPoint>()
@@ -1517,6 +1518,34 @@ private fun generateDynamicTrendPoints(
                 val label = "${interval.first}-${interval.second}日"
 
                 points.add(TrendPoint(label = label, expense = exp, income = inc, timestamp = pStart))
+            }
+            return points
+        }
+        "LAST_6_MONTHS" -> {
+            // 近半年按月分6段（5个月前 → 当前月）
+            val points = mutableListOf<TrendPoint>()
+            val cal = Calendar.getInstance()
+
+            for (i in 5 downTo 0) {
+                cal.timeInMillis = System.currentTimeMillis()
+                cal.add(Calendar.MONTH, -i)
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val mStart = cal.timeInMillis
+                val bucketMonth = cal.get(Calendar.MONTH)
+
+                // 该月最后时刻：跳到下月 0 时再减 1 毫秒
+                cal.add(Calendar.MONTH, 1)
+                val mEnd = cal.timeInMillis - 1
+
+                val exp = expenses.filter { it.type == "EXPENSE" && it.dateTimestamp in mStart..mEnd }.sumOf { it.amount }
+                val inc = expenses.filter { it.type == "INCOME" && it.dateTimestamp in mStart..mEnd }.sumOf { it.amount }
+                val label = "${bucketMonth + 1}月"
+
+                points.add(TrendPoint(label = label, expense = exp, income = inc, timestamp = mStart))
             }
             return points
         }
@@ -1810,6 +1839,36 @@ fun assignDistinctPieColors(stats: List<CategoryStat>): List<ColoredCategoryStat
 }
 
 /**
+ * 小占比扇区在 Canvas 内的四角位置
+ */
+enum class Corner { TopRight, BottomRight, BottomLeft, TopLeft }
+
+/**
+ * 根据扇区中点角度（度）映射到四个角。
+ *
+ * 扇区绘制从 startAngle=-90° 开始顺时针累加，归一化后 a 表示相对中心的射线角度（0..360）：
+ *   a=0   → 射线指向正右方
+ *   a=90  → 射线指向正下方（Canvas 坐标系 Y 向下）
+ *   a=180 → 射线指向正左方
+ *   a=270 → 射线指向正上方
+ *
+ * 因此扇区中点位置到四个标签角的对称映射（让引线方向与角位置天然对齐，避免穿越其他扇区）：
+ *   TopRight:    a∈[315,360) ∪ [0,45)        射线偏右上 → 右上角
+ *   BottomRight: a∈[45,135)                  射线偏右下 → 右下角
+ *   BottomLeft:  a∈[135,225)                 射线偏左下 → 左下角
+ *   TopLeft:     a∈[225,315)                 射线偏左上 → 左上角
+ */
+fun cornerOf(midAngle: Float): Corner {
+    val a = ((midAngle % 360f) + 360f) % 360f  // 归一化到 0..360
+    return when {
+        a >= 315f || a < 45f -> Corner.TopRight
+        a < 135f -> Corner.BottomRight
+        a < 225f -> Corner.BottomLeft
+        else -> Corner.TopLeft
+    }
+}
+
+/**
  * Custom Canvas Interactive Donut / Pie Chart with on-chart category text labels and adjacent distinct colors
  */
 @Composable
@@ -1831,22 +1890,82 @@ fun DonutPieChart(
 
     var selectedIndex by remember(coloredStats) { mutableStateOf<Int?>(null) }
 
+    // 预计算小占比分类的标签位置（防重叠）
+    val labelYPositions = remember(coloredStats) { mutableMapOf<String, Float>() }
+    val labelSide = remember(coloredStats) { mutableMapOf<String, Corner>() } // category → corner
+
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
+        // 四角分布：将每个小占比扇区按中点角度映射到四个角
         Canvas(
-            modifier = Modifier.size(220.dp)
+            modifier = Modifier.size(280.dp)
         ) {
-            val chartSize = size.minDimension
-            val strokeWidth = 36.dp.toPx()
-            val diameter = chartSize - strokeWidth - 4.dp.toPx()
-            val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
-            val arcSize = Size(diameter, diameter)
+            val chartSize = size.minDimension       // = 280dp
+            val strokeWidth = 30.dp.toPx()          // 略减，给引线留出空间
+            val chartDiameter = 160.dp.toPx()       // 固定 160dp 饼图
+            val topLeft = Offset(
+                (size.width - chartDiameter) / 2f,
+                (size.height - chartDiameter) / 2f
+            )
+            val arcSize = Size(chartDiameter, chartDiameter)
             val centerOffset = Offset(size.width / 2f, size.height / 2f)
-            val arcRadius = diameter / 2f
+            val arcRadius = chartDiameter / 2f      // = 80dp
 
             var startAngle = -90f
+
+            // 0. 预计算小占比分类的标签位置（防重叠，四角分布）
+            // 第一遍：收集所有小占比扇区
+            val smallSlices = mutableListOf<Triple<ColoredCategoryStat, Float, Float>>()
+            var tempAngle = -90f
+            coloredStats.forEach { item ->
+                val sweepAngle = item.stat.percentage * 360f
+                val midAngle = tempAngle + sweepAngle / 2f
+                if (item.stat.percentage in 0.01f..0.05f) {
+                    val midAngleRad = Math.toRadians(midAngle.toDouble())
+                    // 初始Y：按 sin 投影（仅作占位/排序参考，最终按角位置垂直均分）
+                    val initialY = centerOffset.y + (arcRadius + 50.dp.toPx()) * sin(midAngleRad).toFloat()
+                    smallSlices.add(Triple(item, midAngle, initialY))
+                }
+                tempAngle += sweepAngle
+            }
+
+            // 按扇区中点角度映射到 4 个角（替代原"奇偶分左右"）
+            smallSlices.forEach { (item, midAngle, _) ->
+                labelSide[item.stat.category] = cornerOf(midAngle)
+            }
+
+            // 按角分桶，分别在 Canvas 半区垂直均分排列
+            val labelSpacing = 32.dp.toPx()
+            val bgHeight = 26.dp.toPx()
+            val margin = 4.dp.toPx()
+            val topLimit = margin + bgHeight / 2
+            val bottomLimit = size.minDimension - margin - bgHeight / 2
+
+            val cornerGroups = smallSlices.groupBy { cornerOf(it.second) }
+
+            // 角顺序：右上 → 右下 → 左下 → 左上（保证从上到下视觉一致）
+            val cornerOrder = listOf(Corner.TopRight, Corner.BottomRight, Corner.BottomLeft, Corner.TopLeft)
+            cornerOrder.forEach { corner ->
+                val items = cornerGroups[corner].orEmpty()
+                if (items.isEmpty()) return@forEach
+                // 按角度排序：上角（a接近 0/360）排在上，下角排在下
+                val sorted = when (corner) {
+                    Corner.TopRight -> items.sortedBy { it.second }                      // 角度小的（更靠右上）排上
+                    Corner.BottomRight -> items.sortedByDescending { it.second }         // 角度大的（更靠右下）排下
+                    Corner.BottomLeft -> items.sortedByDescending { it.second }          // 角度大的（更靠左下）排下
+                    Corner.TopLeft -> items.sortedBy { it.second }                       // 角度小的（更靠左上）排上
+                }
+                val count = sorted.size
+                val totalHeight = ((count - 1).coerceAtLeast(0)) * labelSpacing
+                val startY = (size.minDimension / 2f - totalHeight / 2f)
+                    .coerceIn(topLimit, bottomLimit - totalHeight)
+                sorted.forEachIndexed { i, (item, _, _) ->
+                    val y = (startY + i * labelSpacing).coerceIn(topLimit, bottomLimit)
+                    labelYPositions[item.stat.category] = y
+                }
+            }
 
             // 1. Draw Arcs
             coloredStats.forEachIndexed { index, item ->
@@ -1884,7 +2003,7 @@ fun DonutPieChart(
                 startAngle += sweepAngle
             }
 
-            // 2. Draw Category & Percentage Text Labels Directly on Slices
+            // 2. Draw Category & Percentage Text Labels with Leader Lines for Small Slices
             drawIntoCanvas { canvas ->
                 val nativeCanvas = canvas.nativeCanvas
 
@@ -1906,6 +2025,13 @@ fun DonutPieChart(
                     setShadowLayer(4f, 0f, 1f, android.graphics.Color.argb(220, 0, 0, 0))
                 }
 
+                // Paint for leader lines
+                val leaderLinePaint = android.graphics.Paint()
+                leaderLinePaint.isAntiAlias = true
+                leaderLinePaint.color = android.graphics.Color.argb(200, 255, 255, 255)
+                leaderLinePaint.strokeWidth = 1.dp.toPx()
+                leaderLinePaint.style = android.graphics.Paint.Style.STROKE
+
                 var textStartAngle = -90f
 
                 coloredStats.forEach { item ->
@@ -1916,19 +2042,70 @@ fun DonutPieChart(
                     val labelX = centerOffset.x + (arcRadius * cos(midAngleRad)).toFloat()
                     val labelY = centerOffset.y + (arcRadius * sin(midAngleRad)).toFloat()
 
-                    val percentInt = (item.stat.percentage * 100).toInt()
-                    val percentStr = "$percentInt%"
+                    val percent = item.stat.percentage * 100
+                    val percentStr = if (percent < 1.0f && percent > 0f) {
+                        String.format("%.1f%%", percent)  // 0.5% → "0.5%"
+                    } else {
+                        "${percent.toInt()}%"             // 5% → "5%"
+                    }
                     val catName = if (item.stat.category.length > 4) item.stat.category.take(3) + "…" else item.stat.category
 
+                    // Phase 8: 占比 < 1% 扇区只显示色块，不显示文字
+                    if (item.stat.percentage < 0.01f) {
+                        textStartAngle += sweepAngle
+                        return@forEach
+                    }
+
                     if (item.stat.percentage >= 0.08f) {
-                        // Slices with >= 8%: display Category Name & Percentage
+                        // Slices with >= 8%: display Category Name & Percentage directly on slice
                         val textYOffset = (primaryTextPaint.descent() + primaryTextPaint.ascent()) / 2f
                         nativeCanvas.drawText(catName, labelX, labelY - 4.5.dp.toPx() - textYOffset, primaryTextPaint)
                         nativeCanvas.drawText(percentStr, labelX, labelY + 6.dp.toPx() - textYOffset, subTextPaint)
-                    } else if (item.stat.percentage >= 0.045f) {
-                        // Slices between 4.5% and 8%: display Percentage
+                    } else if (item.stat.percentage >= 0.05f) {
+                        // Slices between 5% and 8%: display Percentage directly on slice
                         val textYOffset = (primaryTextPaint.descent() + primaryTextPaint.ascent()) / 2f
                         nativeCanvas.drawText(percentStr, labelX, labelY - textYOffset, primaryTextPaint)
+                    } else {
+                        // Small slices (1% ~ 5%): 取消引线，在左侧显示小字并添加小点
+                        val baseR = (item.color.red * 255).toInt()
+                        val baseG = (item.color.green * 255).toInt()
+                        val baseB = (item.color.blue * 255).toInt()
+
+                        // 此区间（>=1%）的百分比都是 ≥1% 的整数
+                        val percentStr = "${percent.toInt()}%"
+                        val catName = if (item.stat.category.length > 2) item.stat.category.take(2) else item.stat.category
+                        val singleLineText = "$catName $percentStr"
+
+                        // 文字 Paint（分类原色，单行，左对齐）
+                        val labelTextPaint = android.graphics.Paint().apply {
+                            isAntiAlias = true
+                            textSize = 8.sp.toPx()  // 稍小字体
+                            color = android.graphics.Color.argb(255, baseR, baseG, baseB)
+                            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                            textAlign = android.graphics.Paint.Align.LEFT
+                        }
+
+                        // 文字坐标（左侧显示）
+                        val margin = 4.dp.toPx()
+                        val textX = margin
+                        val labelYOut = labelYPositions[item.stat.category] ?: centerOffset.y
+
+                        // 在文字前面添加对应颜色的小点
+                        val dotSize = 4.dp.toPx()
+                        val dotX = textX + 6.dp.toPx()  // 点在文字左侧
+                        val dotY = labelYOut - (labelTextPaint.descent() + labelTextPaint.ascent()) / 2f
+                        nativeCanvas.drawCircle(
+                            dotX, dotY,
+                            dotSize / 2f,
+                            android.graphics.Paint().apply {
+                                isAntiAlias = true
+                                color = android.graphics.Color.argb(255, baseR, baseG, baseB)
+                            }
+                        )
+
+                        // 单行文字（分类名和百分比）
+                        val textYOffset = (labelTextPaint.descent() + labelTextPaint.ascent()) / 2f
+                        nativeCanvas.drawText(singleLineText, textX + 12.dp.toPx(), labelYOut - textYOffset, labelTextPaint)
                     }
 
                     textStartAngle += sweepAngle
@@ -1965,7 +2142,11 @@ fun DonutPieChart(
                     maxLines = 1
                 )
                 Text(
-                    text = "${(selectedItem.stat.percentage * 100).toInt()}% (${selectedItem.stat.count}笔)",
+                    text = run {
+                        val p = selectedItem.stat.percentage * 100
+                        val ps = if (p < 1.0f && p > 0f) String.format("%.1f%%", p) else "${p.toInt()}%"
+                        "$ps (${selectedItem.stat.count}笔)"
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = textTertiary,
                     fontSize = 9.5.sp

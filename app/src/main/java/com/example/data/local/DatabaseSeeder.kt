@@ -179,8 +179,19 @@ object DatabaseSeeder {
                     subName.isNotBlank() && categoryName.isNotBlank() ->
                         childIdIdx["$typeLower|$categoryName|$subName"]
                             ?: parentIdIdx["$typeLower|$categoryName"]
-                    subName.isNotBlank() ->
-                        parentIdIdx["$typeLower|$subName"]              // 漏记款类调整行：category 空、二级承载名称
+                    subName.isNotBlank() -> {
+                        // 修复：category为空但subCategory有值时，先按子分类名匹配父级分类
+                        // CSV中 "一级分类=餐饮, 二级分类=晚餐" 被错误转换成了 category=""
+                        // 此时应通过二级名称"晚餐"反查父分类"餐饮"
+                        parentIdIdx["$typeLower|$subName"]
+                            ?: run {
+                                // 在所有分类中查找名字等于subName的子分类
+                                val matchChild = catById.values.firstOrNull { cat ->
+                                    cat.parentId != null && cat.name == subName && cat.type == typeLower
+                                }
+                                matchChild?.id
+                            }
+                    }
                     categoryName.isNotBlank() ->
                         parentIdIdx["$typeLower|$categoryName"]
                     else -> null

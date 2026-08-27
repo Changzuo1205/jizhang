@@ -388,6 +388,13 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         return categoryDao.findChildByName(subCategory.trim(), parent.id)?.id ?: parent.id
     }
 
+    /**
+     * 查找回退分类：当分类映射失败时使用的备用分类
+     */
+    suspend fun findFallbackCategory(type: String): CategoryEntity? {
+        return categoryDao.findFallbackCategory(type)
+    }
+
     data class ExpenseSnapshot(
         val id: Long,
         val type: String,
