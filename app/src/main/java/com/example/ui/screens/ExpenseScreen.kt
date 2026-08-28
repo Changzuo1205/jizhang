@@ -83,6 +83,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -138,8 +139,11 @@ import com.example.ui.components.GlowEmerald
 import com.example.ui.components.GlowPink
 import com.example.ui.components.GlowViolet
 import com.example.ui.components.MonthCalendarView
+import com.example.ui.components.AnimatedNumberText
 import com.example.ui.theme.LocalAppBackgroundConfig
 import com.example.ui.theme.LocalAppColorScheme
+import com.example.ui.theme.ProgressColorTween
+import com.example.ui.theme.ProgressFillSpring
 import com.example.ui.viewmodel.BudgetConfig
 import com.example.ui.viewmodel.BudgetPeriod
 import com.example.ui.viewmodel.BudgetProgressInfo
@@ -313,10 +317,16 @@ fun ExpenseScreen(
 
                 // 1. Unified Panoramic Month Expense & Budget Card (Merged, bolder & larger amount, click to open settings)
                 item {
-                    val animatedBudgetProgress by animateFloatAsState(
-                        targetValue = budgetProgress.progressPercent.coerceIn(0f, 1f),
-                        label = "budgetProgress"
-                    )
+                    // 显式 Animatable：splash 结束后首次进入 composition 时强制从 0 起步，
+                    // 保证 budgetProgress.progressPercent == initial(0f) 时 spring 也能启动。
+                    val animatedBudgetProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+                    LaunchedEffect(budgetProgress.progressPercent) {
+                        animatedBudgetProgress.animateTo(
+                            targetValue = budgetProgress.progressPercent.coerceIn(0f, 1f),
+                            animationSpec = ProgressFillSpring
+                        )
+                    }
+                    val animatedBudgetProgressValue = animatedBudgetProgress.value
 
                     val isBudgetOver = budgetProgress.isOverBudget
                     val budgetWarningColor = Color(0xFFEF4444)
@@ -324,6 +334,7 @@ fun ExpenseScreen(
 
                     val budgetBarColor by animateColorAsState(
                         targetValue = if (isBudgetOver) budgetWarningColor else if (budgetProgress.progressPercent > 0.8f) Color(0xFFF59E0B) else budgetSafeColor,
+                        animationSpec = ProgressColorTween,
                         label = "budgetBarColor"
                     )
 
@@ -424,10 +435,18 @@ fun ExpenseScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             // Large & Bold Expense Amount (加粗加大)
-                            com.example.ui.components.AnimatedNumberText(
-                                value = thisMonthExpense,
-                                prefix = "¥ ",
-                                textStyle = MaterialTheme.typography.headlineLarge.copy(
+                            // 显式 Animatable：splash 结束后首次进入 composition 时强制从 0 起步，
+                            // 保证 thisMonthExpense == initial(0f) 时 tween(800) 数字滚动也能启动
+                            val animatedThisMonthExpense = remember { androidx.compose.animation.core.Animatable(0f) }
+                            LaunchedEffect(thisMonthExpense) {
+                                animatedThisMonthExpense.animateTo(
+                                    targetValue = thisMonthExpense.toFloat(),
+                                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 800)
+                                )
+                            }
+                            Text(
+                                text = "¥${String.format(java.util.Locale.CHINA, "%,.2f", animatedThisMonthExpense.value)}",
+                                style = MaterialTheme.typography.headlineLarge.copy(
                                     fontSize = 32.sp,
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = (-0.6).sp
@@ -471,7 +490,7 @@ fun ExpenseScreen(
 
                             // Animated Budget Progress Indicator (Clicking whole card triggers onOpenBudgetSettings)
                             LinearProgressIndicator(
-                                progress = { animatedBudgetProgress },
+                                progress = { animatedBudgetProgressValue },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(7.dp)
@@ -493,10 +512,12 @@ fun ExpenseScreen(
                                     fontWeight = FontWeight.Medium,
                                     color = if (monthNetBalance < 0) budgetWarningColor else bgConfig.textSecondary
                                 )
-                                Text(
-                                    text = "已用 ${(budgetProgress.progressPercent * 100).toInt()}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
+                                AnimatedNumberText(
+                                    value = (budgetProgress.progressPercent * 100).toDouble(),
+                                    prefix = "已用 ",
+                                    suffix = "%",
+                                    fractionDigits = 0,
+                                    textStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                     color = budgetBarColor
                                 )
                             }

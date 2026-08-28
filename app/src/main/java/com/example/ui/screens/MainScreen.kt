@@ -21,6 +21,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import kotlinx.coroutines.delay
 import com.example.ui.components.AppTab
 import com.example.ui.components.GlassBottomNavBar
 import com.example.ui.theme.LocalAppBackgroundConfig
@@ -63,6 +65,13 @@ fun MainScreen(
     var currentTab by remember { mutableStateOf(AppTab.HOME) }
     var activeSubScreen by remember { mutableStateOf(ActiveSubScreen.NONE) }
     var triggerAddExpenseInHome by remember { mutableStateOf(false) }
+
+    // Splash overlay：纯延时 600ms 后切到正常首页，让背景等数据先行加载完成
+    var splashDone by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(600)
+        splashDone = true
+    }
 
     val colorScheme by viewModel.colorScheme.collectAsStateWithLifecycle()
     val fontScale by viewModel.fontScale.collectAsStateWithLifecycle()
@@ -137,200 +146,53 @@ fun MainScreen(
                 color = if (backgroundConfig.isLight) Color(0xFFF6F8FC) else Color(0xFF090D16)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Outer transition between Main Tabs and Sub-Screens (Bill Calendar / Budget Settings)
-                    AnimatedContent(
-                        targetState = activeSubScreen,
-                        transitionSpec = {
-                            if (targetState != ActiveSubScreen.NONE) {
-                                (slideInHorizontally(animationSpec = tween(280, easing = FastOutSlowInEasing)) { width -> (width * 0.35f).toInt() } + fadeIn(animationSpec = tween(240)))
-                                    .togetherWith(
-                                        slideOutHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { width -> -(width * 0.15f).toInt() } + fadeOut(animationSpec = tween(180))
-                                    )
-                            } else {
-                                (slideInHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { width -> -(width * 0.15f).toInt() } + fadeIn(animationSpec = tween(180)))
-                                    .togetherWith(
-                                        slideOutHorizontally(animationSpec = tween(280, easing = FastOutSlowInEasing)) { width -> (width * 0.35f).toInt() } + fadeOut(animationSpec = tween(200))
-                                    )
-                            }
-                        },
-                        label = "SubScreenTransition"
-                    ) { subScreen ->
-                        when (subScreen) {
-                            ActiveSubScreen.BILL_CALENDAR -> {
-                                BillCalendarScreen(
-                                    allExpenses = allExpenses,
-                                    accounts = accounts,
-                                    onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
-                                        viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
-                                    },
-                                    onUpdateExpense = { oldExp, newExp ->
-                                        viewModel.updateExpense(oldExp, newExp)
-                                    },
-                                    onDeleteExpense = { viewModel.deleteExpense(it) },
-                                    onBack = { activeSubScreen = ActiveSubScreen.NONE }
-                                )
-                            }
-
-                            ActiveSubScreen.BUDGET_SETTINGS -> {
-                                BudgetSettingsScreen(
-                                    budgetConfig = budgetConfig,
-                                    budgetProgress = budgetProgress,
-                                    thisMonthExpense = thisMonthExpense,
-                                    onSelectPeriod = { viewModel.setActiveBudgetPeriod(it) },
-                                    onUpdateBudgetLimits = { m, q, y -> viewModel.updateBudgetLimits(m, q, y) },
-                                    onBack = { activeSubScreen = ActiveSubScreen.NONE }
-                                )
-                            }
-
-                            ActiveSubScreen.BOOKS -> {
-                                BooksScreen(
-                                    books = books,
-                                    onCreateBook = { name -> viewModel.saveBook(name) },
-                                    onRenameBook = { id, name -> viewModel.updateBook(id, name) },
-                                    onSetDefaultBook = { viewModel.setDefaultBook(it) },
-                                    onArchiveBook = { viewModel.archiveBook(it) },
-                                    onBack = { activeSubScreen = ActiveSubScreen.NONE }
-                                )
-                            }
-
-                            ActiveSubScreen.CATEGORIES -> {
-                                CategoryManageScreen(
-                                    categories = categories,
-                                    onCreateCategory = { parentName, name, type ->
-                                        viewModel.addCategory(parentName, name, type)
-                                    },
-                                    onArchiveCategory = { viewModel.archiveCategory(it) },
-                                    onBack = { activeSubScreen = ActiveSubScreen.NONE }
-                                )
-                            }
-
-                            ActiveSubScreen.NONE -> {
-                                // Tab Content Switcher with smooth crossfade and zero shadow flicker
-                                AnimatedContent(
-                                    targetState = currentTab,
-                                    transitionSpec = {
-                                        fadeIn(animationSpec = tween(200, easing = LinearOutSlowInEasing))
-                                            .togetherWith(fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing)))
-                                    },
-                                    label = "TabContent"
-                                ) { tab ->
-                                when (tab) {
-                                    AppTab.HOME -> {
-                                        ExpenseScreen(
-                                            expenses = expenses,
-                                            accounts = accounts,
-                                            allExpenses = allExpenses,
-                                            thisMonthExpense = thisMonthExpense,
-                                            thisMonthIncome = thisMonthIncome,
-                                            totalExpense = totalExpense,
-                                            totalIncome = totalIncome,
-                                            todayExpense = todayExpense,
-                                            budgetConfig = budgetConfig,
-                                            budgetProgress = budgetProgress,
-                                            categoryStats = categoryStats,
-                                            filterType = filterType,
-                                            filterTime = filterTime,
-                                            searchQuery = searchQuery,
-                                            showAddDialogTrigger = triggerAddExpenseInHome,
-                                            isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
-                                            onToggleCategoryAnalysisExpanded = { viewModel.setCategoryAnalysisExpanded(!isCategoryAnalysisExpanded) },
-                                            onSetFilterType = { viewModel.setFilterType(it) },
-                                            onSetFilterTime = { viewModel.setFilterTime(it) },
-                                            onSetSearchQuery = { viewModel.setSearchQuery(it) },
-                                            onSelectBudgetPeriod = { viewModel.setActiveBudgetPeriod(it) },
-                                            onUpdateBudgetLimits = { m, q, y -> viewModel.updateBudgetLimits(m, q, y) },
-                                            onOpenBillCalendar = { activeSubScreen = ActiveSubScreen.BILL_CALENDAR },
-                                            onOpenBudgetSettings = { activeSubScreen = ActiveSubScreen.BUDGET_SETTINGS },
-                                            onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
-                                                viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
-                                            },
-                                            onUpdateExpense = { oldExp, newExp ->
-                                                viewModel.updateExpense(oldExp, newExp)
-                                            },
-                                            onDeleteExpense = { viewModel.deleteExpense(it) },
-                                            onCloseAddDialogTrigger = { triggerAddExpenseInHome = false }
-                                        )
-                                    }
-
-                                    AppTab.ACCOUNTS -> {
-                                        AccountsScreen(
-                                            accounts = accounts,
-                                            expenses = allExpenses,
-                                            totalNetAssets = totalNetAssets,
-                                            totalPositiveAssets = totalPositiveAssets,
-                                            totalDebts = totalDebts,
-                                            onAddAccount = { name, type, balance, suffix, color, note ->
-                                                viewModel.addAccount(name, type, balance, suffix, color, note)
-                                            },
-                                            onUpdateAccount = { account, saveAsMissedRecord, oldBalance ->
-                                                viewModel.updateAccount(account, saveAsMissedRecord, oldBalance)
-                                            },
-                                            onDeleteAccount = { viewModel.deleteAccount(it) }
-                                        )
-                                    }
-
-                                    AppTab.REPORTS -> {
-                                        ReportsScreen(
-                                            expenses = allExpenses,
-                                            categoryStats = categoryStats,
-                                            incomeCategoryStats = incomeCategoryStats,
-                                            weekTrendPoints = weekTrendPoints,
-                                            monthTrendPoints = monthTrendPoints,
-                                            totalExpense = totalExpense,
-                                            totalIncome = totalIncome
-                                        )
-                                    }
-
-                                    AppTab.MINE -> {
-                                        MineScreen(
-                                            expenses = allExpenses,
-                                            accountsCount = accounts.size,
-                                            currentColorScheme = colorScheme,
-                                            currentFontScale = fontScale,
-                                            currentBackgroundConfig = backgroundConfig,
-                                            onSelectColorScheme = { viewModel.setColorScheme(it) },
-                                            onSelectFontScale = { viewModel.setFontScale(it) },
-                                            onSelectBackgroundConfig = { viewModel.setBackgroundConfig(it) },
-                                            onSetCustomColor = { hex, name -> viewModel.setCustomBackgroundColor(hex, name) },
-                                            onSetCustomImage = { uri, isLight -> viewModel.setCustomBackgroundImage(uri, isLight) },
-                                            onSetCardAlpha = { viewModel.setCardAlpha(it) },
-                                            onSetBlurRadius = { viewModel.setBlurRadius(it) },
-                                            onSetFrostAlpha = { viewModel.setFrostAlpha(it) },
-                                            onSetIsLight = { viewModel.setIsLightBackground(it) },
-                                            onGenerateCsv = { viewModel.generateCsvData() },
-                                            onImportCsv = { viewModel.importCsvData(it) },
-                                            onUpdateExpense = { oldExp, newExp -> viewModel.updateExpense(oldExp, newExp) },
-                                            onDeleteExpense = { viewModel.deleteExpense(it) },
-                                            onOpenBooks = { activeSubScreen = ActiveSubScreen.BOOKS },
-                                            onOpenCategories = { activeSubScreen = ActiveSubScreen.CATEGORIES }
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    if (splashDone) {
+                        MainScreenContent(
+                            currentTab = currentTab,
+                            onCurrentTabChange = { currentTab = it },
+                            activeSubScreen = activeSubScreen,
+                            onActiveSubScreenChange = { activeSubScreen = it },
+                            triggerAddExpenseInHome = triggerAddExpenseInHome,
+                            onTriggerAddExpenseConsumed = { triggerAddExpenseInHome = false },
+                            isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
+                            onToggleCategoryAnalysisExpanded = { viewModel.setCategoryAnalysisExpanded(!isCategoryAnalysisExpanded) },
+                            expenses = expenses,
+                            accounts = accounts,
+                            allExpenses = allExpenses,
+                            thisMonthExpense = thisMonthExpense,
+                            thisMonthIncome = thisMonthIncome,
+                            totalExpense = totalExpense,
+                            totalIncome = totalIncome,
+                            todayExpense = todayExpense,
+                            budgetConfig = budgetConfig,
+                            budgetProgress = budgetProgress,
+                            categoryStats = categoryStats,
+                            filterType = filterType,
+                            filterTime = filterTime,
+                            searchQuery = searchQuery,
+                            totalNetAssets = totalNetAssets,
+                            totalPositiveAssets = totalPositiveAssets,
+                            totalDebts = totalDebts,
+                            incomeCategoryStats = incomeCategoryStats,
+                            weekTrendPoints = weekTrendPoints,
+                            monthTrendPoints = monthTrendPoints,
+                            books = books,
+                            categories = categories,
+                            colorScheme = colorScheme,
+                            fontScale = fontScale,
+                            backgroundConfig = backgroundConfig,
+                            viewModel = viewModel
+                        )
+                    } else {
+                        // Splash phase: render only splash, skip home composition entirely
+                        // (节省 80% composition 工作量：避免 GlassBackgroundWithGlow orb 永久动画
+                        // + 30 项 LazyColumn + 各 spring 全部跑起来)
+                        SplashScreen(splashDone = splashDone)
                     }
-                }
-
-                // Frosted Glass Bottom Navigation Bar: Hidden when inside sub-screens (e.g. BillCalendarScreen)
-                AnimatedVisibility(
-                    visible = activeSubScreen == ActiveSubScreen.NONE,
-                    enter = fadeIn() + slideInVertically { height -> height },
-                    exit = fadeOut() + slideOutVertically { height -> height },
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                ) {
-                    GlassBottomNavBar(
-                        currentTab = currentTab,
-                        onTabSelected = { currentTab = it },
-                        onOpenAddExpense = {
-                            // User clicked the highlighted glowing "+" button while on HOME tab
-                            triggerAddExpenseInHome = true
-                        }
-                    )
                 }
             }
         }
     }
-}
 }
 
 private fun TextStyle.scale(factor: Float): TextStyle {
@@ -338,4 +200,206 @@ private fun TextStyle.scale(factor: Float): TextStyle {
         fontSize = this.fontSize * factor,
         lineHeight = this.lineHeight * factor
     )
+}
+
+@Composable
+private fun MainScreenContent(
+    currentTab: AppTab,
+    onCurrentTabChange: (AppTab) -> Unit,
+    activeSubScreen: ActiveSubScreen,
+    onActiveSubScreenChange: (ActiveSubScreen) -> Unit,
+    triggerAddExpenseInHome: Boolean,
+    onTriggerAddExpenseConsumed: () -> Unit,
+    isCategoryAnalysisExpanded: Boolean,
+    onToggleCategoryAnalysisExpanded: () -> Unit,
+    expenses: List<com.example.data.local.ExpenseEntity>,
+    accounts: List<com.example.data.local.AccountEntity>,
+    allExpenses: List<com.example.data.local.ExpenseEntity>,
+    thisMonthExpense: Double,
+    thisMonthIncome: Double,
+    totalExpense: Double,
+    totalIncome: Double,
+    todayExpense: Double,
+    budgetConfig: com.example.ui.viewmodel.BudgetConfig,
+    budgetProgress: com.example.ui.viewmodel.BudgetProgressInfo,
+    categoryStats: List<com.example.ui.viewmodel.CategoryStat>,
+    filterType: String,
+    filterTime: String,
+    searchQuery: String,
+    totalNetAssets: Double,
+    totalPositiveAssets: Double,
+    totalDebts: Double,
+    incomeCategoryStats: List<com.example.ui.viewmodel.CategoryStat>,
+    weekTrendPoints: List<com.example.ui.viewmodel.TrendPoint>,
+    monthTrendPoints: List<com.example.ui.viewmodel.TrendPoint>,
+    books: List<com.example.data.local.entity.BookEntity>,
+    categories: List<com.example.data.local.entity.CategoryEntity>,
+    colorScheme: com.example.ui.theme.ColorSchemeOption,
+    fontScale: com.example.ui.theme.FontScaleOption,
+    backgroundConfig: com.example.ui.theme.BackgroundConfig,
+    viewModel: ToolboxViewModel
+) {
+    // Outer transition between Main Tabs and Sub-Screens (Bill Calendar / Budget Settings)
+    AnimatedContent(
+        targetState = activeSubScreen,
+        transitionSpec = {
+            if (targetState != ActiveSubScreen.NONE) {
+                (slideInHorizontally(animationSpec = tween(280, easing = FastOutSlowInEasing)) { width -> (width * 0.35f).toInt() } + fadeIn(animationSpec = tween(240)))
+                    .togetherWith(
+                        slideOutHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { width -> -(width * 0.15f).toInt() } + fadeOut(animationSpec = tween(180))
+                    )
+            } else {
+                (slideInHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { width -> -(width * 0.15f).toInt() } + fadeIn(animationSpec = tween(180)))
+                    .togetherWith(
+                        slideOutHorizontally(animationSpec = tween(280, easing = FastOutSlowInEasing)) { width -> (width * 0.35f).toInt() } + fadeOut(animationSpec = tween(200))
+                    )
+            }
+        },
+        label = "SubScreenTransition"
+    ) { subScreen ->
+        when (subScreen) {
+            ActiveSubScreen.BILL_CALENDAR -> {
+                BillCalendarScreen(
+                    allExpenses = allExpenses,
+                    accounts = accounts,
+                    onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
+                        viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
+                    },
+                    onUpdateExpense = { oldExp, newExp -> viewModel.updateExpense(oldExp, newExp) },
+                    onDeleteExpense = { viewModel.deleteExpense(it) },
+                    onBack = { onActiveSubScreenChange(ActiveSubScreen.NONE) }
+                )
+            }
+            ActiveSubScreen.BUDGET_SETTINGS -> {
+                BudgetSettingsScreen(
+                    budgetConfig = budgetConfig,
+                    budgetProgress = budgetProgress,
+                    thisMonthExpense = thisMonthExpense,
+                    onSelectPeriod = { viewModel.setActiveBudgetPeriod(it) },
+                    onUpdateBudgetLimits = { m, q, y -> viewModel.updateBudgetLimits(m, q, y) },
+                    onBack = { onActiveSubScreenChange(ActiveSubScreen.NONE) }
+                )
+            }
+            ActiveSubScreen.BOOKS -> {
+                BooksScreen(
+                    books = books,
+                    onCreateBook = { name -> viewModel.saveBook(name) },
+                    onRenameBook = { id, name -> viewModel.updateBook(id, name) },
+                    onSetDefaultBook = { viewModel.setDefaultBook(it) },
+                    onArchiveBook = { viewModel.archiveBook(it) },
+                    onBack = { onActiveSubScreenChange(ActiveSubScreen.NONE) }
+                )
+            }
+            ActiveSubScreen.CATEGORIES -> {
+                CategoryManageScreen(
+                    categories = categories,
+                    onCreateCategory = { parentName, name, type -> viewModel.addCategory(parentName, name, type) },
+                    onArchiveCategory = { viewModel.archiveCategory(it) },
+                    onBack = { onActiveSubScreenChange(ActiveSubScreen.NONE) }
+                )
+            }
+            ActiveSubScreen.NONE -> {
+                AnimatedContent(
+                    targetState = currentTab,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(200, easing = LinearOutSlowInEasing))
+                            .togetherWith(fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing)))
+                    },
+                    label = "TabContent"
+                ) { tab ->
+                    when (tab) {
+                        AppTab.HOME -> ExpenseScreen(
+                            expenses = expenses,
+                            accounts = accounts,
+                            allExpenses = allExpenses,
+                            thisMonthExpense = thisMonthExpense,
+                            thisMonthIncome = thisMonthIncome,
+                            totalExpense = totalExpense,
+                            totalIncome = totalIncome,
+                            todayExpense = todayExpense,
+                            budgetConfig = budgetConfig,
+                            budgetProgress = budgetProgress,
+                            categoryStats = categoryStats,
+                            filterType = filterType,
+                            filterTime = filterTime,
+                            searchQuery = searchQuery,
+                            showAddDialogTrigger = triggerAddExpenseInHome,
+                            isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
+                            onToggleCategoryAnalysisExpanded = onToggleCategoryAnalysisExpanded,
+                            onSetFilterType = { viewModel.setFilterType(it) },
+                            onSetFilterTime = { viewModel.setFilterTime(it) },
+                            onSetSearchQuery = { viewModel.setSearchQuery(it) },
+                            onSelectBudgetPeriod = { viewModel.setActiveBudgetPeriod(it) },
+                            onUpdateBudgetLimits = { m, q, y -> viewModel.updateBudgetLimits(m, q, y) },
+                            onOpenBillCalendar = { onActiveSubScreenChange(ActiveSubScreen.BILL_CALENDAR) },
+                            onOpenBudgetSettings = { onActiveSubScreenChange(ActiveSubScreen.BUDGET_SETTINGS) },
+                            onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
+                                viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
+                            },
+                            onUpdateExpense = { oldExp, newExp -> viewModel.updateExpense(oldExp, newExp) },
+                            onDeleteExpense = { viewModel.deleteExpense(it) },
+                            onCloseAddDialogTrigger = onTriggerAddExpenseConsumed
+                        )
+                        AppTab.ACCOUNTS -> AccountsScreen(
+                            accounts = accounts,
+                            expenses = allExpenses,
+                            totalNetAssets = totalNetAssets,
+                            totalPositiveAssets = totalPositiveAssets,
+                            totalDebts = totalDebts,
+                            onAddAccount = { name, type, balance, suffix, color, note -> viewModel.addAccount(name, type, balance, suffix, color, note) },
+                            onUpdateAccount = { account, saveAsMissedRecord, oldBalance -> viewModel.updateAccount(account, saveAsMissedRecord, oldBalance) },
+                            onDeleteAccount = { viewModel.deleteAccount(it) }
+                        )
+                        AppTab.REPORTS -> ReportsScreen(
+                            expenses = allExpenses,
+                            categoryStats = categoryStats,
+                            incomeCategoryStats = incomeCategoryStats,
+                            weekTrendPoints = weekTrendPoints,
+                            monthTrendPoints = monthTrendPoints,
+                            totalExpense = totalExpense,
+                            totalIncome = totalIncome
+                        )
+                        AppTab.MINE -> MineScreen(
+                            expenses = allExpenses,
+                            accountsCount = accounts.size,
+                            currentColorScheme = colorScheme,
+                            currentFontScale = fontScale,
+                            currentBackgroundConfig = backgroundConfig,
+                            onSelectColorScheme = { viewModel.setColorScheme(it) },
+                            onSelectFontScale = { viewModel.setFontScale(it) },
+                            onSelectBackgroundConfig = { viewModel.setBackgroundConfig(it) },
+                            onSetCustomColor = { hex, name -> viewModel.setCustomBackgroundColor(hex, name) },
+                            onSetCustomImage = { uri, isLight -> viewModel.setCustomBackgroundImage(uri, isLight) },
+                            onSetCardAlpha = { viewModel.setCardAlpha(it) },
+                            onSetBlurRadius = { viewModel.setBlurRadius(it) },
+                            onSetFrostAlpha = { viewModel.setFrostAlpha(it) },
+                            onSetIsLight = { viewModel.setIsLightBackground(it) },
+                            onGenerateCsv = { viewModel.generateCsvData() },
+                            onImportCsv = { viewModel.importCsvData(it) },
+                            onUpdateExpense = { oldExp, newExp -> viewModel.updateExpense(oldExp, newExp) },
+                            onDeleteExpense = { viewModel.deleteExpense(it) },
+                            onOpenBooks = { onActiveSubScreenChange(ActiveSubScreen.BOOKS) },
+                            onOpenCategories = { onActiveSubScreenChange(ActiveSubScreen.CATEGORIES) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // Frosted Glass Bottom Navigation Bar
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = activeSubScreen == ActiveSubScreen.NONE,
+            enter = fadeIn() + slideInVertically { it },
+            exit = fadeOut() + slideOutVertically { it },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            GlassBottomNavBar(
+                currentTab = currentTab,
+                onTabSelected = onCurrentTabChange,
+                onOpenAddExpense = onTriggerAddExpenseConsumed
+            )
+        }
+    }
 }

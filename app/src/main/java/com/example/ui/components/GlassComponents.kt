@@ -96,47 +96,12 @@ fun GlassBackgroundWithGlow(
 
     when (bgConfig.type) {
         BackgroundOptionType.GRAY_WHITE -> {
-            // Default 灰白纯色: Clean, modern, minimalist slate gray-white solid background
+            // Default 灰白纯色: 纯色背景不画 orb（性能优化，跳过永久循环动画）
             Box(
                 modifier = modifier
                     .fillMaxSize()
                     .background(bgConfig.solidColor)
             ) {
-                // Subtle, elegant soft lighting orbs for delicate frosted glass realism
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 80.dp, y = (-40).dp)
-                        .size(360.dp)
-                        .scale(pulse1)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    Color(0xFFE2E8F0).copy(alpha = 0.7f),
-                                    Color(0xFFF1F5F9).copy(alpha = 0.3f),
-                                    Color.Transparent
-                                )
-                            ),
-                            CircleShape
-                        )
-                )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .offset(x = (-60).dp, y = 80.dp)
-                        .size(380.dp)
-                        .scale(pulse2)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    Color(0xFFE2E8F0).copy(alpha = 0.6f),
-                                    Color(0xFFE0E7FF).copy(alpha = 0.2f),
-                                    Color.Transparent
-                                )
-                            ),
-                            CircleShape
-                        )
-                )
                 content()
             }
         }
@@ -304,29 +269,12 @@ fun GlassBackgroundWithGlow(
             }
         }
         else -> {
-            // Light / Custom Solid Color
+            // Light / Custom Solid Color: 跳过 orb（性能优化）
             Box(
                 modifier = modifier
                     .fillMaxSize()
                     .background(bgConfig.solidColor)
             ) {
-                if (bgConfig.isLight) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = 90.dp, y = (-30).dp)
-                            .size(320.dp)
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.5f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                CircleShape
-                            )
-                    )
-                }
                 content()
             }
         }

@@ -15,6 +15,8 @@ import java.util.Locale
 fun AnimatedNumberText(
     value: Double,
     prefix: String = "¥ ",
+    suffix: String = "",
+    fractionDigits: Int = 2,
     modifier: Modifier = Modifier,
     textStyle: TextStyle = LocalTextStyle.current,
     color: Color = Color.Unspecified
@@ -25,8 +27,9 @@ fun AnimatedNumberText(
         label = "number_animation"
     )
 
+    val fmt = "%,.${fractionDigits}f"
     Text(
-        text = "$prefix${String.format(Locale.CHINA, "%,.2f", animatedValue)}",
+        text = "$prefix${String.format(Locale.CHINA, fmt, animatedValue)}$suffix",
         style = textStyle,
         color = color,
         modifier = modifier
