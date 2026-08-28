@@ -2,6 +2,7 @@ package com.example.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -316,6 +318,16 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     )
     val fontScale: StateFlow<FontScaleOption> = _fontScale.asStateFlow()
 
+    private val _isCategoryAnalysisExpanded = MutableStateFlow(
+        settingsPrefs.getBoolean("home_category_analysis_expanded", true)
+    )
+    val isCategoryAnalysisExpanded: StateFlow<Boolean> = _isCategoryAnalysisExpanded.asStateFlow()
+
+    fun setCategoryAnalysisExpanded(expanded: Boolean) {
+        _isCategoryAnalysisExpanded.value = expanded
+        settingsPrefs.edit().putBoolean("home_category_analysis_expanded", expanded).apply()
+    }
+
     private fun loadBackgroundConfig(): BackgroundConfig {
         val hasSaved = settingsPrefs.getBoolean("bg_has_saved", false)
         if (!hasSaved) {
@@ -373,12 +385,37 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     }
 
     fun setCustomBackgroundImage(uriString: String, isLight: Boolean = false) {
+        var finalPath = uriString
+        try {
+            val app = getApplication<Application>()
+            val uri = Uri.parse(uriString)
+            val inputStream = if (uriString.startsWith("content://") || uriString.startsWith("file://")) {
+                app.contentResolver.openInputStream(uri)
+            } else {
+                val file = File(uriString)
+                if (file.exists()) file.inputStream() else null
+            }
+
+            if (inputStream != null) {
+                val filesDir = app.filesDir
+                filesDir.listFiles { file -> file.name.startsWith("custom_wallpaper_") }?.forEach { it.delete() }
+                val destFile = File(filesDir, "custom_wallpaper_${System.currentTimeMillis()}.jpg")
+                destFile.outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+                inputStream.close()
+                finalPath = destFile.absolutePath
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val current = _backgroundConfig.value
         val newConfig = current.copy(
             type = BackgroundOptionType.CUSTOM_IMAGE,
             title = "自定义背景图片",
             subtitle = "个性化壁纸与毛玻璃卡片",
-            imageUri = uriString,
+            imageUri = finalPath,
             isLight = isLight
         )
         setBackgroundConfig(newConfig)

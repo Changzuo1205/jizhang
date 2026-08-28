@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import java.io.File
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -251,9 +252,15 @@ fun GlassBackgroundWithGlow(
                         Modifier.fillMaxSize()
                     }
 
+                    val imgData: Any = if (bgConfig.imageUri.startsWith("/") || bgConfig.imageUri.startsWith("file:")) {
+                        File(bgConfig.imageUri.removePrefix("file://"))
+                    } else {
+                        bgConfig.imageUri
+                    }
+
                     AsyncImage(
                         model = ImageRequest.Builder(context)
-                            .data(bgConfig.imageUri)
+                            .data(imgData)
                             .crossfade(true)
                             .build(),
                         contentDescription = "自定义背景壁纸",

@@ -175,6 +175,8 @@ fun ExpenseScreen(
     filterTime: String,
     searchQuery: String,
     showAddDialogTrigger: Boolean,
+    isCategoryAnalysisExpanded: Boolean = true,
+    onToggleCategoryAnalysisExpanded: () -> Unit = {},
     onSetFilterType: (String) -> Unit,
     onSetFilterTime: (String) -> Unit,
     onSetSearchQuery: (String) -> Unit,
@@ -193,7 +195,7 @@ fun ExpenseScreen(
 
     var showLocalAddDialog by remember { mutableStateOf(false) }
     var expenseToEdit by remember { mutableStateOf<ExpenseEntity?>(null) }
-    var showStatsPanel by remember { mutableStateOf(true) }
+    val showStatsPanel = isCategoryAnalysisExpanded
     var showSearchInput by remember { mutableStateOf(false) }
     var selectedCalendarDay by remember { mutableStateOf<Int?>(null) }
 
@@ -283,7 +285,7 @@ fun ExpenseScreen(
                                         if (bgConfig.isLight) Color(0xFF6366F1).copy(alpha = 0.2f) else Color.White.copy(alpha = 0.2f)
                                     )
                                 ),
-                                onClick = { showStatsPanel = !showStatsPanel },
+                                onClick = { onToggleCategoryAnalysisExpanded() },
                                 modifier = Modifier.testTag("toggle_stats_button")
                             ) {
                                 Row(
