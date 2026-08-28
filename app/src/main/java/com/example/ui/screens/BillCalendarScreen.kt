@@ -834,13 +834,5 @@ fun BillCalendarScreen(
 }
 
 private fun formatCalendarAmount(amount: Double): String {
-    return if (amount >= 10000) {
-        String.format(Locale.CHINA, "%.1fw", amount / 10000.0)
-    } else if (amount >= 1000) {
-        String.format(Locale.CHINA, "%.0f", amount)
-    } else if (amount % 1.0 == 0.0) {
-        String.format(Locale.CHINA, "%.0f", amount)
-    } else {
-        String.format(Locale.CHINA, "%.1f", amount)
-    }
+    return String.format(Locale.CHINA, "%.2f", amount)
 }

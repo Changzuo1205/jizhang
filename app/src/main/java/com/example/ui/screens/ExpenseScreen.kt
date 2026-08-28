@@ -31,6 +31,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -179,6 +182,8 @@ fun ExpenseScreen(
     filterTime: String,
     searchQuery: String,
     showAddDialogTrigger: Boolean,
+    selectedCalendarDay: Int? = null,
+    onSelectCalendarDay: (Int?) -> Unit = {},
     isCategoryAnalysisExpanded: Boolean = true,
     onToggleCategoryAnalysisExpanded: () -> Unit = {},
     onSetFilterType: (String) -> Unit,
@@ -189,6 +194,7 @@ fun ExpenseScreen(
     onOpenBillCalendar: () -> Unit = {},
     onOpenBudgetSettings: () -> Unit = {},
     onAddExpense: (type: String, category: String, subCategory: String, amount: Double, note: String, accountId: Long, accountName: String, timestamp: Long, transferToAccountId: Long?) -> Unit,
+    onEditExpense: (ExpenseEntity) -> Unit = {},
     onUpdateExpense: (ExpenseEntity, ExpenseEntity) -> Unit,
     onDeleteExpense: (ExpenseEntity) -> Unit,
     onCloseAddDialogTrigger: () -> Unit,
@@ -197,11 +203,8 @@ fun ExpenseScreen(
     val colorScheme = LocalAppColorScheme.current
     val bgConfig = LocalAppBackgroundConfig.current
 
-    var showLocalAddDialog by remember { mutableStateOf(false) }
-    var expenseToEdit by remember { mutableStateOf<ExpenseEntity?>(null) }
     val showStatsPanel = isCategoryAnalysisExpanded
     var showSearchInput by remember { mutableStateOf(false) }
-    var selectedCalendarDay by remember { mutableStateOf<Int?>(null) }
 
     // If calendar day is selected, filter display list to that day
     val displayedExpenses = remember(expenses, selectedCalendarDay) {
@@ -225,18 +228,6 @@ fun ExpenseScreen(
         displayedExpenses.groupBy { sdf.format(Date(it.dateTimestamp)) }
     }
 
-    // Default timestamp: if date is selected in calendar, default to that selected date!
-    val defaultTimestamp = remember(selectedCalendarDay) {
-        if (selectedCalendarDay == null) {
-            System.currentTimeMillis()
-        } else {
-            val cal = Calendar.getInstance()
-            cal.set(Calendar.DAY_OF_MONTH, selectedCalendarDay!!)
-            cal.timeInMillis
-        }
-    }
-
-    val shouldShowAddDialog = showLocalAddDialog || showAddDialogTrigger
     val listState = rememberLazyListState()
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
 
@@ -251,7 +242,7 @@ fun ExpenseScreen(
             ) {
                 // Header Area
                 item {
-                    Spacer(modifier = Modifier.statusBarsPadding())
+                    Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -643,7 +634,7 @@ fun ExpenseScreen(
                         expenses = allExpenses,
                         selectedDay = selectedCalendarDay,
                         onSelectDay = { day ->
-                            selectedCalendarDay = day
+                            onSelectCalendarDay(day)
                         },
                         onOpenBillCalendar = onOpenBillCalendar
                     )
@@ -668,7 +659,7 @@ fun ExpenseScreen(
                                 )
                             }
                     ) {
-                        Spacer(modifier = Modifier.statusBarsPadding())
+                        Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
                         
                         Row(
                             modifier = Modifier
@@ -693,7 +684,7 @@ fun ExpenseScreen(
                                         color = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan,
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
-                                            .clickable { selectedCalendarDay = null }
+                                            .clickable { onSelectCalendarDay(null) }
                                             .padding(horizontal = 4.dp, vertical = 2.dp)
                                             .testTag("clear_day_filter_btn")
                                     )
@@ -934,8 +925,7 @@ fun ExpenseScreen(
                                 expenseTextColor = colorScheme.expenseText,
                                 incomeTextColor = colorScheme.incomeText,
                                 onEdit = {
-                                    expenseToEdit = expense
-                                    showLocalAddDialog = true
+                                    onEditExpense(expense)
                                 },
                                 onDelete = { onDeleteExpense(expense) },
                                 modifier = Modifier.animateItemPlacement()
@@ -949,43 +939,6 @@ fun ExpenseScreen(
                 }
             }
         }
-    }
-
-    if (shouldShowAddDialog) {
-        ExpenseAddEditDialog(
-            expenseToEdit = expenseToEdit,
-            allExpenses = allExpenses,
-            accounts = accounts,
-            initialTimestamp = defaultTimestamp,
-            onDismiss = {
-                showLocalAddDialog = false
-                expenseToEdit = null
-                onCloseAddDialogTrigger()
-            },
-            onConfirm = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
-                if (expenseToEdit == null) {
-                    onAddExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
-                } else {
-                    onUpdateExpense(
-                        expenseToEdit!!,
-                        expenseToEdit!!.copy(
-                            type = type,
-                            category = cat,
-                            subCategory = subCat,
-                            amount = amount,
-                            note = note,
-                            accountId = accId,
-                            accountName = accName,
-                            dateTimestamp = timestamp,
-                            transferToAccountId = transferToAccountId ?: 0L
-                        )
-                    )
-                }
-                showLocalAddDialog = false
-                expenseToEdit = null
-                onCloseAddDialogTrigger()
-            }
-        )
     }
 }
 

@@ -24,6 +24,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE is_deleted = 0")
     suspend fun getActiveOnce(): List<TransactionEntity>
 
+    @Query("SELECT * FROM transactions WHERE type = :type")
+    suspend fun getByTypeOnce(type: TransactionType): List<TransactionEntity>
+
     @Query("SELECT * FROM transactions WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): TransactionEntity?
 
@@ -51,6 +54,12 @@ interface TransactionDao {
 
     @Update
     suspend fun update(tx: TransactionEntity)
+
+    @Query("UPDATE transactions SET category_id = :newCategoryId WHERE category_id = :oldCategoryId")
+    suspend fun updateCategoryId(oldCategoryId: Long, newCategoryId: Long)
+
+    @Query("UPDATE transactions SET category_id = :newCategoryId WHERE category_id IN (:oldCategoryIds)")
+    suspend fun updateCategoryIds(oldCategoryIds: List<Long>, newCategoryId: Long)
 
     /** 软删除：仅置位标记并刷新更新时间，物理行保留以维护外键与历史 */
     @Query("UPDATE transactions SET is_deleted = 1, updated_at = :now WHERE id = :id")

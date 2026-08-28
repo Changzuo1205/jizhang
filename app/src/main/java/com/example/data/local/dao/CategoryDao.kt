@@ -42,6 +42,15 @@ interface CategoryDao {
     @Query("SELECT COUNT(*) FROM category")
     suspend fun count(): Int
 
+    @Query("SELECT * FROM category WHERE parent_id = :parentId")
+    suspend fun getChildrenByParentId(parentId: Long): List<CategoryEntity>
+
+    @Query("SELECT * FROM category WHERE name = :name")
+    suspend fun findByName(name: String): List<CategoryEntity>
+
+    @Query("DELETE FROM category WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(categories: List<CategoryEntity>)
 

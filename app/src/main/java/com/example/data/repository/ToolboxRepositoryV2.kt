@@ -351,9 +351,9 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
 
         val topUp = diffCents > 0
         val categoryId = if (topUp)
-            resolveCategoryId(TransactionType.INCOME, "漏记款", "漏记款")
+            resolveCategoryId(TransactionType.INCOME, "居家", "漏记款")
         else
-            resolveCategoryId(TransactionType.EXPENSE, "漏记款", "漏记款")
+            resolveCategoryId(TransactionType.EXPENSE, "居家", "漏记款")
 
         transactionDao.insert(
             TransactionEntity(

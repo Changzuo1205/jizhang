@@ -50,6 +50,12 @@ class AppContainerImpl(context: Context) : AppContainer {
             DatabaseSeeder.seedIfEmpty(appContext, database)
             // 独立迁移分支：老用户（库已存在）的自定义分类一次性补插，幂等标记在 seeder 内维护
             DatabaseSeeder.importLegacyCustomCategoriesIfPending(appContext, database)
+            // 同步确保所有「漏记款」归于「居家」一级分类下（支出端）
+            DatabaseSeeder.syncMissedCategoryUnderHome(appContext, database)
+            // 同步确保扁平化 19 个标准收入分类，移除收入端「居家」，迁移「漏记款」为收入一级分类
+            DatabaseSeeder.syncFlatIncomeCategories(appContext, database)
+            // 同步并校准七个标准资产账户信息与目标余额
+            DatabaseSeeder.syncUserAccountBalances(appContext, database)
         }
     }
 

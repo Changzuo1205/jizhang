@@ -172,47 +172,86 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                 val cat = tx.categoryId?.let { catById[it] }
                 val parent = cat?.parentId?.let { catById[it] }
                 
-                // 分类映射逻辑：优先显示父级名称（二级分类），否则显示自身名称（一级分类）
-                val resolvedCategory = when {
-                    parent != null -> {
-                        // 二级分类：显示父级名称
-                        parent.name
+                val (finalCategory, finalSubCategory) = if (tx.type == TransactionType.INCOME) {
+                    val rawName = when {
+                        parent != null && parent.type == "income" && parent.name != "居家" -> parent.name
+                        cat != null && cat.type == "income" && cat.name != "居家" -> cat.name
+                        else -> {
+                            val note = tx.note.orEmpty()
+                            when {
+                                note.contains("利息") -> "利息"
+                                note.contains("兼职") || note in listOf("众包保证金", "大叹号") -> "兼职外快"
+                                note.contains("营业") -> "营业收入"
+                                note.contains("红包") -> "红包"
+                                note.contains("销售") -> "销售款"
+                                note.contains("退款") || note.contains("返款") -> "退款返款"
+                                note.contains("报销") -> "报销款"
+                                note.contains("福利") || note.contains("补贴") -> "福利补贴"
+                                note.contains("余额宝") -> "余额宝"
+                                note.contains("应收") -> "应收款"
+                                note.contains("生活费") -> "生活费"
+                                note.contains("基金") || note.contains("001423") -> "基金"
+                                note.contains("礼金") || note in listOf("娘", "压岁") -> "礼金"
+                                note.contains("分红") || note.contains("股票") -> "分红股票"
+                                note.contains("公积金") -> "公积金"
+                                note.contains("赔付") -> "赔付款"
+                                note.contains("余额调整") || note.contains("漏记") -> "漏记款"
+                                note.contains("工资") || note.contains("薪") -> "工资薪水"
+                                else -> "其他"
+                            }
+                        }
                     }
-                    cat != null -> {
-                        // 一级分类：显示自身名称
-                        cat.name
+                    val normalized = when (rawName) {
+                        "工资" -> "工资薪水"
+                        "居家" -> if (tx.note?.contains("生活费") == true) "生活费" else "漏记款"
+                        else -> rawName
                     }
-                    else -> {
-                        // 未找到分类：记录日志并使用回退分类
-                        tx.categoryId?.let { missingCategories.add(it) }
-                        "未分类"
+                    // 收入明细的一级分类与二级分类相同
+                    Pair(normalized, normalized)
+                } else {
+                    // 支出与转账：分类映射逻辑：优先显示父级名称（二级分类），否则显示自身名称（一级分类）
+                    val resolvedCategory = when {
+                        parent != null -> {
+                            // 二级分类：显示父级名称
+                            parent.name
+                        }
+                        cat != null -> {
+                            // 一级分类：显示自身名称
+                            cat.name
+                        }
+                        else -> {
+                            // 未找到分类：记录日志并使用回退分类
+                            tx.categoryId?.let { missingCategories.add(it) }
+                            "未分类"
+                        }
                     }
-                }
-                
-                // 子分类逻辑：只有存在父级和子级时才显示子级名称
-                val resolvedSubCategory = when {
-                    parent != null && cat != null -> cat.name
-                    else -> ""
-                }
-                
-                // 如果原始分类ID存在但映射失败，尝试使用回退分类
-                val finalCategory = if (tx.categoryId != null && resolvedCategory == "未分类") {
-                    val fallbackCat = findFallbackCategory(tx.type.name)
-                    if (fallbackCat != null) {
-                        fallbackCategories.add("${tx.type.name}:${fallbackCat.name}")
-                        fallbackCat.name
+                    
+                    // 子分类逻辑：只有存在父级和子级时才显示子级名称
+                    val resolvedSubCategory = when {
+                        parent != null && cat != null -> cat.name
+                        else -> ""
+                    }
+                    
+                    // 如果原始分类ID存在但映射失败，尝试使用回退分类
+                    val finalCat = if (tx.categoryId != null && resolvedCategory == "未分类") {
+                        val fallbackCat = findFallbackCategory(tx.type.name)
+                        if (fallbackCat != null) {
+                            fallbackCategories.add("${tx.type.name}:${fallbackCat.name}")
+                            fallbackCat.name
+                        } else {
+                            resolvedCategory
+                        }
                     } else {
                         resolvedCategory
                     }
-                } else {
-                    resolvedCategory
+                    Pair(finalCat, resolvedSubCategory)
                 }
                 
                 ExpenseEntity(
                     id = tx.id,
                     type = tx.type.name,
                     category = finalCategory,
-                    subCategory = resolvedSubCategory,
+                    subCategory = finalSubCategory,
                     amount = AmountFormatter.centsToYuan(tx.amount),
                     note = tx.note.orEmpty(),
                     dateTimestamp = tx.occurredAt,
@@ -1308,6 +1347,11 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         val targetId = currentAccounts.find { it.name.equals(tokens.getOrNull(7)?.trim() ?: "", ignoreCase = true) }?.id
                         if (targetId == null || targetId == accId) continue
                         transferToAccountId = targetId
+                    }
+
+                    if (category == "漏记款" || (category.isBlank() && subCategory == "漏记款")) {
+                        category = "居家"
+                        subCategory = "漏记款"
                     }
 
                     repository.insertLegacyExpense(

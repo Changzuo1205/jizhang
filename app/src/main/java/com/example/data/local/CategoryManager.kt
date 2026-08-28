@@ -94,7 +94,7 @@ object CategoryManager {
         CategoryItem(
             name = "居家",
             type = "EXPENSE",
-            defaultSubcategories = listOf("手机电话", "水电燃气", "生活费", "美发美容", "住宿房租", "材料建材", "房款房贷", "快递邮政", "电脑宽带", "家政服务", "物业", "税费手续费", "保险费", "消费贷款", "婚庆摄影", "生活其他", "其他")
+            defaultSubcategories = listOf("手机电话", "水电燃气", "生活费", "美发美容", "住宿房租", "材料建材", "房款房贷", "快递邮政", "电脑宽带", "家政服务", "物业", "税费手续费", "保险费", "消费贷款", "婚庆摄影", "漏记款", "生活其他", "其他")
         ),
         CategoryItem(
             name = "投资",
@@ -112,11 +112,6 @@ object CategoryManager {
             defaultSubcategories = listOf("进货采购", "人工支出", "材料辅料", "办公费用", "交通运输", "工程付款", "运营费", "会务费", "营销广告", "店面租金", "注册登记", "生意其他", "其他")
         ),
         CategoryItem(
-            name = "漏记款",
-            type = "EXPENSE",
-            defaultSubcategories = listOf("漏记款")
-        ),
-        CategoryItem(
             name = "资金流转",
             type = "EXPENSE",
             defaultSubcategories = listOf("应收款", "报销款", "公积金", "销售款", "退款返款", "其他")
@@ -128,31 +123,26 @@ object CategoryManager {
         )
     )
 
-    // 2. 系统预置收入一级分类及二级分类
+    // 2. 系统预置收入一级分类及二级分类 (收入不区分层级，一级与二级完全相同)
     val DEFAULT_INCOME_CATEGORIES = listOf(
-        CategoryItem(name = "工资薪水", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "利息", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "兼职外快", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "营业收入", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "红包", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "销售款", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "退款返款", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "报销款", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "福利补贴", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "余额宝", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "应收款", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "生活费", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "奖金", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "基金", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "礼金", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "分红", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "租金", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "股票", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "公积金", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "工程款", type = "INCOME", defaultSubcategories = listOf("其他")),
-        CategoryItem(name = "赔付款", type = "INCOME", defaultSubcategories = listOf("其他")),
+        CategoryItem(name = "工资薪水", type = "INCOME", defaultSubcategories = listOf("工资薪水")),
+        CategoryItem(name = "利息", type = "INCOME", defaultSubcategories = listOf("利息")),
+        CategoryItem(name = "兼职外快", type = "INCOME", defaultSubcategories = listOf("兼职外快")),
+        CategoryItem(name = "营业收入", type = "INCOME", defaultSubcategories = listOf("营业收入")),
+        CategoryItem(name = "红包", type = "INCOME", defaultSubcategories = listOf("红包")),
+        CategoryItem(name = "销售款", type = "INCOME", defaultSubcategories = listOf("销售款")),
+        CategoryItem(name = "退款返款", type = "INCOME", defaultSubcategories = listOf("退款返款")),
+        CategoryItem(name = "报销款", type = "INCOME", defaultSubcategories = listOf("报销款")),
+        CategoryItem(name = "福利补贴", type = "INCOME", defaultSubcategories = listOf("福利补贴")),
+        CategoryItem(name = "余额宝", type = "INCOME", defaultSubcategories = listOf("余额宝")),
+        CategoryItem(name = "应收款", type = "INCOME", defaultSubcategories = listOf("应收款")),
+        CategoryItem(name = "生活费", type = "INCOME", defaultSubcategories = listOf("生活费")),
+        CategoryItem(name = "基金", type = "INCOME", defaultSubcategories = listOf("基金")),
+        CategoryItem(name = "礼金", type = "INCOME", defaultSubcategories = listOf("礼金")),
+        CategoryItem(name = "分红股票", type = "INCOME", defaultSubcategories = listOf("分红股票")),
+        CategoryItem(name = "公积金", type = "INCOME", defaultSubcategories = listOf("公积金")),
+        CategoryItem(name = "赔付款", type = "INCOME", defaultSubcategories = listOf("赔付款")),
         CategoryItem(name = "漏记款", type = "INCOME", defaultSubcategories = listOf("漏记款")),
-        CategoryItem(name = "转账", type = "INCOME", defaultSubcategories = listOf("转入", "存入", "平账", "其他")),
         CategoryItem(name = "其他", type = "INCOME", defaultSubcategories = listOf("其他"))
     )
 
@@ -201,8 +191,12 @@ object CategoryManager {
 
     /**
      * 获取指定分类下的全部二级细分列表（合并预置与自定义扩展），保证“其他”置底
+     * 收入类型统一不区分层级，一级与二级分类保持相同。
      */
     fun getSubcategories(context: Context, categoryName: String, type: String): List<String> {
+        if (type == "INCOME") {
+            return listOf(categoryName)
+        }
         val allCats = getCategories(context, type)
         val matched = allCats.find { it.name == categoryName }
         val baseSubs = matched?.defaultSubcategories ?: listOf("其他")
@@ -223,6 +217,7 @@ object CategoryManager {
 
     /**
      * 智能计算默认选中的二级分类：
+     * - 收入类型直接返回一级分类同名
      * - 餐饮分类：新建时按当前时间段智能推荐（早餐/午餐/晚餐/夜宵）
      * - 其余分类：优先使用用户上次选择的历史偏好，若无则回退至该分类的首个二级项
      */
@@ -233,6 +228,9 @@ object CategoryManager {
         isFreshCreation: Boolean = true,
         timestamp: Long = System.currentTimeMillis()
     ): String {
+        if (type == "INCOME") {
+            return categoryName
+        }
         val subcategories = getSubcategories(context, categoryName, type)
         if (subcategories.isEmpty()) return "其他"
 
@@ -410,14 +408,16 @@ object CategoryManager {
             category.contains("购物") || category.contains("百货") || category.contains("衣服") || category.contains("数码") -> Icons.Default.ShoppingBag
             category.contains("娱乐") || category.contains("电影") || category.contains("游戏") || category.contains("聚会") -> Icons.Default.SportsEsports
             category.contains("医教") || category.contains("医疗") || category.contains("药品") || category.contains("挂号") || category.contains("学费") -> Icons.Default.MedicalServices
-            category.contains("居家") || category.contains("水电") || category.contains("房租") || category.contains("宽带") -> Icons.Default.Home
-            category.contains("投资") || category.contains("基金") || category.contains("股票") || category.contains("利息") -> Icons.Default.TrendingUp
+            category.contains("居家") || category.contains("水电") || category.contains("房租") || category.contains("宽带") || category.contains("生活费") -> Icons.Default.Home
+            category.contains("分红股票") || category.contains("分红") || category.contains("股票") -> Icons.Default.TrendingUp
+            category.contains("投资") || category.contains("基金") || category.contains("利息") -> Icons.Default.TrendingUp
             category.contains("人情") || category.contains("礼金") || category.contains("红包") || category.contains("孝敬") -> Icons.Default.CardGiftcard
             category.contains("工资") || category.contains("薪") -> Icons.Default.Work
             category.contains("奖金") -> Icons.Default.MonetizationOn
-            category.contains("兼职") -> Icons.Default.Assignment
-            category.contains("应收款") || category.contains("销售款") -> Icons.Default.AccountBalance
-            category.contains("报销") || category.contains("公积金") -> Icons.Default.Payment
+            category.contains("兼职") || category.contains("外快") -> Icons.Default.Assignment
+            category.contains("营业") || category.contains("应收款") || category.contains("销售") || category.contains("余额宝") -> Icons.Default.AccountBalance
+            category.contains("退款") || category.contains("返款") || category.contains("报销") || category.contains("公积金") || category.contains("福利") || category.contains("补贴") -> Icons.Default.Payment
+            category.contains("赔付") || category.contains("赔偿") -> Icons.Default.Healing
             category.contains("漏记") || category.contains("校准") -> Icons.Default.Bookmark
             category.contains("转账") || category.contains("余额调整") -> Icons.Default.MoreHoriz
             else -> Icons.Default.Category
@@ -434,14 +434,22 @@ object CategoryManager {
             category.contains("购物") -> GlowPink
             category.contains("娱乐") -> GlowViolet
             category.contains("医教") -> Color(0xFFF87171)
-            category.contains("居家") -> Color(0xFF38BDF8)
-            category.contains("投资") -> Color(0xFF34D399)
-            category.contains("人情") -> Color(0xFFF59E0B)
-            category.contains("工资") -> GlowEmerald
+            category.contains("居家") || category.contains("生活费") -> Color(0xFF38BDF8)
+            category.contains("投资") || category.contains("利息") -> Color(0xFF34D399)
+            category.contains("基金") -> Color(0xFF3B82F6)
+            category.contains("人情") || category.contains("礼金") || category.contains("红包") -> Color(0xFFF59E0B)
+            category.contains("工资") || category.contains("薪水") -> GlowEmerald
             category.contains("奖金") -> Color(0xFFFBBF24)
-            category.contains("兼职") -> Color(0xFF818CF8)
-            category.contains("应收款") || category.contains("销售款") -> Color(0xFF10B981)
+            category.contains("兼职") || category.contains("外快") -> Color(0xFF818CF8)
+            category.contains("营业") -> Color(0xFF0EA5E9)
+            category.contains("销售") -> Color(0xFF10B981)
+            category.contains("退款") || category.contains("返款") -> Color(0xFF14B8A6)
             category.contains("报销") || category.contains("公积金") -> Color(0xFF6366F1)
+            category.contains("福利") || category.contains("补贴") -> Color(0xFFFBBF24)
+            category.contains("余额宝") -> Color(0xFF0284C7)
+            category.contains("应收款") || category.contains("应收") -> Color(0xFF059669)
+            category.contains("分红股票") || category.contains("分红") || category.contains("股票") -> Color(0xFFEC4899)
+            category.contains("赔付") || category.contains("赔偿") -> Color(0xFFA855F7)
             category.contains("转账") || category.contains("余额调整") -> Color(0xFF8B5CF6)
             category.contains("漏记") || category.contains("校准") -> Color(0xFFF97316)
             else -> Color(0xFF9333EA)

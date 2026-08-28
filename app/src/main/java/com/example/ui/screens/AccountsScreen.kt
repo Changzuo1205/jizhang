@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -56,6 +59,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -119,51 +123,93 @@ fun AccountsScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
 
-    // Dynamically calculate the real 6-month historical asset values from actual accounts & transactions
-    // If a time period has no recorded data, it defaults to zero
-    val assetHistory = remember(accounts, expenses, totalPositiveAssets) {
-        val currentAsset = totalPositiveAssets
+    // Dynamically calculate the real historical asset values from the earliest recorded data to now
+    val assetHistory = remember(accounts, expenses, totalPositiveAssets, totalNetAssets, totalDebts) {
+        val currentAsset = if (totalDebts > 0.0) totalNetAssets else totalPositiveAssets
         val points = mutableListOf<AssetHistoryPoint>()
-        val hasAnyExpenses = expenses.isNotEmpty()
         
-        for (i in 5 downTo 0) {
-            val monthCal = Calendar.getInstance().apply {
-                add(Calendar.MONTH, -i)
-                if (i == 0) {
-                    // For current month, take now
-                } else {
-                    set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-                    set(Calendar.HOUR_OF_DAY, 23)
-                    set(Calendar.MINUTE, 59)
-                    set(Calendar.SECOND, 59)
-                    set(Calendar.MILLISECOND, 999)
+        if (expenses.isEmpty()) {
+            // Default 6 months if no transactions
+            for (i in 5 downTo 0) {
+                val monthCal = Calendar.getInstance().apply {
+                    add(Calendar.MONTH, -i)
+                    if (i != 0) {
+                        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                        set(Calendar.SECOND, 59)
+                        set(Calendar.MILLISECOND, 999)
+                    }
                 }
+                val targetTimestamp = monthCal.timeInMillis
+                val monthLabel = "${monthCal.get(Calendar.MONTH) + 1}月"
+                points.add(AssetHistoryPoint(label = monthLabel, value = currentAsset, timestamp = targetTimestamp))
             }
-            val targetTimestamp = monthCal.timeInMillis
-            val monthLabel = "${monthCal.get(Calendar.MONTH) + 1}月"
+        } else {
+            val minTimestamp = expenses.minOf { it.dateTimestamp }
+            val startCal = Calendar.getInstance().apply {
+                timeInMillis = minTimestamp
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val nowCal = Calendar.getInstance()
             
-            // Check if there is recorded data on or before this period
-            val hasDataForThisPeriod = if (i == 0) {
-                totalPositiveAssets > 0 || hasAnyExpenses
-            } else {
-                expenses.any { it.dateTimestamp <= targetTimestamp }
-            }
+            // Build list of months from start month to current month
+            val cursorCal = startCal.clone() as Calendar
+            while (cursorCal.get(Calendar.YEAR) < nowCal.get(Calendar.YEAR) ||
+                (cursorCal.get(Calendar.YEAR) == nowCal.get(Calendar.YEAR) && cursorCal.get(Calendar.MONTH) <= nowCal.get(Calendar.MONTH))
+            ) {
+                val isCurrentMonth = cursorCal.get(Calendar.YEAR) == nowCal.get(Calendar.YEAR) &&
+                        cursorCal.get(Calendar.MONTH) == nowCal.get(Calendar.MONTH)
+                
+                val targetTimestamp = if (isCurrentMonth) {
+                    nowCal.timeInMillis
+                } else {
+                    val endOfMonth = cursorCal.clone() as Calendar
+                    endOfMonth.set(Calendar.DAY_OF_MONTH, endOfMonth.getActualMaximum(Calendar.DAY_OF_MONTH))
+                    endOfMonth.set(Calendar.HOUR_OF_DAY, 23)
+                    endOfMonth.set(Calendar.MINUTE, 59)
+                    endOfMonth.set(Calendar.SECOND, 59)
+                    endOfMonth.set(Calendar.MILLISECOND, 999)
+                    endOfMonth.timeInMillis
+                }
+                
+                val year = cursorCal.get(Calendar.YEAR) % 100
+                val month = cursorCal.get(Calendar.MONTH) + 1
+                val monthLabel = if (nowCal.get(Calendar.YEAR) != startCal.get(Calendar.YEAR)) {
+                    String.format(Locale.CHINA, "%02d.%02d", year, month)
+                } else {
+                    "${month}月"
+                }
 
-            val historicalAsset = if (!hasDataForThisPeriod) {
-                0.0
-            } else {
                 // Asset(t) = currentAsset + sum_{tx > t}(Expense) - sum_{tx > t}(Income)
                 val laterExpenses = expenses.filter { it.dateTimestamp > targetTimestamp }
                 val netChangeAfterT = laterExpenses.sumOf { if (it.type == "EXPENSE") it.amount else -it.amount }
-                (currentAsset + netChangeAfterT).coerceAtLeast(0.0)
+                val historicalAsset = (currentAsset + netChangeAfterT).coerceAtLeast(0.0)
+
+                points.add(AssetHistoryPoint(label = monthLabel, value = historicalAsset, timestamp = targetTimestamp))
+                cursorCal.add(Calendar.MONTH, 1)
             }
             
-            points.add(AssetHistoryPoint(label = monthLabel, value = historicalAsset, timestamp = targetTimestamp))
+            // If only 1 point, add previous month baseline
+            if (points.size == 1) {
+                val prevCal = (nowCal.clone() as Calendar).apply { add(Calendar.MONTH, -1) }
+                val prevLabel = if (nowCal.get(Calendar.YEAR) != startCal.get(Calendar.YEAR)) {
+                    String.format(Locale.CHINA, "%02d.%02d", prevCal.get(Calendar.YEAR) % 100, prevCal.get(Calendar.MONTH) + 1)
+                } else {
+                    "${prevCal.get(Calendar.MONTH) + 1}月"
+                }
+                points.add(0, AssetHistoryPoint(label = prevLabel, value = points[0].value, timestamp = prevCal.timeInMillis))
+            }
         }
         points
     }
 
-    val currentMonthAsset = assetHistory.lastOrNull()?.value ?: totalPositiveAssets
+    val currentMonthAsset = assetHistory.lastOrNull()?.value ?: (if (totalDebts > 0.0) totalNetAssets else totalPositiveAssets)
+    val earliestAsset = assetHistory.firstOrNull()?.value ?: currentMonthAsset
     val lastMonthAsset = assetHistory.getOrNull(assetHistory.size - 2)?.value ?: currentMonthAsset
     val monthGrowthRate = if (lastMonthAsset > 0.0) {
         ((currentMonthAsset - lastMonthAsset) / lastMonthAsset) * 100.0
@@ -196,7 +242,7 @@ fun AccountsScreen(
         ) {
             // Header Title
             item {
-                Spacer(modifier = Modifier.statusBarsPadding())
+                Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -331,9 +377,17 @@ fun AccountsScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Large Asset Number (Total Net Assets when debts exist, or Current Total Assets when no debt)
+                        // Large Asset Number with rolling number animation (Total Net Assets when debts exist, or Current Total Assets when no debt)
+                        val targetNetAsset = if (totalDebts > 0.0) totalNetAssets else totalPositiveAssets
+                        val animatedNetAsset = remember { androidx.compose.animation.core.Animatable(0f) }
+                        LaunchedEffect(targetNetAsset) {
+                            animatedNetAsset.animateTo(
+                                targetValue = targetNetAsset.toFloat(),
+                                animationSpec = androidx.compose.animation.core.tween(durationMillis = 800)
+                            )
+                        }
                         Text(
-                            text = "¥ ${String.format(Locale.CHINA, "%,.2f", if (totalDebts > 0.0) totalNetAssets else totalPositiveAssets)}",
+                            text = "¥ ${String.format(Locale.CHINA, "%,.2f", animatedNetAsset.value)}",
                             style = MaterialTheme.typography.headlineLarge.copy(
                                 fontSize = 34.sp,
                                 fontWeight = FontWeight.ExtraBold,
@@ -493,7 +547,7 @@ fun AccountsScreen(
                                                     color = if (bgConfig.isLight) Color(0xFF3730A3) else Color.White
                                                 )
                                                 Text(
-                                                    text = "近6个月资产趋势 · 零负债",
+                                                    text = "有数据以来资产趋势 · 零负债",
                                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                     color = bgConfig.textSecondary
                                                 )
@@ -1210,7 +1264,7 @@ fun getAccountTypeName(type: String): String {
 }
 
 /**
- * Asset Trend Mini Sparkline Chart for the Zero-Debt Asset Header Card
+ * Asset Trend Mini Sparkline Chart for the Zero-Debt Asset Header Card with Animation & Interactive Scrubbing
  */
 @Composable
 fun AssetTrendMiniChart(
@@ -1219,6 +1273,21 @@ fun AssetTrendMiniChart(
     modifier: Modifier = Modifier
 ) {
     if (historyPoints.isEmpty()) return
+
+    val animProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(historyPoints) {
+        animProgress.snapTo(0f)
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.tween(
+                durationMillis = 900,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing
+            )
+        )
+    }
+    val progress = animProgress.value
+
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
     val values = historyPoints.map { it.value }
     val minVal = (values.minOrNull() ?: 0.0).toFloat().coerceAtLeast(0f)
@@ -1231,82 +1300,150 @@ fun AssetTrendMiniChart(
     val effectiveRange = (padMax - padMin).coerceAtLeast(1f)
 
     Column(modifier = modifier) {
-        Canvas(
+        if (selectedIndex != null && selectedIndex in historyPoints.indices) {
+            val point = historyPoints[selectedIndex!!]
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 3.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "时点: ${point.label}",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = if (isLight) Color(0xFF4F46E5) else GlowCyan,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "净资产: ¥${String.format(Locale.CHINA, "%,.2f", point.value)}",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = if (isLight) Color(0xFF1E293B) else Color.White,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        }
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-        ) {
-            val width = size.width
-            val height = size.height
-            val count = historyPoints.size
-            if (count < 2) return@Canvas
-
-            val stepX = width / (count - 1)
-
-            val coords = historyPoints.mapIndexed { index, p ->
-                val x = index * stepX
-                val normalizedY = if (isAllZero) 0.1f else if (isFlat) 0.5f else ((p.value.toFloat() - padMin) / effectiveRange).coerceIn(0.08f, 0.92f)
-                val y = height - (normalizedY * height)
-                Offset(x, y)
-            }
-
-            // Draw Area Gradient under curve
-            val fillPath = Path().apply {
-                moveTo(0f, height)
-                lineTo(coords.first().x, coords.first().y)
-                for (i in 0 until coords.size - 1) {
-                    val p0 = coords[i]
-                    val p1 = coords[i + 1]
-                    val controlPoint1 = Offset(p0.x + (p1.x - p0.x) / 2, p0.y)
-                    val controlPoint2 = Offset(p0.x + (p1.x - p0.x) / 2, p1.y)
-                    cubicTo(controlPoint1.x, controlPoint1.y, controlPoint2.x, controlPoint2.y, p1.x, p1.y)
+                .pointerInput(historyPoints) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { offset ->
+                            val width = size.width
+                            val count = historyPoints.size
+                            if (count > 1 && width > 0) {
+                                val idx = ((offset.x / width) * (count - 1)).roundToInt().coerceIn(0, count - 1)
+                                selectedIndex = idx
+                            }
+                        },
+                        onDragEnd = { selectedIndex = null },
+                        onDragCancel = { selectedIndex = null },
+                        onHorizontalDrag = { change, _ ->
+                            val width = size.width
+                            val count = historyPoints.size
+                            if (count > 1 && width > 0) {
+                                val idx = ((change.position.x / width) * (count - 1)).roundToInt().coerceIn(0, count - 1)
+                                selectedIndex = idx
+                            }
+                        }
+                    )
                 }
-                lineTo(width, height)
-                close()
-            }
+        ) {
+            Canvas(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                val width = size.width
+                val height = size.height
+                val count = historyPoints.size
+                if (count < 2) return@Canvas
 
-            drawPath(
-                path = fillPath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        (if (isLight) Color(0xFF6366F1) else GlowCyan).copy(alpha = 0.25f),
-                        Color.Transparent
+                val stepX = width / (count - 1)
+
+                val coords = historyPoints.mapIndexed { index, p ->
+                    val x = index * stepX
+                    val normalizedY = if (isAllZero) 0.1f else if (isFlat) 0.5f else ((p.value.toFloat() - padMin) / effectiveRange).coerceIn(0.08f, 0.92f)
+                    val y = height - (normalizedY * height * progress)
+                    Offset(x, y)
+                }
+
+                // Draw Area Gradient under curve
+                val fillPath = Path().apply {
+                    moveTo(0f, height)
+                    lineTo(coords.first().x, coords.first().y)
+                    for (i in 0 until coords.size - 1) {
+                        val p0 = coords[i]
+                        val p1 = coords[i + 1]
+                        val controlPoint1 = Offset(p0.x + (p1.x - p0.x) / 2, p0.y)
+                        val controlPoint2 = Offset(p0.x + (p1.x - p0.x) / 2, p1.y)
+                        cubicTo(controlPoint1.x, controlPoint1.y, controlPoint2.x, controlPoint2.y, p1.x, p1.y)
+                    }
+                    lineTo(width, height)
+                    close()
+                }
+
+                drawPath(
+                    path = fillPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            (if (isLight) Color(0xFF6366F1) else GlowCyan).copy(alpha = 0.25f * progress),
+                            Color.Transparent
+                        )
                     )
                 )
-            )
 
-            // Draw Smooth Bezier Line
-            val strokePath = Path().apply {
-                moveTo(coords.first().x, coords.first().y)
-                for (i in 0 until coords.size - 1) {
-                    val p0 = coords[i]
-                    val p1 = coords[i + 1]
-                    val controlPoint1 = Offset(p0.x + (p1.x - p0.x) / 2, p0.y)
-                    val controlPoint2 = Offset(p0.x + (p1.x - p0.x) / 2, p1.y)
-                    cubicTo(controlPoint1.x, controlPoint1.y, controlPoint2.x, controlPoint2.y, p1.x, p1.y)
+                // Draw Smooth Bezier Line
+                val strokePath = Path().apply {
+                    moveTo(coords.first().x, coords.first().y)
+                    for (i in 0 until coords.size - 1) {
+                        val p0 = coords[i]
+                        val p1 = coords[i + 1]
+                        val controlPoint1 = Offset(p0.x + (p1.x - p0.x) / 2, p0.y)
+                        val controlPoint2 = Offset(p0.x + (p1.x - p0.x) / 2, p1.y)
+                        cubicTo(controlPoint1.x, controlPoint1.y, controlPoint2.x, controlPoint2.y, p1.x, p1.y)
+                    }
                 }
-            }
 
-            drawPath(
-                path = strokePath,
-                color = if (isLight) Color(0xFF4F46E5) else GlowCyan,
-                style = Stroke(width = 2.5.dp.toPx())
-            )
-
-            // Draw Point Markers
-            coords.forEachIndexed { index, coord ->
-                val isLast = index == coords.size - 1
-                drawCircle(
-                    color = if (isLast) (if (isLight) Color(0xFF4338CA) else Color.White) else (if (isLight) Color(0xFF818CF8) else GlowCyan),
-                    radius = if (isLast) 4.5.dp.toPx() else 2.5.dp.toPx(),
-                    center = coord
+                drawPath(
+                    path = strokePath,
+                    color = if (isLight) Color(0xFF4F46E5) else GlowCyan,
+                    style = Stroke(width = 2.5.dp.toPx())
                 )
-                if (isLast) {
+
+                // Draw Point Markers
+                coords.forEachIndexed { index, coord ->
+                    val isLast = index == coords.size - 1
+                    val isSelected = selectedIndex == index
+                    val pointRadius = if (isSelected) 6.dp.toPx() else if (isLast) 4.5.dp.toPx() else 2.5.dp.toPx()
+
                     drawCircle(
-                        color = (if (isLight) Color(0xFF4F46E5) else GlowCyan).copy(alpha = 0.4f),
-                        radius = 8.dp.toPx(),
+                        color = if (isSelected) (if (isLight) Color(0xFF4338CA) else Color.White)
+                                else if (isLast) (if (isLight) Color(0xFF4338CA) else Color.White)
+                                else (if (isLight) Color(0xFF818CF8) else GlowCyan),
+                        radius = pointRadius,
                         center = coord
                     )
+                    if (isLast || isSelected) {
+                        drawCircle(
+                            color = (if (isLight) Color(0xFF4F46E5) else GlowCyan).copy(alpha = 0.4f * progress),
+                            radius = (if (isSelected) 10.dp else 8.dp).toPx(),
+                            center = coord
+                        )
+                    }
+                }
+
+                // If selected, draw vertical indicator line
+                selectedIndex?.let { selIdx ->
+                    if (selIdx in coords.indices) {
+                        val selCoord = coords[selIdx]
+                        drawLine(
+                            color = (if (isLight) Color(0xFF4F46E5) else GlowCyan).copy(alpha = 0.6f),
+                            start = Offset(selCoord.x, 0f),
+                            end = Offset(selCoord.x, height),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                    }
                 }
             }
         }
@@ -1314,20 +1451,25 @@ fun AssetTrendMiniChart(
         Spacer(modifier = Modifier.height(4.dp))
 
         // Month Labels Row
+        val step = if (historyPoints.size > 8) (historyPoints.size / 6).coerceAtLeast(1) else 1
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             historyPoints.forEachIndexed { index, item ->
-                val isCurrent = index == historyPoints.size - 1
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 9.sp,
-                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
-                    ),
-                    color = if (isCurrent) (if (isLight) Color(0xFF4F46E5) else GlowCyan) else (if (isLight) Color(0xFF94A3B8) else Color.White.copy(alpha = 0.4f))
-                )
+                val isFirst = index == 0
+                val isLast = index == historyPoints.size - 1
+                val isSampled = index % step == 0 || isFirst || isLast
+                if (isSampled) {
+                    Text(
+                        text = item.label,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 9.sp,
+                            fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal
+                        ),
+                        color = if (isLast) (if (isLight) Color(0xFF4F46E5) else GlowCyan) else (if (isLight) Color(0xFF94A3B8) else Color.White.copy(alpha = 0.4f))
+                    )
+                }
             }
         }
     }

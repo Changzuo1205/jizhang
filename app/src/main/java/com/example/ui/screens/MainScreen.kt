@@ -33,16 +33,20 @@ import androidx.compose.ui.text.TextStyle
 import kotlinx.coroutines.delay
 import com.example.ui.components.AppTab
 import com.example.ui.components.GlassBottomNavBar
+import com.example.ui.components.ExpenseAddEditDialog
+import com.example.data.local.ExpenseEntity
 import com.example.ui.theme.LocalAppBackgroundConfig
 import com.example.ui.theme.LocalAppColorScheme
 import com.example.ui.theme.LocalAppFontScale
 import com.example.ui.viewmodel.ToolboxViewModel
+import java.util.Calendar
 
 /**
  * 次级全屏页面路由枚举
  */
 enum class ActiveSubScreen {
     NONE,
+    ADD_EXPENSE,       // 记一笔 / 编辑账目全屏视图
     BILL_CALENDAR,     // 账单日历视图
     BUDGET_SETTINGS,   // 预算配置管理视图
     BOOKS,             // 账本管理视图（Phase 2）
@@ -64,7 +68,8 @@ fun MainScreen(
 ) {
     var currentTab by remember { mutableStateOf(AppTab.HOME) }
     var activeSubScreen by remember { mutableStateOf(ActiveSubScreen.NONE) }
-    var triggerAddExpenseInHome by remember { mutableStateOf(false) }
+    var expenseToEdit by remember { mutableStateOf<ExpenseEntity?>(null) }
+    var addExpenseTimestamp by remember { mutableStateOf<Long?>(null) }
 
     // Splash overlay：纯延时 600ms 后切到正常首页，让背景等数据先行加载完成
     var splashDone by remember { mutableStateOf(false) }
@@ -152,8 +157,18 @@ fun MainScreen(
                             onCurrentTabChange = { currentTab = it },
                             activeSubScreen = activeSubScreen,
                             onActiveSubScreenChange = { activeSubScreen = it },
-                            triggerAddExpenseInHome = triggerAddExpenseInHome,
-                            onTriggerAddExpenseConsumed = { triggerAddExpenseInHome = false },
+                            expenseToEdit = expenseToEdit,
+                            addExpenseTimestamp = addExpenseTimestamp,
+                            onOpenAddExpenseWithItem = { ts, exp ->
+                                expenseToEdit = exp
+                                addExpenseTimestamp = ts
+                                activeSubScreen = ActiveSubScreen.ADD_EXPENSE
+                            },
+                            onCloseAddExpense = {
+                                expenseToEdit = null
+                                addExpenseTimestamp = null
+                                activeSubScreen = ActiveSubScreen.NONE
+                            },
                             isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
                             onToggleCategoryAnalysisExpanded = { viewModel.setCategoryAnalysisExpanded(!isCategoryAnalysisExpanded) },
                             expenses = expenses,
@@ -208,8 +223,10 @@ private fun MainScreenContent(
     onCurrentTabChange: (AppTab) -> Unit,
     activeSubScreen: ActiveSubScreen,
     onActiveSubScreenChange: (ActiveSubScreen) -> Unit,
-    triggerAddExpenseInHome: Boolean,
-    onTriggerAddExpenseConsumed: () -> Unit,
+    expenseToEdit: com.example.data.local.ExpenseEntity?,
+    addExpenseTimestamp: Long?,
+    onOpenAddExpenseWithItem: (Long?, com.example.data.local.ExpenseEntity?) -> Unit,
+    onCloseAddExpense: () -> Unit,
     isCategoryAnalysisExpanded: Boolean,
     onToggleCategoryAnalysisExpanded: () -> Unit,
     expenses: List<com.example.data.local.ExpenseEntity>,
@@ -239,11 +256,23 @@ private fun MainScreenContent(
     backgroundConfig: com.example.ui.theme.BackgroundConfig,
     viewModel: ToolboxViewModel
 ) {
-    // Outer transition between Main Tabs and Sub-Screens (Bill Calendar / Budget Settings)
+    var selectedCalendarDay by remember { mutableStateOf<Int?>(null) }
+
+    // Outer transition between Main Tabs and Sub-Screens (Add Expense / Bill Calendar / Budget Settings)
     AnimatedContent(
         targetState = activeSubScreen,
         transitionSpec = {
-            if (targetState != ActiveSubScreen.NONE) {
+            if (targetState == ActiveSubScreen.ADD_EXPENSE) {
+                (slideInVertically(animationSpec = tween(280, easing = FastOutSlowInEasing)) { height -> height } + fadeIn(animationSpec = tween(200)))
+                    .togetherWith(
+                        slideOutVertically(animationSpec = tween(240, easing = FastOutSlowInEasing)) { height -> (height * 0.15f).toInt() } + fadeOut(animationSpec = tween(150))
+                    )
+            } else if (initialState == ActiveSubScreen.ADD_EXPENSE) {
+                (slideInVertically(animationSpec = tween(240, easing = FastOutSlowInEasing)) { height -> -(height * 0.15f).toInt() } + fadeIn(animationSpec = tween(150)))
+                    .togetherWith(
+                        slideOutVertically(animationSpec = tween(280, easing = FastOutSlowInEasing)) { height -> height } + fadeOut(animationSpec = tween(200))
+                    )
+            } else if (targetState != ActiveSubScreen.NONE) {
                 (slideInHorizontally(animationSpec = tween(280, easing = FastOutSlowInEasing)) { width -> (width * 0.35f).toInt() } + fadeIn(animationSpec = tween(240)))
                     .togetherWith(
                         slideOutHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { width -> -(width * 0.15f).toInt() } + fadeOut(animationSpec = tween(180))
@@ -258,6 +287,36 @@ private fun MainScreenContent(
         label = "SubScreenTransition"
     ) { subScreen ->
         when (subScreen) {
+            ActiveSubScreen.ADD_EXPENSE -> {
+                ExpenseAddEditDialog(
+                    expenseToEdit = expenseToEdit,
+                    allExpenses = allExpenses,
+                    accounts = accounts,
+                    initialTimestamp = expenseToEdit?.dateTimestamp ?: (addExpenseTimestamp ?: System.currentTimeMillis()),
+                    onDismiss = onCloseAddExpense,
+                    onConfirm = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
+                        if (expenseToEdit == null) {
+                            viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
+                        } else {
+                            viewModel.updateExpense(
+                                expenseToEdit,
+                                expenseToEdit.copy(
+                                    type = type,
+                                    category = cat,
+                                    subCategory = subCat,
+                                    amount = amount,
+                                    note = note,
+                                    accountId = accId,
+                                    accountName = accName,
+                                    dateTimestamp = timestamp,
+                                    transferToAccountId = transferToAccountId ?: 0L
+                                )
+                            )
+                        }
+                        onCloseAddExpense()
+                    }
+                )
+            }
             ActiveSubScreen.BILL_CALENDAR -> {
                 BillCalendarScreen(
                     allExpenses = allExpenses,
@@ -323,7 +382,9 @@ private fun MainScreenContent(
                             filterType = filterType,
                             filterTime = filterTime,
                             searchQuery = searchQuery,
-                            showAddDialogTrigger = triggerAddExpenseInHome,
+                            showAddDialogTrigger = false,
+                            selectedCalendarDay = selectedCalendarDay,
+                            onSelectCalendarDay = { selectedCalendarDay = it },
                             isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
                             onToggleCategoryAnalysisExpanded = onToggleCategoryAnalysisExpanded,
                             onSetFilterType = { viewModel.setFilterType(it) },
@@ -336,9 +397,12 @@ private fun MainScreenContent(
                             onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
                                 viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
                             },
+                            onEditExpense = { exp ->
+                                onOpenAddExpenseWithItem(exp.dateTimestamp, exp)
+                            },
                             onUpdateExpense = { oldExp, newExp -> viewModel.updateExpense(oldExp, newExp) },
                             onDeleteExpense = { viewModel.deleteExpense(it) },
-                            onCloseAddDialogTrigger = onTriggerAddExpenseConsumed
+                            onCloseAddDialogTrigger = {}
                         )
                         AppTab.ACCOUNTS -> AccountsScreen(
                             accounts = accounts,
@@ -398,7 +462,16 @@ private fun MainScreenContent(
             GlassBottomNavBar(
                 currentTab = currentTab,
                 onTabSelected = onCurrentTabChange,
-                onOpenAddExpense = onTriggerAddExpenseConsumed
+                onOpenAddExpense = {
+                    val addTimestamp = if (selectedCalendarDay != null) {
+                        val cal = Calendar.getInstance()
+                        cal.set(Calendar.DAY_OF_MONTH, selectedCalendarDay!!)
+                        cal.timeInMillis
+                    } else {
+                        null
+                    }
+                    onOpenAddExpenseWithItem(addTimestamp, null)
+                }
             )
         }
     }
