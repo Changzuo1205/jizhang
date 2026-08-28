@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 单色钱包外轮廓（用于 Android12+ monochrome 主题图标） -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M22,46 L22,84 a4,4 0 0,0 4,4 h56 a4,4 0 0,0 4,-4 L86,46 L72,38 a4,4 0 0,0 -3,-1 L39,37 a4,4 0 0,0 -3,1 Z" />
+    <!-- ¥ 字符 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,48 L54,58 L62,48 M54,58 L54,66 M47,57 H61 M48,62 H60" />
+</vector>
