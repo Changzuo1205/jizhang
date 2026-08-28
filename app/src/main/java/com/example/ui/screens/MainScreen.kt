@@ -97,6 +97,7 @@ fun MainScreen(
     val filterType by viewModel.filterType.collectAsStateWithLifecycle()
     val filterTime by viewModel.filterTime.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val isCategoryAnalysisExpanded by viewModel.isCategoryAnalysisExpanded.collectAsStateWithLifecycle()
 
     // Dynamic scaled typography based on fontScale setting
     val baseTypography = MaterialTheme.typography
@@ -231,6 +232,8 @@ fun MainScreen(
                                             filterTime = filterTime,
                                             searchQuery = searchQuery,
                                             showAddDialogTrigger = triggerAddExpenseInHome,
+                                            isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
+                                            onToggleCategoryAnalysisExpanded = { viewModel.setCategoryAnalysisExpanded(!isCategoryAnalysisExpanded) },
                                             onSetFilterType = { viewModel.setFilterType(it) },
                                             onSetFilterTime = { viewModel.setFilterTime(it) },
                                             onSetSearchQuery = { viewModel.setSearchQuery(it) },

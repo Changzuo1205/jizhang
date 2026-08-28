@@ -344,8 +344,7 @@ fun ReportsScreen(
                                 "THIS_WEEK" to "近7天",
                                 "LAST_6_MONTHS" to "近半年",
                                 "THIS_YEAR" to "本年",
-                                "ALL" to "全部历史",
-                                "CUSTOM" to "自定义 📅"
+                                "ALL" to "全部历史"
                             )
 
                             timeOptions.forEach { (key, label) ->
@@ -354,9 +353,6 @@ fun ReportsScreen(
                                     selected = isSelected,
                                     onClick = {
                                         timeFilter = key
-                                        if (key == "CUSTOM") {
-                                            showCustomDateDialog = true
-                                        }
                                     },
                                     selectedGlowColor = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan
                                 ) {
