@@ -117,6 +117,7 @@ import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.MonetizationOn
@@ -222,10 +223,22 @@ fun ExpenseScreen(
             }
         }
     }
+
+    // 默认预加载最近 20 条，按需增加加载量以节省资源
+    val pageSize = 20
+    var visibleLimit by remember(expenses.size, selectedCalendarDay, filterType, filterTime, searchQuery) {
+        mutableIntStateOf(pageSize)
+    }
+
+    val paginatedExpenses = remember(displayedExpenses, visibleLimit) {
+        displayedExpenses.take(visibleLimit)
+    }
+    val hasMore = displayedExpenses.size > paginatedExpenses.size
+    val remainingCount = displayedExpenses.size - paginatedExpenses.size
     
-    val groupedExpenses = remember(displayedExpenses) {
+    val groupedExpenses = remember(paginatedExpenses) {
         val sdf = SimpleDateFormat("yyyy年MM月dd日 EEEE", Locale.CHINA)
-        displayedExpenses.groupBy { sdf.format(Date(it.dateTimestamp)) }
+        paginatedExpenses.groupBy { sdf.format(Date(it.dateTimestamp)) }
     }
 
     val listState = rememberLazyListState()
@@ -691,7 +704,7 @@ fun ExpenseScreen(
                                 }
                             }
                             Text(
-                                text = "共 ${displayedExpenses.size} 条",
+                                text = if (hasMore) "已显 ${paginatedExpenses.size} / 共 ${displayedExpenses.size} 条" else "共 ${displayedExpenses.size} 条",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = bgConfig.textTertiary
                             )
@@ -930,6 +943,123 @@ fun ExpenseScreen(
                                 onDelete = { onDeleteExpense(expense) },
                                 modifier = Modifier.animateItemPlacement()
                             )
+                        }
+                    }
+
+                    if (hasMore) {
+                        item(key = "load_more_footer") {
+                            GlassCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .testTag("load_more_expenses_btn"),
+                                shape = RoundedCornerShape(18.dp),
+                                onClick = {
+                                    visibleLimit += pageSize
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 13.dp, horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .background(
+                                                    (if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan).copy(alpha = 0.15f),
+                                                    CircleShape
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "加载更多",
+                                                tint = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "加载更多账单明细",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = bgConfig.textPrimary
+                                            )
+                                            Text(
+                                                text = "已加载 ${paginatedExpenses.size} 条 · 剩余 $remainingCount 条未显示",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                color = bgConfig.textTertiary
+                                            )
+                                        }
+                                    }
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = (if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan).copy(alpha = 0.14f),
+                                            modifier = Modifier
+                                                .clickable { visibleLimit += pageSize }
+                                                .testTag("load_next_20_btn")
+                                        ) {
+                                            Text(
+                                                text = "+20条",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                            )
+                                        }
+                                        if (remainingCount > pageSize) {
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = if (bgConfig.isLight) Color(0xFFF1F5F9) else Color.White.copy(alpha = 0.08f),
+                                                modifier = Modifier
+                                                    .clickable { visibleLimit = displayedExpenses.size }
+                                                    .testTag("load_all_expenses_btn")
+                                            ) {
+                                                Text(
+                                                    text = "全部",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = bgConfig.textSecondary,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (displayedExpenses.size > pageSize) {
+                        item(key = "all_loaded_footer") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = bgConfig.textTertiary.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "已展示全部 ${displayedExpenses.size} 笔账目记录",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                    color = bgConfig.textTertiary
+                                )
+                            }
                         }
                     }
                 }
