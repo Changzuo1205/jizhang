@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -1793,79 +1794,65 @@ data class ColoredCategoryStat(
 )
 
 /**
- * Dedicated high-contrast color palette ensuring strong visual contrast between adjacent categories
+ * Dedicated progressive color ramp ensuring smooth color gradient transition from largest share to smallest share
  */
-val PieChartDistinctPalette = listOf(
-    Color(0xFF6366F1), // 1. Deep Indigo
-    Color(0xFFF59E0B), // 2. Warm Amber
-    Color(0xFF10B981), // 3. Emerald Green
-    Color(0xFFEC4899), // 4. Rose Pink
-    Color(0xFF06B6D4), // 5. Ocean Cyan
-    Color(0xFF8B5CF6), // 6. Violet Purple
-    Color(0xFFFF6B4A), // 7. Sunset Coral
-    Color(0xFF0EA5E9), // 8. Sky Blue
-    Color(0xFF84CC16), // 9. Lime Green
-    Color(0xFFD946EF), // 10. Magenta
-    Color(0xFF0D9488), // 11. Deep Teal
+val ProgressivePiePalette = listOf(
+    Color(0xFF4338CA), // 1. Deep Indigo (Rank 1 - Largest share)
+    Color(0xFF3B82F6), // 2. Royal Blue
+    Color(0xFF0EA5E9), // 3. Sky Blue
+    Color(0xFF06B6D4), // 4. Cyan
+    Color(0xFF0D9488), // 5. Deep Teal
+    Color(0xFF10B981), // 6. Emerald Green
+    Color(0xFF84CC16), // 7. Lime Green
+    Color(0xFFEAB308), // 8. Golden Yellow
+    Color(0xFFF59E0B), // 9. Warm Amber
+    Color(0xFFF97316), // 10. Vivid Orange
+    Color(0xFFFF6B4A), // 11. Sunset Coral
     Color(0xFFF43F5E), // 12. Crimson
-    Color(0xFFEAB308), // 13. Goldenrod
-    Color(0xFF3B82F6)  // 14. Azure Blue
+    Color(0xFFEC4899), // 13. Rose Pink
+    Color(0xFFD946EF), // 14. Fuchsia
+    Color(0xFFA855F7), // 15. Purple
+    Color(0xFF7C3AED)  // 16. Deep Violet
 )
 
 /**
- * Assigns distinct colors so that no two adjacent categories (including first and last) share the same color.
+ * Calculates progressive gradient color based on ranking from largest percentage to smallest
+ */
+fun getProgressiveColor(index: Int, total: Int): Color {
+    if (total <= 1) return ProgressivePiePalette.first()
+    val maxIdx = ProgressivePiePalette.size - 1
+    val t = index.toFloat() / (total - 1).toFloat()
+    val pos = t * maxIdx
+    val lower = pos.toInt().coerceIn(0, maxIdx)
+    val upper = (lower + 1).coerceIn(0, maxIdx)
+    val fraction = pos - lower
+    val c1 = ProgressivePiePalette[lower]
+    val c2 = ProgressivePiePalette[upper]
+    return Color(
+        red = c1.red + (c2.red - c1.red) * fraction,
+        green = c1.green + (c2.green - c1.green) * fraction,
+        blue = c1.blue + (c2.blue - c1.blue) * fraction,
+        alpha = 1f
+    )
+}
+
+/**
+ * Assigns progressive colors so that categories have a smooth color progression from highest to lowest share.
  */
 fun assignDistinctPieColors(stats: List<CategoryStat>): List<ColoredCategoryStat> {
     if (stats.isEmpty()) return emptyList()
-    val paletteSize = PieChartDistinctPalette.size
-    val result = mutableListOf<ColoredCategoryStat>()
-
-    for (i in stats.indices) {
-        var colorIndex = i % paletteSize
-        if (i == stats.size - 1 && i > 0 && colorIndex == 0) {
-            colorIndex = 1 % paletteSize
-            val prevIndex = (i - 1) % paletteSize
-            if (colorIndex == prevIndex) {
-                colorIndex = (colorIndex + 1) % paletteSize
-            }
-        }
-        result.add(ColoredCategoryStat(stat = stats[i], color = PieChartDistinctPalette[colorIndex]))
-    }
-    return result
-}
-
-/**
- * 小占比扇区在 Canvas 内的四角位置
- */
-enum class Corner { TopRight, BottomRight, BottomLeft, TopLeft }
-
-/**
- * 根据扇区中点角度（度）映射到四个角。
- *
- * 扇区绘制从 startAngle=-90° 开始顺时针累加，归一化后 a 表示相对中心的射线角度（0..360）：
- *   a=0   → 射线指向正右方
- *   a=90  → 射线指向正下方（Canvas 坐标系 Y 向下）
- *   a=180 → 射线指向正左方
- *   a=270 → 射线指向正上方
- *
- * 因此扇区中点位置到四个标签角的对称映射（让引线方向与角位置天然对齐，避免穿越其他扇区）：
- *   TopRight:    a∈[315,360) ∪ [0,45)        射线偏右上 → 右上角
- *   BottomRight: a∈[45,135)                  射线偏右下 → 右下角
- *   BottomLeft:  a∈[135,225)                 射线偏左下 → 左下角
- *   TopLeft:     a∈[225,315)                 射线偏左上 → 左上角
- */
-fun cornerOf(midAngle: Float): Corner {
-    val a = ((midAngle % 360f) + 360f) % 360f  // 归一化到 0..360
-    return when {
-        a >= 315f || a < 45f -> Corner.TopRight
-        a < 135f -> Corner.BottomRight
-        a < 225f -> Corner.BottomLeft
-        else -> Corner.TopLeft
+    val sorted = stats.sortedByDescending { it.percentage }
+    val total = sorted.size
+    return sorted.mapIndexed { index, stat ->
+        ColoredCategoryStat(
+            stat = stat,
+            color = getProgressiveColor(index, total)
+        )
     }
 }
 
 /**
- * Custom Canvas Interactive Donut / Pie Chart with on-chart category text labels and adjacent distinct colors
+ * Custom Canvas Interactive Donut / Pie Chart with progressive gradient colors and left-side <=5% item list
  */
 @Composable
 fun DonutPieChart(
@@ -1885,85 +1872,32 @@ fun DonutPieChart(
     }
 
     var selectedIndex by remember(coloredStats) { mutableStateOf<Int?>(null) }
-
-    // 预计算小占比分类的标签位置（防重叠）
-    val labelYPositions = remember(coloredStats) { mutableMapOf<String, Float>() }
-    val labelSide = remember(coloredStats) { mutableMapOf<String, Corner>() } // category → corner
+    val smallStats = remember(coloredStats) {
+        coloredStats.filter { it.stat.percentage <= 0.05f }
+    }
+    val hasSmallStats = smallStats.isNotEmpty()
 
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        // 四角分布：将每个小占比扇区按中点角度映射到四个角
         Canvas(
-            modifier = Modifier.size(280.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
-            val chartSize = size.minDimension       // = 280dp
-            val strokeWidth = 30.dp.toPx()          // 略减，给引线留出空间
-            val chartDiameter = 160.dp.toPx()       // 固定 160dp 饼图
+            val strokeWidth = 28.dp.toPx()
+            val chartDiameter = 146.dp.toPx()
+            val arcRadius = chartDiameter / 2f
+            val shiftX = if (hasSmallStats) 18.dp.toPx() else 0f
+            val centerOffset = Offset(size.width / 2f + shiftX, size.height / 2f)
             val topLeft = Offset(
-                (size.width - chartDiameter) / 2f,
-                (size.height - chartDiameter) / 2f
+                centerOffset.x - arcRadius,
+                centerOffset.y - arcRadius
             )
             val arcSize = Size(chartDiameter, chartDiameter)
-            val centerOffset = Offset(size.width / 2f, size.height / 2f)
-            val arcRadius = chartDiameter / 2f      // = 80dp
 
             var startAngle = -90f
 
-            // 0. 预计算小占比分类的标签位置（防重叠，四角分布）
-            // 第一遍：收集所有小占比扇区
-            val smallSlices = mutableListOf<Triple<ColoredCategoryStat, Float, Float>>()
-            var tempAngle = -90f
-            coloredStats.forEach { item ->
-                val sweepAngle = item.stat.percentage * 360f
-                val midAngle = tempAngle + sweepAngle / 2f
-                if (item.stat.percentage in 0.01f..0.05f) {
-                    val midAngleRad = Math.toRadians(midAngle.toDouble())
-                    // 初始Y：按 sin 投影（仅作占位/排序参考，最终按角位置垂直均分）
-                    val initialY = centerOffset.y + (arcRadius + 50.dp.toPx()) * sin(midAngleRad).toFloat()
-                    smallSlices.add(Triple(item, midAngle, initialY))
-                }
-                tempAngle += sweepAngle
-            }
-
-            // 按扇区中点角度映射到 4 个角（替代原"奇偶分左右"）
-            smallSlices.forEach { (item, midAngle, _) ->
-                labelSide[item.stat.category] = cornerOf(midAngle)
-            }
-
-            // 按角分桶，分别在 Canvas 半区垂直均分排列
-            val labelSpacing = 32.dp.toPx()
-            val bgHeight = 26.dp.toPx()
-            val margin = 4.dp.toPx()
-            val topLimit = margin + bgHeight / 2
-            val bottomLimit = size.minDimension - margin - bgHeight / 2
-
-            val cornerGroups = smallSlices.groupBy { cornerOf(it.second) }
-
-            // 角顺序：右上 → 右下 → 左下 → 左上（保证从上到下视觉一致）
-            val cornerOrder = listOf(Corner.TopRight, Corner.BottomRight, Corner.BottomLeft, Corner.TopLeft)
-            cornerOrder.forEach { corner ->
-                val items = cornerGroups[corner].orEmpty()
-                if (items.isEmpty()) return@forEach
-                // 按角度排序：上角（a接近 0/360）排在上，下角排在下
-                val sorted = when (corner) {
-                    Corner.TopRight -> items.sortedBy { it.second }                      // 角度小的（更靠右上）排上
-                    Corner.BottomRight -> items.sortedByDescending { it.second }         // 角度大的（更靠右下）排下
-                    Corner.BottomLeft -> items.sortedByDescending { it.second }          // 角度大的（更靠左下）排下
-                    Corner.TopLeft -> items.sortedBy { it.second }                       // 角度小的（更靠左上）排上
-                }
-                val count = sorted.size
-                val totalHeight = ((count - 1).coerceAtLeast(0)) * labelSpacing
-                val startY = (size.minDimension / 2f - totalHeight / 2f)
-                    .coerceIn(topLimit, bottomLimit - totalHeight)
-                sorted.forEachIndexed { i, (item, _, _) ->
-                    val y = (startY + i * labelSpacing).coerceIn(topLimit, bottomLimit)
-                    labelYPositions[item.stat.category] = y
-                }
-            }
-
-            // 1. Draw Arcs
+            // 1. Draw Donut Slices
             coloredStats.forEachIndexed { index, item ->
                 val sweepAngle = item.stat.percentage * 360f
                 val isSelected = selectedIndex == index
@@ -1972,7 +1906,7 @@ fun DonutPieChart(
                 drawArc(
                     color = item.color,
                     startAngle = startAngle,
-                    sweepAngle = sweepAngle.coerceAtLeast(1.5f),
+                    sweepAngle = sweepAngle.coerceAtLeast(1.2f),
                     useCenter = false,
                     topLeft = topLeft,
                     size = arcSize,
@@ -1989,17 +1923,72 @@ fun DonutPieChart(
                     val x2 = centerOffset.x + (outerR * cos(angleRad)).toFloat()
                     val y2 = centerOffset.y + (outerR * sin(angleRad)).toFloat()
                     drawLine(
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = Color.White.copy(alpha = 0.55f),
                         start = Offset(x1, y1),
                         end = Offset(x2, y2),
-                        strokeWidth = 2.dp.toPx()
+                        strokeWidth = 1.5.dp.toPx()
                     )
                 }
 
                 startAngle += sweepAngle
             }
 
-            // 2. Draw Category & Percentage Text Labels with Leader Lines for Small Slices
+            // 2. Draw Left-side List for <= 5% items with colored dots
+            if (hasSmallStats) {
+                val rowCount = smallStats.size
+                val rowHeight = when {
+                    rowCount <= 4 -> 22.dp.toPx()
+                    rowCount <= 6 -> 18.dp.toPx()
+                    else -> 15.dp.toPx()
+                }
+                val totalListHeight = (rowCount - 1) * rowHeight
+                val startListY = (size.height - totalListHeight) / 2f
+                val dotRadius = 3.dp.toPx()
+                val dotX = 10.dp.toPx()
+                val textX = dotX + 8.dp.toPx()
+
+                val smallLabelPaint = android.graphics.Paint().apply {
+                    isAntiAlias = true
+                    textSize = if (rowCount > 6) 8.sp.toPx() else 9.sp.toPx()
+                    color = android.graphics.Color.argb(235, 240, 243, 248)
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                    textAlign = android.graphics.Paint.Align.LEFT
+                    setShadowLayer(3f, 0f, 1f, android.graphics.Color.argb(180, 0, 0, 0))
+                }
+
+                smallStats.forEachIndexed { i, item ->
+                    val rowY = startListY + i * rowHeight
+
+                    // Draw colored dot in front of text
+                    drawCircle(
+                        color = item.color,
+                        radius = dotRadius,
+                        center = Offset(dotX, rowY)
+                    )
+
+                    // Draw text: Category + Percentage
+                    val percent = item.stat.percentage * 100
+                    val percentStr = if (percent < 1.0f && percent > 0f) {
+                        String.format(Locale.CHINA, "%.1f%%", percent)
+                    } else {
+                        "${percent.toInt()}%"
+                    }
+                    val catName = if (item.stat.category.length > 3) item.stat.category.take(3) + "…" else item.stat.category
+                    val singleLineText = "$catName $percentStr"
+
+                    drawIntoCanvas { canvas ->
+                        val textYOffset = (smallLabelPaint.descent() + smallLabelPaint.ascent()) / 2f
+                        canvas.nativeCanvas.drawText(
+                            singleLineText,
+                            textX,
+                            rowY - textYOffset,
+                            smallLabelPaint
+                        )
+                    }
+                }
+            }
+
+            // 3. Draw Category & Percentage Text Labels directly on Slices (> 5%)
             drawIntoCanvas { canvas ->
                 val nativeCanvas = canvas.nativeCanvas
 
@@ -2021,12 +2010,23 @@ fun DonutPieChart(
                     setShadowLayer(4f, 0f, 1f, android.graphics.Color.argb(220, 0, 0, 0))
                 }
 
-                // Paint for leader lines
-                val leaderLinePaint = android.graphics.Paint()
-                leaderLinePaint.isAntiAlias = true
-                leaderLinePaint.color = android.graphics.Color.argb(200, 255, 255, 255)
-                leaderLinePaint.strokeWidth = 1.dp.toPx()
-                leaderLinePaint.style = android.graphics.Paint.Style.STROKE
+                val compactPrimaryTextPaint = android.graphics.Paint().apply {
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    textSize = 8.5.sp.toPx()
+                    color = android.graphics.Color.WHITE
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                    setShadowLayer(3f, 0f, 1f, android.graphics.Color.argb(220, 0, 0, 0))
+                }
+
+                val compactSubTextPaint = android.graphics.Paint().apply {
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    textSize = 7.5.sp.toPx()
+                    color = android.graphics.Color.argb(245, 255, 255, 255)
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                    setShadowLayer(3f, 0f, 1f, android.graphics.Color.argb(220, 0, 0, 0))
+                }
 
                 var textStartAngle = -90f
 
@@ -2039,69 +2039,20 @@ fun DonutPieChart(
                     val labelY = centerOffset.y + (arcRadius * sin(midAngleRad)).toFloat()
 
                     val percent = item.stat.percentage * 100
-                    val percentStr = if (percent < 1.0f && percent > 0f) {
-                        String.format("%.1f%%", percent)  // 0.5% → "0.5%"
-                    } else {
-                        "${percent.toInt()}%"             // 5% → "5%"
-                    }
+                    val percentStr = "${percent.toInt()}%"
                     val catName = if (item.stat.category.length > 4) item.stat.category.take(3) + "…" else item.stat.category
-
-                    // Phase 8: 占比 < 1% 扇区只显示色块，不显示文字
-                    if (item.stat.percentage < 0.01f) {
-                        textStartAngle += sweepAngle
-                        return@forEach
-                    }
 
                     if (item.stat.percentage >= 0.08f) {
                         // Slices with >= 8%: display Category Name & Percentage directly on slice
                         val textYOffset = (primaryTextPaint.descent() + primaryTextPaint.ascent()) / 2f
                         nativeCanvas.drawText(catName, labelX, labelY - 4.5.dp.toPx() - textYOffset, primaryTextPaint)
                         nativeCanvas.drawText(percentStr, labelX, labelY + 6.dp.toPx() - textYOffset, subTextPaint)
-                    } else if (item.stat.percentage >= 0.05f) {
-                        // Slices between 5% and 8%: display Percentage directly on slice
-                        val textYOffset = (primaryTextPaint.descent() + primaryTextPaint.ascent()) / 2f
-                        nativeCanvas.drawText(percentStr, labelX, labelY - textYOffset, primaryTextPaint)
-                    } else {
-                        // Small slices (1% ~ 5%): 取消引线，在左侧显示小字并添加小点
-                        val baseR = (item.color.red * 255).toInt()
-                        val baseG = (item.color.green * 255).toInt()
-                        val baseB = (item.color.blue * 255).toInt()
-
-                        // 此区间（>=1%）的百分比都是 ≥1% 的整数
-                        val percentStr = "${percent.toInt()}%"
-                        val catName = if (item.stat.category.length > 2) item.stat.category.take(2) else item.stat.category
-                        val singleLineText = "$catName $percentStr"
-
-                        // 文字 Paint（分类原色，单行，左对齐）
-                        val labelTextPaint = android.graphics.Paint().apply {
-                            isAntiAlias = true
-                            textSize = 8.sp.toPx()  // 稍小字体
-                            color = android.graphics.Color.argb(255, baseR, baseG, baseB)
-                            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
-                            textAlign = android.graphics.Paint.Align.LEFT
-                        }
-
-                        // 文字坐标（左侧显示）
-                        val margin = 4.dp.toPx()
-                        val textX = margin
-                        val labelYOut = labelYPositions[item.stat.category] ?: centerOffset.y
-
-                        // 在文字前面添加对应颜色的小点
-                        val dotSize = 4.dp.toPx()
-                        val dotX = textX + 6.dp.toPx()  // 点在文字左侧
-                        val dotY = labelYOut - (labelTextPaint.descent() + labelTextPaint.ascent()) / 2f
-                        nativeCanvas.drawCircle(
-                            dotX, dotY,
-                            dotSize / 2f,
-                            android.graphics.Paint().apply {
-                                isAntiAlias = true
-                                color = android.graphics.Color.argb(255, baseR, baseG, baseB)
-                            }
-                        )
-
-                        // 单行文字（分类名和百分比）
-                        val textYOffset = (labelTextPaint.descent() + labelTextPaint.ascent()) / 2f
-                        nativeCanvas.drawText(singleLineText, textX + 12.dp.toPx(), labelYOut - textYOffset, labelTextPaint)
+                    } else if (item.stat.percentage > 0.05f) {
+                        // Slices between 5% and 8%: also display Category Name & Percentage with compact typography
+                        val compactCatName = if (item.stat.category.length > 3) item.stat.category.take(2) + "…" else item.stat.category
+                        val textYOffset = (compactPrimaryTextPaint.descent() + compactPrimaryTextPaint.ascent()) / 2f
+                        nativeCanvas.drawText(compactCatName, labelX, labelY - 4.dp.toPx() - textYOffset, compactPrimaryTextPaint)
+                        nativeCanvas.drawText(percentStr, labelX, labelY + 5.5.dp.toPx() - textYOffset, compactSubTextPaint)
                     }
 
                     textStartAngle += sweepAngle
@@ -2111,12 +2062,14 @@ fun DonutPieChart(
 
         // Center Content Card (Clickable to reset or view selected category)
         val selectedItem = selectedIndex?.let { coloredStats.getOrNull(it) }
+        val centerCardShiftX = if (hasSmallStats) 18.dp else 0.dp
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .size(116.dp)
+                .offset(x = centerCardShiftX)
+                .size(108.dp)
                 .clip(CircleShape)
                 .clickable { selectedIndex = null }
                 .padding(4.dp)
@@ -2140,7 +2093,7 @@ fun DonutPieChart(
                 Text(
                     text = run {
                         val p = selectedItem.stat.percentage * 100
-                        val ps = if (p < 1.0f && p > 0f) String.format("%.1f%%", p) else "${p.toInt()}%"
+                        val ps = if (p < 1.0f && p > 0f) String.format(Locale.CHINA, "%.1f%%", p) else "${p.toInt()}%"
                         "$ps (${selectedItem.stat.count}笔)"
                     },
                     style = MaterialTheme.typography.labelSmall,
