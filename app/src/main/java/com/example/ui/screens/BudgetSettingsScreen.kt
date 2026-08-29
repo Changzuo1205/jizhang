@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,20 +27,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Savings
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -50,25 +47,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.components.GlassBackgroundWithGlow
-import com.example.ui.components.GlassCard
-import com.example.ui.components.GlowCyan
-import com.example.ui.components.GlowEmerald
+import com.example.model.AmountFormatter
 import com.example.ui.theme.LocalAppBackgroundConfig
-import com.example.ui.theme.LocalAppColorScheme
 import com.example.ui.viewmodel.BudgetConfig
 import com.example.ui.viewmodel.BudgetPeriod
 import com.example.ui.viewmodel.BudgetProgressInfo
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.abs
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -81,13 +75,23 @@ fun BudgetSettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Intercept hardware / gesture back navigation to return home
     BackHandler(enabled = true) {
         onBack()
     }
 
-    val bgConfig = LocalAppBackgroundConfig.current
-    val colorScheme = LocalAppColorScheme.current
+    val globalBgConfig = LocalAppBackgroundConfig.current
+    val isLight = globalBgConfig.isLight
+
+    // 配色令牌（与 EditorialPreviewScreen 严格统一）
+    val canvasBg = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
+    val dividerColor = if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637)
+    val cardBg = if (isLight) Color(0xFFF2EFE8) else Color(0xFF1B231B)
+    val inkPrimary = if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7)
+    val inkSecondary = if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA)
+    val inkMuted = if (isLight) Color(0xFF8A8780) else Color(0xFF889689)
+    val clayAccent = Color(0xFFC4623D)
+    val forestGreen = if (isLight) Color(0xFF2D6A4F) else Color(0xFF52B788)
+    val warningAmber = Color(0xFFD97706)
 
     var selectedPeriod by remember { mutableStateOf(budgetConfig.activePeriod) }
     var monthlyInput by remember { mutableStateOf(if (budgetConfig.monthlyLimit > 0) budgetConfig.monthlyLimit.toInt().toString() else "5000") }
@@ -97,7 +101,6 @@ fun BudgetSettingsScreen(
     var saveSuccessMessage by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Quick presets for monthly budget
     val monthlyPresets = listOf(2000, 3000, 5000, 8000, 10000, 15000, 20000)
 
     val currentLimit = when (selectedPeriod) {
@@ -116,494 +119,558 @@ fun BudgetSettingsScreen(
     val remainingMonthly = (monthlyInput.toDoubleOrNull() ?: 0.0) - thisMonthExpense
     val suggestedDailySpend = if (remainingMonthly > 0) remainingMonthly / daysLeftInMonth else 0.0
 
-    GlassBackgroundWithGlow(modifier = modifier) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-            ) {
-                Spacer(modifier = Modifier.statusBarsPadding())
-                Spacer(modifier = Modifier.height(8.dp))
+    val isOver = budgetProgress.isOverBudget
+    val animatedProgress by animateFloatAsState(
+        targetValue = budgetProgress.progressPercent.coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 500),
+        label = "budget_setting_progress"
+    )
+    val progressColor = if (isOver) clayAccent else if (budgetProgress.progressPercent > 0.8f) warningAmber else inkPrimary
 
-                // Top Bar
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(canvasBg)
+            .statusBarsPadding()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp)
+        ) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 1. Top Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(if (isLight) Color(0xFFECE7DC) else Color(0xFF1F291F))
+                            .testTag("budget_settings_back_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回",
+                            tint = inkPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = "Budget",
+                            fontFamily = FontFamily.Serif,
+                            fontStyle = FontStyle.Italic,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = inkPrimary,
+                            letterSpacing = (-0.5).sp
+                        )
+                        Spacer(modifier = Modifier.height(1.dp))
+                        Text(
+                            text = "合理规划收支 · 保持财务从容",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = inkMuted,
+                            letterSpacing = 0.3.sp
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (isLight) Color(0xFFECE7DC) else Color(0xFF1F291F)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = onBack,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(if (bgConfig.isLight) Color.White.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.1f))
-                                .testTag("budget_settings_back_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "返回",
-                                tint = bgConfig.textPrimary
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = null,
+                        tint = clayAccent,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 2. Budget Health Status Card (报刊手帐风格卡片)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cardBg)
+                    .border(0.5.dp, dividerColor, RoundedCornerShape(14.dp))
+                    .padding(18.dp)
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${selectedPeriod.title.uppercase(Locale.getDefault())} HEALTH",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.sp,
+                            color = inkMuted
+                        )
+
+                        Text(
+                            text = if (isOver) "⚠️ 已超支" else "● 状态良好",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isOver) clayAccent else forestGreen
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
                         Column {
                             Text(
-                                text = "预算管理与设置",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = bgConfig.textPrimary
+                                text = "已用金额",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 10.5.sp,
+                                color = inkMuted
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "合理规划支出 · 避免超额消费",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = bgConfig.textSecondary
+                                text = "¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(budgetProgress.spentAmount))}",
+                                fontFamily = FontFamily.Serif,
+                                fontStyle = FontStyle.Italic,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = inkPrimary,
+                                letterSpacing = (-0.8).sp
+                            )
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "目标上限 ¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(currentLimit))}",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                color = inkSecondary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "已用 ${(budgetProgress.progressPercent * 100).toInt()}%",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = progressColor
                             )
                         }
                     }
 
-                    // Top Tune Icon Badge
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Progress Bar
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(if (bgConfig.isLight) Color(0xFF6366F1).copy(alpha = 0.12f) else Color(0xFF6366F1).copy(alpha = 0.3f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = null,
-                            tint = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // 1. Current Budget Health Status Card (Panoramic Glass Card, No Heavy Border)
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    backgroundColor = if (budgetProgress.isOverBudget) {
-                        if (bgConfig.isLight) Color(0xFFFEF2F2).copy(alpha = 0.95f) else Color(0xFF3B151E).copy(alpha = 0.70f)
-                    } else {
-                        if (bgConfig.isLight) Color.White.copy(alpha = 0.90f) else Color(0xFF161F38).copy(alpha = 0.70f)
-                    },
-                    borderColor = Brush.linearGradient(
-                        listOf(Color.Transparent, Color.Transparent) // Borderless aesthetic as requested
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp)
+                            .height(3.dp)
+                            .background(dividerColor)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .background(
-                                            if (budgetProgress.isOverBudget) Color(0xFFEF4444).copy(alpha = 0.2f)
-                                            else Color(0xFF6366F1).copy(alpha = 0.2f),
-                                            CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if (budgetProgress.isOverBudget) Icons.Default.Warning else Icons.Default.Savings,
-                                        contentDescription = null,
-                                        tint = if (budgetProgress.isOverBudget) Color(0xFFEF4444) else (if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "${selectedPeriod.title}实时健康度",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = bgConfig.textPrimary
-                                )
-                            }
-
-                            Text(
-                                text = if (budgetProgress.isOverBudget) "⚠️ 已超支" else "正常良好",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (budgetProgress.isOverBudget) Color(0xFFEF4444) else (if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Progress Bar
-                        LinearProgressIndicator(
-                            progress = { budgetProgress.progressPercent.coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(10.dp)
-                                .clip(RoundedCornerShape(5.dp)),
-                            color = if (budgetProgress.isOverBudget) Color(0xFFEF4444) else if (budgetProgress.progressPercent > 0.8f) Color(0xFFF59E0B) else (if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan),
-                            trackColor = if (bgConfig.isLight) Color(0xFFE2E8F0) else Color.White.copy(alpha = 0.12f),
-                            strokeCap = StrokeCap.Round
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // 3 Grid Info Pills
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Spent
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(if (bgConfig.isLight) Color(0xFFF1F5F9) else Color.White.copy(alpha = 0.05f), RoundedCornerShape(14.dp))
-                                    .padding(10.dp)
-                            ) {
-                                Text(text = "已支出", style = MaterialTheme.typography.labelSmall, color = bgConfig.textTertiary)
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "¥${String.format(Locale.CHINA, "%,.1f", budgetProgress.spentAmount)}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = bgConfig.textPrimary,
-                                    maxLines = 1
-                                )
-                            }
-
-                            // Limit
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(if (bgConfig.isLight) Color(0xFFF1F5F9) else Color.White.copy(alpha = 0.05f), RoundedCornerShape(14.dp))
-                                    .padding(10.dp)
-                            ) {
-                                Text(text = "预算目标", style = MaterialTheme.typography.labelSmall, color = bgConfig.textTertiary)
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "¥${String.format(Locale.CHINA, "%,.1f", currentLimit)}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = bgConfig.textPrimary,
-                                    maxLines = 1
-                                )
-                            }
-
-                            // Remaining
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(if (bgConfig.isLight) Color(0xFFF1F5F9) else Color.White.copy(alpha = 0.05f), RoundedCornerShape(14.dp))
-                                    .padding(10.dp)
-                            ) {
-                                Text(
-                                    text = if (budgetProgress.isOverBudget) "超支额" else "剩余可用",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (budgetProgress.isOverBudget) Color(0xFFEF4444) else bgConfig.textTertiary
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "¥${String.format(Locale.CHINA, "%,.1f", if (budgetProgress.isOverBudget) budgetProgress.overAmount else budgetProgress.remainingAmount)}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (budgetProgress.isOverBudget) Color(0xFFEF4444) else (if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald),
-                                    maxLines = 1
-                                )
-                            }
-                        }
-
-                        // Daily spending suggestion
-                        if (selectedPeriod == BudgetPeriod.MONTH && remainingMonthly > 0) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (bgConfig.isLight) Color(0xFFEEF2FF) else Color(0xFF312E81).copy(alpha = 0.35f))
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "本月剩余 ${daysLeftInMonth} 天，建议每日开销不超过 ¥${String.format(Locale.CHINA, "%.1f", suggestedDailySpend)}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // 2. Default Active Period Selector
-                Text(
-                    text = "主展示预算周期",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = bgConfig.textPrimary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    BudgetPeriod.values().forEach { period ->
-                        val isSelected = selectedPeriod == period
-                        val selectColor = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan
                         Box(
+                            modifier = Modifier
+                                .fillMaxWidth(animatedProgress)
+                                .height(3.dp)
+                                .background(progressColor)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // 3 Stat Pills
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 周期支出
+                        Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    if (isSelected) {
-                                        if (bgConfig.isLight) Color(0xFF6366F1).copy(alpha = 0.15f) else Color(0xFF6366F1).copy(alpha = 0.35f)
-                                    } else {
-                                        if (bgConfig.isLight) Color.White.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.06f)
-                                    }
-                                )
-                                .border(
-                                    width = if (isSelected) 1.5.dp else 0.dp,
-                                    color = if (isSelected) selectColor else Color.Transparent,
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .clickable {
-                                    selectedPeriod = period
-                                    onSelectPeriod(period)
-                                }
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = period.title,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) selectColor else bgConfig.textSecondary
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = when (period) {
-                                        BudgetPeriod.MONTH -> "¥$monthlyInput"
-                                        BudgetPeriod.QUARTER -> "¥$quarterlyInput"
-                                        BudgetPeriod.YEAR -> "¥$yearlyInput"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isSelected) bgConfig.textPrimary else bgConfig.textTertiary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(22.dp))
-
-                // 3. Customize Budget Limits (Inputs)
-                Text(
-                    text = "设置各周期预算额度",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = bgConfig.textPrimary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "可手动输入具体数额，或点击下方快捷选项快速填入",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = bgConfig.textSecondary
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Monthly Input
-                OutlinedTextField(
-                    value = monthlyInput,
-                    onValueChange = {
-                        monthlyInput = it
-                        // Auto calculate quarterly and yearly recommendations if empty or standard
-                        val mVal = it.toDoubleOrNull()
-                        if (mVal != null && mVal > 0) {
-                            quarterlyInput = (mVal * 3).toInt().toString()
-                            yearlyInput = (mVal * 12).toInt().toString()
-                        }
-                    },
-                    label = { Text("月度预算限额 (元)", color = bgConfig.textSecondary) },
-                    leadingIcon = { Text("¥", fontWeight = FontWeight.Bold, color = bgConfig.textPrimary, modifier = Modifier.padding(start = 12.dp)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = bgConfig.textPrimary,
-                        unfocusedTextColor = bgConfig.textPrimary,
-                        focusedContainerColor = bgConfig.inputFieldBg,
-                        unfocusedContainerColor = bgConfig.inputFieldBg,
-                        focusedBorderColor = Color(0xFF6366F1),
-                        unfocusedBorderColor = bgConfig.inputFieldBorder
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Quick Monthly Presets FlowRow
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    monthlyPresets.forEach { preset ->
-                        val isCurrent = monthlyInput == preset.toString()
-                        Box(
-                            modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    if (isCurrent) (if (bgConfig.isLight) Color(0xFF6366F1).copy(alpha = 0.15f) else Color(0xFF6366F1).copy(alpha = 0.35f))
-                                    else (if (bgConfig.isLight) Color(0xFFF1F5F9) else Color.White.copy(alpha = 0.07f))
-                                )
-                                .clickable {
-                                    monthlyInput = preset.toString()
-                                    quarterlyInput = (preset * 3).toString()
-                                    yearlyInput = (preset * 12).toString()
-                                }
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                                .background(if (isLight) Color(0xFFE9E4D8) else Color(0xFF242E24))
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Text(text = "已支出", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = inkMuted)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(budgetProgress.spentAmount))}",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = inkPrimary,
+                                maxLines = 1
+                            )
+                        }
+
+                        // 预算目标
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isLight) Color(0xFFE9E4D8) else Color(0xFF242E24))
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Text(text = "预算目标", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = inkMuted)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(currentLimit))}",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = inkPrimary,
+                                maxLines = 1
+                            )
+                        }
+
+                        // 剩余可用/超支
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isLight) Color(0xFFE9E4D8) else Color(0xFF242E24))
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = "¥$preset",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isCurrent) (if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan) else bgConfig.textSecondary
+                                text = if (isOver) "超支额" else "剩余可用",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 10.sp,
+                                color = if (isOver) clayAccent else inkMuted
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            val amt = if (isOver) budgetProgress.overAmount else budgetProgress.remainingAmount
+                            Text(
+                                text = "¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(amt))}",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isOver) clayAccent else forestGreen,
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    if (selectedPeriod == BudgetPeriod.MONTH && remainingMonthly > 0) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isLight) Color(0xFFE5ECE7) else Color(0xFF1D2B22))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = forestGreen,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "本月剩余 $daysLeftInMonth 天 · 建议每日开销不超过 ¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(suggestedDailySpend))}",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                color = forestGreen,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(22.dp))
 
-                // Quarterly Input
-                OutlinedTextField(
-                    value = quarterlyInput,
-                    onValueChange = { quarterlyInput = it },
-                    label = { Text("季度预算限额 (元)", color = bgConfig.textSecondary) },
-                    leadingIcon = { Text("¥", fontWeight = FontWeight.Bold, color = bgConfig.textPrimary, modifier = Modifier.padding(start = 12.dp)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = bgConfig.textPrimary,
-                        unfocusedTextColor = bgConfig.textPrimary,
-                        focusedContainerColor = bgConfig.inputFieldBg,
-                        unfocusedContainerColor = bgConfig.inputFieldBg,
-                        focusedBorderColor = Color(0xFF6366F1),
-                        unfocusedBorderColor = bgConfig.inputFieldBorder
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+            // 3. 周期选择 (Period Selector)
+            Text(
+                text = "DISPLAY PERIOD · 展示周期",
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = inkMuted
+            )
+            Spacer(modifier = Modifier.height(10.dp))
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Yearly Input
-                OutlinedTextField(
-                    value = yearlyInput,
-                    onValueChange = { yearlyInput = it },
-                    label = { Text("年度预算限额 (元)", color = bgConfig.textSecondary) },
-                    leadingIcon = { Text("¥", fontWeight = FontWeight.Bold, color = bgConfig.textPrimary, modifier = Modifier.padding(start = 12.dp)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = bgConfig.textPrimary,
-                        unfocusedTextColor = bgConfig.textPrimary,
-                        focusedContainerColor = bgConfig.inputFieldBg,
-                        unfocusedContainerColor = bgConfig.inputFieldBg,
-                        focusedBorderColor = Color(0xFF6366F1),
-                        unfocusedBorderColor = bgConfig.inputFieldBorder
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                if (errorMessage != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = errorMessage ?: "",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFEF4444)
-                    )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                BudgetPeriod.values().forEach { period ->
+                    val isSelected = selectedPeriod == period
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (isSelected) clayAccent.copy(alpha = 0.12f)
+                                else (if (isLight) Color(0xFFF2EFE8) else Color(0xFF1B231B))
+                            )
+                            .border(
+                                width = if (isSelected) 1.5.dp else 0.5.dp,
+                                color = if (isSelected) clayAccent else dividerColor,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                selectedPeriod = period
+                                onSelectPeriod(period)
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = period.title,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) clayAccent else inkSecondary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = when (period) {
+                                    BudgetPeriod.MONTH -> "¥$monthlyInput"
+                                    BudgetPeriod.QUARTER -> "¥$quarterlyInput"
+                                    BudgetPeriod.YEAR -> "¥$yearlyInput"
+                                },
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isSelected) inkPrimary else inkMuted
+                            )
+                        }
+                    }
                 }
+            }
 
-                if (saveSuccessMessage != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.height(22.dp))
+
+            // 4. 额度配置 (Customize Limits)
+            Text(
+                text = "BUDGET LIMITS · 额度设置",
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = inkMuted
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "可手动输入具体数额，或点击下方快捷选项快速填入",
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                color = inkMuted
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Monthly Input
+            OutlinedTextField(
+                value = monthlyInput,
+                onValueChange = {
+                    monthlyInput = it
+                    val mVal = it.toDoubleOrNull()
+                    if (mVal != null && mVal > 0) {
+                        quarterlyInput = (mVal * 3).toInt().toString()
+                        yearlyInput = (mVal * 12).toInt().toString()
+                    }
+                },
+                label = { Text("月度预算限额 (元)", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = inkMuted) },
+                leadingIcon = { Text("¥", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Bold, color = inkPrimary, modifier = Modifier.padding(start = 12.dp)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = inkPrimary,
+                    unfocusedTextColor = inkPrimary,
+                    focusedContainerColor = cardBg,
+                    unfocusedContainerColor = cardBg,
+                    focusedBorderColor = clayAccent,
+                    unfocusedBorderColor = dividerColor
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Quick Monthly Presets
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                monthlyPresets.forEach { preset ->
+                    val isCurrent = monthlyInput == preset.toString()
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (isCurrent) clayAccent.copy(alpha = 0.15f)
+                                else (if (isLight) Color(0xFFECE7DC) else Color(0xFF1F291F))
+                            )
+                            .border(
+                                width = if (isCurrent) 1.dp else 0.dp,
+                                color = if (isCurrent) clayAccent else Color.Transparent,
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                            .clickable {
+                                monthlyInput = preset.toString()
+                                quarterlyInput = (preset * 3).toString()
+                                yearlyInput = (preset * 12).toString()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
                         Text(
-                            text = saveSuccessMessage ?: "",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald,
-                            fontWeight = FontWeight.Bold
+                            text = "¥$preset",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCurrent) clayAccent else inkSecondary
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Save Button
-                Button(
-                    onClick = {
-                        val m = monthlyInput.toDoubleOrNull()
-                        val q = quarterlyInput.toDoubleOrNull()
-                        val y = yearlyInput.toDoubleOrNull()
-
-                        if (m == null || m <= 0) {
-                            errorMessage = "请输入有效的月度预算金额"
-                            return@Button
-                        }
-                        val safeQ = q ?: (m * 3)
-                        val safeY = y ?: (m * 12)
-
-                        errorMessage = null
-                        onSelectPeriod(selectedPeriod)
-                        onUpdateBudgetLimits(m, safeQ, safeY)
-                        saveSuccessMessage = "预算设置已成功保存！"
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF6366F1),
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .testTag("save_budget_button")
-                ) {
-                    Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("保存并应用预算", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Spacer(modifier = Modifier.height(40.dp))
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Quarterly Input
+            OutlinedTextField(
+                value = quarterlyInput,
+                onValueChange = { quarterlyInput = it },
+                label = { Text("季度预算限额 (元)", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = inkMuted) },
+                leadingIcon = { Text("¥", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Bold, color = inkPrimary, modifier = Modifier.padding(start = 12.dp)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = inkPrimary,
+                    unfocusedTextColor = inkPrimary,
+                    focusedContainerColor = cardBg,
+                    unfocusedContainerColor = cardBg,
+                    focusedBorderColor = clayAccent,
+                    unfocusedBorderColor = dividerColor
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Yearly Input
+            OutlinedTextField(
+                value = yearlyInput,
+                onValueChange = { yearlyInput = it },
+                label = { Text("年度预算限额 (元)", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = inkMuted) },
+                leadingIcon = { Text("¥", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Bold, color = inkPrimary, modifier = Modifier.padding(start = 12.dp)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = inkPrimary,
+                    unfocusedTextColor = inkPrimary,
+                    focusedContainerColor = cardBg,
+                    unfocusedContainerColor = cardBg,
+                    focusedBorderColor = clayAccent,
+                    unfocusedBorderColor = dividerColor
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (errorMessage != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = errorMessage ?: "",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.5.sp,
+                    color = clayAccent
+                )
+            }
+
+            if (saveSuccessMessage != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = forestGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = saveSuccessMessage ?: "",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.5.sp,
+                        color = forestGreen,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 5. Save Button
+            Button(
+                onClick = {
+                    val m = monthlyInput.toDoubleOrNull()
+                    val q = quarterlyInput.toDoubleOrNull()
+                    val y = yearlyInput.toDoubleOrNull()
+
+                    if (m == null || m <= 0) {
+                        errorMessage = "请输入有效的月度预算金额"
+                        return@Button
+                    }
+                    val safeQ = q ?: (m * 3)
+                    val safeY = y ?: (m * 12)
+
+                    errorMessage = null
+                    onSelectPeriod(selectedPeriod)
+                    onUpdateBudgetLimits(m, safeQ, safeY)
+                    saveSuccessMessage = "预算设置已成功保存！"
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = clayAccent,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("save_budget_button")
+            ) {
+                Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(17.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "保存并应用预算",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
         }
     }
 }

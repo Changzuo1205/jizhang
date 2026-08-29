@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material3.Icon
@@ -51,6 +52,7 @@ import com.example.ui.theme.LocalAppBackgroundConfig
 
 enum class AppTab(val title: String) {
     HOME("首页"),
+    DESIGN("设计稿"),
     ACCOUNTS("账户"),
     REPORTS("报表"),
     MINE("我的")
@@ -151,8 +153,8 @@ fun GlassBottomNavBar(
                                         .background(
                                             Brush.radialGradient(
                                                 listOf(
-                                                    Color(0xFF6366F1).copy(alpha = pulseAlpha),
-                                                    Color(0xFF06B6D4).copy(alpha = pulseAlpha * 0.5f),
+                                                    Color(0xFFC4623D).copy(alpha = pulseAlpha),
+                                                    Color(0xFFC4623D).copy(alpha = pulseAlpha * 0.3f),
                                                     Color.Transparent
                                                 )
                                             ),
@@ -165,14 +167,7 @@ fun GlassBottomNavBar(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(
-                                                    Color(0xFF6366F1),
-                                                    Color(0xFF06B6D4)
-                                                )
-                                            )
-                                        )
+                                        .background(Color(0xFFC4623D))
                                         .border(1.dp, Color.White.copy(alpha = 0.8f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -191,7 +186,7 @@ fun GlassBottomNavBar(
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 ),
-                                color = if (bgConfig.isLight) Color(0xFF0284C7) else Color(0xFF38BDF8)
+                                color = Color(0xFFC4623D)
                             )
                         }
                     } else {
@@ -205,7 +200,16 @@ fun GlassBottomNavBar(
                     }
                 }
 
-                // Tab 2: Accounts
+                // Tab 2: Design Preview / 编辑页设计稿
+                NavItem(
+                    icon = Icons.Default.Palette,
+                    title = "设计稿",
+                    selected = currentTab == AppTab.DESIGN,
+                    onClick = { onTabSelected(AppTab.DESIGN) },
+                    modifier = Modifier.weight(1f).testTag("nav_tab_design")
+                )
+
+                // Tab 3: Accounts
                 NavItem(
                     icon = Icons.Default.AccountBalance,
                     title = "账户",
@@ -214,7 +218,7 @@ fun GlassBottomNavBar(
                     modifier = Modifier.weight(1f).testTag("nav_tab_accounts")
                 )
 
-                // Tab 3: Reports
+                // Tab 4: Reports
                 NavItem(
                     icon = Icons.Default.PieChart,
                     title = "报表",
@@ -223,7 +227,7 @@ fun GlassBottomNavBar(
                     modifier = Modifier.weight(1f).testTag("nav_tab_reports")
                 )
 
-                // Tab 4: Mine
+                // Tab 5: Mine
                 NavItem(
                     icon = Icons.Default.Person,
                     title = "我的",

@@ -64,7 +64,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.AccountEntity
 import com.example.data.local.ExpenseEntity
 import com.example.ui.components.DaySummary
-import com.example.ui.components.ExpenseAddEditDialog
+import com.example.ui.screens.EditorialExpenseAddEditScreen
 import com.example.ui.components.GlassBackgroundWithGlow
 import com.example.ui.components.GlassCard
 import com.example.ui.components.GlowAmber
@@ -792,11 +792,12 @@ fun BillCalendarScreen(
             c.timeInMillis
         }
 
-        ExpenseAddEditDialog(
+        EditorialExpenseAddEditScreen(
             expenseToEdit = null,
             allExpenses = allExpenses,
             accounts = accounts,
             initialTimestamp = presetTimestamp,
+            isPreviewMode = false,
             onDismiss = { showAddDialog = false },
             onConfirm = { type, category, subCategory, amount, note, accountId, accountName, timestamp, transferToAccountId ->
                 onAddExpense(type, category, subCategory, amount, note, accountId, accountName, timestamp, transferToAccountId)
@@ -806,11 +807,12 @@ fun BillCalendarScreen(
     }
 
     if (expenseToEdit != null) {
-        ExpenseAddEditDialog(
+        EditorialExpenseAddEditScreen(
             expenseToEdit = expenseToEdit,
             allExpenses = allExpenses,
             accounts = accounts,
             initialTimestamp = expenseToEdit!!.dateTimestamp,
+            isPreviewMode = false,
             onDismiss = { expenseToEdit = null },
             onConfirm = { type, category, subCategory, amount, note, accountId, accountName, timestamp, transferToAccountId ->
                 onUpdateExpense(

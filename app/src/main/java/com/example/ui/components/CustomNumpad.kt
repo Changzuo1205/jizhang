@@ -259,17 +259,17 @@ private fun NumpadIconKey(
     }
 }
 
-private fun hasOperator(expr: String): Boolean {
+fun hasOperator(expr: String): Boolean {
     return expr.contains("+") || expr.contains("-") || expr.contains("×") || expr.contains("*") || expr.contains("÷") || expr.contains("/")
 }
 
-private fun canEvaluate(expr: String): Boolean {
+fun canEvaluate(expr: String): Boolean {
     if (expr.isEmpty()) return false
     val lastChar = expr.last()
     return lastChar.isDigit() || lastChar == '.'
 }
 
-private fun handleInput(
+fun handleInput(
     input: String,
     expr: String,
     onChange: (String) -> Unit,

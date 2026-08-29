@@ -13,6 +13,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +34,6 @@ import androidx.compose.ui.text.TextStyle
 import kotlinx.coroutines.delay
 import com.example.ui.components.AppTab
 import com.example.ui.components.GlassBottomNavBar
-import com.example.ui.components.ExpenseAddEditDialog
 import com.example.data.local.ExpenseEntity
 import com.example.ui.theme.LocalAppBackgroundConfig
 import com.example.ui.theme.LocalAppColorScheme
@@ -151,58 +151,65 @@ fun MainScreen(
                 color = if (backgroundConfig.isLight) Color(0xFFF6F8FC) else Color(0xFF090D16)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    if (splashDone) {
-                        MainScreenContent(
-                            currentTab = currentTab,
-                            onCurrentTabChange = { currentTab = it },
-                            activeSubScreen = activeSubScreen,
-                            onActiveSubScreenChange = { activeSubScreen = it },
-                            expenseToEdit = expenseToEdit,
-                            addExpenseTimestamp = addExpenseTimestamp,
-                            onOpenAddExpenseWithItem = { ts, exp ->
-                                expenseToEdit = exp
-                                addExpenseTimestamp = ts
-                                activeSubScreen = ActiveSubScreen.ADD_EXPENSE
-                            },
-                            onCloseAddExpense = {
-                                expenseToEdit = null
-                                addExpenseTimestamp = null
-                                activeSubScreen = ActiveSubScreen.NONE
-                            },
-                            isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
-                            onToggleCategoryAnalysisExpanded = { viewModel.setCategoryAnalysisExpanded(!isCategoryAnalysisExpanded) },
-                            expenses = expenses,
-                            accounts = accounts,
-                            allExpenses = allExpenses,
-                            thisMonthExpense = thisMonthExpense,
-                            thisMonthIncome = thisMonthIncome,
-                            totalExpense = totalExpense,
-                            totalIncome = totalIncome,
-                            todayExpense = todayExpense,
-                            budgetConfig = budgetConfig,
-                            budgetProgress = budgetProgress,
-                            categoryStats = categoryStats,
-                            filterType = filterType,
-                            filterTime = filterTime,
-                            searchQuery = searchQuery,
-                            totalNetAssets = totalNetAssets,
-                            totalPositiveAssets = totalPositiveAssets,
-                            totalDebts = totalDebts,
-                            incomeCategoryStats = incomeCategoryStats,
-                            weekTrendPoints = weekTrendPoints,
-                            monthTrendPoints = monthTrendPoints,
-                            books = books,
-                            categories = categories,
-                            colorScheme = colorScheme,
-                            fontScale = fontScale,
-                            backgroundConfig = backgroundConfig,
-                            viewModel = viewModel
-                        )
-                    } else {
-                        // Splash phase: render only splash, skip home composition entirely
-                        // (节省 80% composition 工作量：避免 GlassBackgroundWithGlow orb 永久动画
-                        // + 30 项 LazyColumn + 各 spring 全部跑起来)
-                        SplashScreen(splashDone = splashDone)
+                    AnimatedContent(
+                        targetState = splashDone,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(400, easing = LinearOutSlowInEasing))
+                                .togetherWith(fadeOut(animationSpec = tween(300, easing = FastOutLinearInEasing)))
+                        },
+                        label = "SplashToMainTransition"
+                    ) { isDone ->
+                        if (isDone) {
+                            MainScreenContent(
+                                currentTab = currentTab,
+                                onCurrentTabChange = { currentTab = it },
+                                activeSubScreen = activeSubScreen,
+                                onActiveSubScreenChange = { activeSubScreen = it },
+                                expenseToEdit = expenseToEdit,
+                                addExpenseTimestamp = addExpenseTimestamp,
+                                onOpenAddExpenseWithItem = { ts, exp ->
+                                    expenseToEdit = exp
+                                    addExpenseTimestamp = ts
+                                    activeSubScreen = ActiveSubScreen.ADD_EXPENSE
+                                },
+                                onCloseAddExpense = {
+                                    expenseToEdit = null
+                                    addExpenseTimestamp = null
+                                    activeSubScreen = ActiveSubScreen.NONE
+                                },
+                                isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
+                                onToggleCategoryAnalysisExpanded = { viewModel.setCategoryAnalysisExpanded(!isCategoryAnalysisExpanded) },
+                                expenses = expenses,
+                                accounts = accounts,
+                                allExpenses = allExpenses,
+                                thisMonthExpense = thisMonthExpense,
+                                thisMonthIncome = thisMonthIncome,
+                                totalExpense = totalExpense,
+                                totalIncome = totalIncome,
+                                todayExpense = todayExpense,
+                                budgetConfig = budgetConfig,
+                                budgetProgress = budgetProgress,
+                                categoryStats = categoryStats,
+                                filterType = filterType,
+                                filterTime = filterTime,
+                                searchQuery = searchQuery,
+                                totalNetAssets = totalNetAssets,
+                                totalPositiveAssets = totalPositiveAssets,
+                                totalDebts = totalDebts,
+                                incomeCategoryStats = incomeCategoryStats,
+                                weekTrendPoints = weekTrendPoints,
+                                monthTrendPoints = monthTrendPoints,
+                                books = books,
+                                categories = categories,
+                                colorScheme = colorScheme,
+                                fontScale = fontScale,
+                                backgroundConfig = backgroundConfig,
+                                viewModel = viewModel
+                            )
+                        } else {
+                            // Splash phase: render only splash, skip home composition entirely
+                            SplashScreen(splashDone = splashDone)
+                        }
                     }
                 }
             }
@@ -258,6 +265,12 @@ private fun MainScreenContent(
 ) {
     var selectedCalendarDay by remember { mutableStateOf<Int?>(null) }
 
+    var homeSelectedDateMillis by remember { mutableStateOf<Long?>(null) }
+    var homeIsCalendarExpanded by remember { mutableStateOf(false) }
+    val homePagerState = rememberPagerState(initialPage = 500, pageCount = { 1000 })
+    var homeForceDarkPreview by remember { mutableStateOf<Boolean?>(null) }
+    var homeEntranceAnimationPlayed by remember { mutableStateOf(false) }
+
     // Outer transition between Main Tabs and Sub-Screens (Add Expense / Bill Calendar / Budget Settings)
     AnimatedContent(
         targetState = activeSubScreen,
@@ -288,11 +301,12 @@ private fun MainScreenContent(
     ) { subScreen ->
         when (subScreen) {
             ActiveSubScreen.ADD_EXPENSE -> {
-                ExpenseAddEditDialog(
+                EditorialExpenseAddEditScreen(
                     expenseToEdit = expenseToEdit,
                     allExpenses = allExpenses,
                     accounts = accounts,
                     initialTimestamp = expenseToEdit?.dateTimestamp ?: (addExpenseTimestamp ?: System.currentTimeMillis()),
+                    isPreviewMode = false,
                     onDismiss = onCloseAddExpense,
                     onConfirm = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
                         if (expenseToEdit == null) {
@@ -367,7 +381,7 @@ private fun MainScreenContent(
                     label = "TabContent"
                 ) { tab ->
                     when (tab) {
-                        AppTab.HOME -> ExpenseScreen(
+                        AppTab.HOME -> EditorialPreviewScreen(
                             expenses = expenses,
                             accounts = accounts,
                             allExpenses = allExpenses,
@@ -376,33 +390,35 @@ private fun MainScreenContent(
                             totalExpense = totalExpense,
                             totalIncome = totalIncome,
                             todayExpense = todayExpense,
+                            totalNetAssets = totalNetAssets,
+                            totalPositiveAssets = totalPositiveAssets,
+                            totalDebts = totalDebts,
+                            categoryStats = categoryStats,
                             budgetConfig = budgetConfig,
                             budgetProgress = budgetProgress,
-                            categoryStats = categoryStats,
-                            filterType = filterType,
-                            filterTime = filterTime,
-                            searchQuery = searchQuery,
-                            showAddDialogTrigger = false,
-                            selectedCalendarDay = selectedCalendarDay,
-                            onSelectCalendarDay = { selectedCalendarDay = it },
-                            isCategoryAnalysisExpanded = isCategoryAnalysisExpanded,
-                            onToggleCategoryAnalysisExpanded = onToggleCategoryAnalysisExpanded,
-                            onSetFilterType = { viewModel.setFilterType(it) },
-                            onSetFilterTime = { viewModel.setFilterTime(it) },
-                            onSetSearchQuery = { viewModel.setSearchQuery(it) },
-                            onSelectBudgetPeriod = { viewModel.setActiveBudgetPeriod(it) },
-                            onUpdateBudgetLimits = { m, q, y -> viewModel.updateBudgetLimits(m, q, y) },
-                            onOpenBillCalendar = { onActiveSubScreenChange(ActiveSubScreen.BILL_CALENDAR) },
                             onOpenBudgetSettings = { onActiveSubScreenChange(ActiveSubScreen.BUDGET_SETTINGS) },
-                            onAddExpense = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
+                            onOpenAddExpense = { onOpenAddExpenseWithItem(null, null) },
+                            onEditExpense = { exp -> onOpenAddExpenseWithItem(exp.dateTimestamp, exp) },
+                            selectedDateMillis = homeSelectedDateMillis,
+                            onSelectedDateChange = { homeSelectedDateMillis = it },
+                            isCalendarExpanded = homeIsCalendarExpanded,
+                            onCalendarExpandedChange = { homeIsCalendarExpanded = it },
+                            pagerState = homePagerState,
+                            forceDarkPreview = homeForceDarkPreview,
+                            onForceDarkPreviewChange = { homeForceDarkPreview = it },
+                            playEntranceAnimation = !homeEntranceAnimationPlayed,
+                            onEntranceAnimationPlayed = { homeEntranceAnimationPlayed = true }
+                        )
+                        AppTab.DESIGN -> EditorialExpenseAddEditScreen(
+                            expenseToEdit = null,
+                            allExpenses = allExpenses,
+                            accounts = accounts,
+                            initialTimestamp = System.currentTimeMillis(),
+                            isPreviewMode = true,
+                            onDismiss = { onCurrentTabChange(AppTab.HOME) },
+                            onConfirm = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
                                 viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
-                            },
-                            onEditExpense = { exp ->
-                                onOpenAddExpenseWithItem(exp.dateTimestamp, exp)
-                            },
-                            onUpdateExpense = { oldExp, newExp -> viewModel.updateExpense(oldExp, newExp) },
-                            onDeleteExpense = { viewModel.deleteExpense(it) },
-                            onCloseAddDialogTrigger = {}
+                            }
                         )
                         AppTab.ACCOUNTS -> AccountsScreen(
                             accounts = accounts,

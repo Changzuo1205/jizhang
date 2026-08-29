@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.dp
+import com.example.data.local.CategoryManager
 import com.example.data.local.entity.CategoryEntity
 import com.example.ui.components.GlassBackgroundWithGlow
 import com.example.ui.components.GlassCard
@@ -297,7 +298,7 @@ private fun CategoryParentRow(
     modifier: Modifier = Modifier
 ) {
     val bgConfig = LocalAppBackgroundConfig.current
-    val glowColor = getCategoryGlowColor(parent.name)
+    val glowColor = CategoryManager.getCategoryGlowColor(parent.name)
 
     GlassCard(shape = RoundedCornerShape(18.dp), modifier = modifier.fillMaxWidth().animateContentSize()) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
@@ -315,7 +316,7 @@ private fun CategoryParentRow(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = getCategoryIcon(parent.name),
+                        imageVector = CategoryManager.getCategoryIcon(parent.name),
                         contentDescription = null,
                         tint = glowColor,
                         modifier = Modifier.size(17.dp)
