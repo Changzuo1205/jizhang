@@ -2,6 +2,8 @@ package com.example.ui.components
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,7 +31,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -38,11 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.view.WindowCompat
 import com.example.data.local.AccountEntity
-import com.example.data.local.CategoryItem
 import com.example.data.local.CategoryManager
 import com.example.data.local.ExpenseEntity
 import com.example.ui.theme.*
@@ -94,7 +91,7 @@ fun ExpenseAddEditDialog(
     val activeThemeColor = when (selectedTypeIndex) {
         1 -> colorScheme.incomeColor
         2 -> transferViolet
-        else -> accentOrange
+        else -> colorScheme.expenseColor
     }
 
     var transferToAccountId by remember {
@@ -246,11 +243,8 @@ fun ExpenseAddEditDialog(
 
     BackHandler(onBack = onDismiss)
 
-    Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(if (bgConfig.isLight) Color(0xFFF8FAFC) else Color(0xFF13151B)),
-        color = if (bgConfig.isLight) Color(0xFFF8FAFC) else Color(0xFF13151B)
+    GlassBackgroundWithGlow(
+        modifier = Modifier.fillMaxSize()
     ) {
         Column(
             modifier = Modifier
@@ -259,81 +253,32 @@ fun ExpenseAddEditDialog(
                 .navigationBarsPadding()
                 .imePadding()
         ) {
-                // 1. Top Navigation Bar & Book Title
-                Box(
+            // 1. Top Navigation Bar with Expense/Income/Transfer Tabs inline
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                IconButton(
+                    onClick = onDismiss,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .align(Alignment.CenterStart)
+                        .size(38.dp)
                 ) {
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回",
-                            tint = bgConfig.textPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    // Centered Book Title
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(horizontal = 8.dp)
-                    ) {
-                        Text(
-                            text = if (expenseToEdit != null) "编辑账目" else "日常账本",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = bgConfig.textPrimary
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = null,
-                            tint = bgConfig.textSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.FavoriteBorder,
-                                contentDescription = "收藏模板",
-                                tint = bgConfig.textSecondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = { if (isExpense) showCategoryPickerSheet = true },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "设置",
-                                tint = bgConfig.textSecondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "返回",
+                        tint = bgConfig.textPrimary,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
 
-                // 2. Type Tabs (支出 / 收入 / 转账)
+                // Centered Type Tabs
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                        .align(Alignment.Center)
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val tabs = listOf("支出", "收入", "转账")
@@ -361,341 +306,340 @@ fun ExpenseAddEditDialog(
                                         ensureTransferTargetValid(selectedAccountId)
                                     }
                                 }
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .padding(vertical = 4.dp)
                         ) {
                             Text(
                                 text = title,
-                                fontSize = 17.sp,
-                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
+                                fontSize = 16.sp,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
                                 color = if (isSelected) bgConfig.textPrimary else bgConfig.textTertiary
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Box(
                                 modifier = Modifier
-                                    .width(24.dp)
-                                    .height(3.dp)
+                                    .width(20.dp)
+                                    .height(2.5.dp)
                                     .clip(RoundedCornerShape(2.dp))
                                     .background(if (isSelected) activeThemeColor else Color.Transparent)
                             )
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-                // 3. Floating Hero Amount Card (Glass card)
-                val catIcon = if (isTransfer) Icons.Default.SwapHoriz else if (isIncome) CategoryManager.getCategoryIcon(selectedCategory) else getSubcategoryIcon(selectedSubCategory, selectedCategory)
-                val catGlow = if (isTransfer) transferViolet else CategoryManager.getCategoryGlowColor(selectedCategory)
-                val heroDisplayName = if (isTransfer) "转账" else if (isIncome) selectedCategory else if (selectedSubCategory.isNotBlank() && selectedSubCategory != "其他") selectedSubCategory else selectedCategory
-                val heroSubtitle = if (isTransfer) "账户间资金划转" else if (isIncome) "" else if (selectedSubCategory.isNotBlank() && selectedSubCategory != "其他") selectedCategory else ""
+            // 3. Floating Hero Amount Card (Frosted Glass Card)
+            val catIcon = if (isTransfer) Icons.Default.SwapHoriz else if (isIncome) CategoryManager.getCategoryIcon(selectedCategory) else getSubcategoryIcon(selectedSubCategory, selectedCategory)
+            val catGlow = if (isTransfer) transferViolet else CategoryManager.getCategoryGlowColor(selectedCategory)
+            val heroDisplayName = if (isTransfer) "转账" else if (isIncome) selectedCategory else if (selectedSubCategory.isNotBlank() && selectedSubCategory != "其他") selectedSubCategory else selectedCategory
+            val heroSubtitle = if (isTransfer) "账户间资金划转" else if (isIncome) "" else if (selectedSubCategory.isNotBlank() && selectedSubCategory != "其他") selectedCategory else ""
 
-                Box(
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (bgConfig.isLight) Color.White
-                            else Color(0xFF1E222B)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (bgConfig.isLight) Color(0xFFE2E8F0) else Color.White.copy(alpha = 0.08f),
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Left: Icon + Category
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .clickable {
+                                if (isExpense) showCategoryPickerSheet = true
+                            }
                     ) {
-                        // Left: Icon + Category
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Box(
                             modifier = Modifier
-                                .weight(1f, fill = false)
-                                .clickable {
-                                    if (isExpense) showCategoryPickerSheet = true
-                                }
+                                .size(46.dp)
+                                .background(catGlow.copy(alpha = 0.2f), CircleShape)
+                                .border(1.dp, catGlow.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .background(catGlow.copy(alpha = 0.2f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = catIcon,
-                                    contentDescription = heroDisplayName,
-                                    tint = catGlow,
-                                    modifier = Modifier.size(24.dp)
+                            Icon(
+                                imageVector = catIcon,
+                                contentDescription = heroDisplayName,
+                                tint = catGlow,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            if (isExpense) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .size(12.dp)
+                                        .background(activeThemeColor, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(10.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = heroDisplayName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = bgConfig.textPrimary,
+                                maxLines = 1
+                            )
+                            if (heroSubtitle.isNotBlank()) {
+                                Text(
+                                    text = heroSubtitle,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = bgConfig.textTertiary,
+                                    maxLines = 1
                                 )
-                                if (isExpense) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .size(12.dp)
-                                            .background(activeThemeColor, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ArrowDropDown,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(10.dp)
-                                        )
-                                    }
+                            }
+                        }
+                    }
+
+                    // Right: Large Amount Display
+                    val displayAmount = if (amountInput.isEmpty()) "0.00" else amountInput
+                    Text(
+                        text = displayAmount,
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = if (displayAmount.length > 8) 28.sp else 34.sp,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = bgConfig.textPrimary,
+                        textAlign = TextAlign.End,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("expense_amount_display")
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // 4. Middle Content: 4-Column Category Grid or Transfer View
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+            ) {
+                if (isTransfer) {
+                    // Transfer View: From Account -> To Account (Glass Card Style)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "资金调拨与转账",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = bgConfig.textSecondary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // From Card
+                            GlassCard(
+                                modifier = Modifier
+                                    .weight(1f),
+                                shape = RoundedCornerShape(16.dp),
+                                onClick = { showAccountPickerSheet = true }
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp)
+                                ) {
+                                    Text("转出账户", style = MaterialTheme.typography.labelSmall, color = bgConfig.textTertiary)
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = selectedAccount?.name ?: "选择账户",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = bgConfig.textPrimary,
+                                        maxLines = 1
+                                    )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "转入",
+                                tint = activeThemeColor,
+                                modifier = Modifier.padding(horizontal = 8.dp).size(24.dp)
+                            )
 
-                            Column {
+                            // To Card
+                            GlassCard(
+                                modifier = Modifier
+                                    .weight(1f),
+                                shape = RoundedCornerShape(16.dp),
+                                onClick = { showTransferTargetPickerSheet = true }
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp)
+                                ) {
+                                    Text("转入账户", style = MaterialTheme.typography.labelSmall, color = bgConfig.textTertiary)
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = targetTransferAccount?.name ?: "选择目标账户",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = bgConfig.textPrimary,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // 4-Column Category Grid
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 6.dp)
+                    ) {
+                        items(allCategories, key = { it.name }) { cat ->
+                            val isSelected = selectedCategory == cat.name
+                            val itemGlow = CategoryManager.getCategoryGlowColor(cat.name)
+                            val itemIcon = CategoryManager.getCategoryIcon(cat.name)
+                            val currentSub = if (isSelected) selectedSubCategory else ""
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = ripple()
+                                    ) {
+                                        selectedCategory = cat.name
+                                        if (isIncome) {
+                                            selectedSubCategory = cat.name
+                                        } else {
+                                            selectedSubCategory = CategoryManager.getDefaultSubcategory(
+                                                context = context,
+                                                categoryName = cat.name,
+                                                type = currentType,
+                                                isFreshCreation = false
+                                            )
+                                            // Open subcategory picker drawer
+                                            showCategoryPickerSheet = true
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp, horizontal = 2.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) itemGlow
+                                            else if (bgConfig.isLight) Color(0xFFEDF2F7).copy(alpha = 0.75f)
+                                            else Color(0xFF232630).copy(alpha = 0.65f)
+                                        )
+                                        .border(
+                                            width = if (isSelected) 2.dp else 1.dp,
+                                            color = if (isSelected) Color.White.copy(alpha = 0.85f)
+                                            else (if (bgConfig.isLight) Color(0xFFE2E8F0) else Color.White.copy(alpha = 0.08f)),
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = itemIcon,
+                                        contentDescription = cat.name,
+                                        tint = if (isSelected) Color.White else (if (bgConfig.isLight) Color(0xFF4A5568) else Color(0xFFA0AEC0)),
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                    if (isExpense) {
+                                        // Small down tag on bottom right
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .padding(3.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ArrowDropDown,
+                                                contentDescription = null,
+                                                tint = if (isSelected) Color.White.copy(alpha = 0.9f) else bgConfig.textTertiary,
+                                                modifier = Modifier.size(10.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
                                 Text(
-                                    text = heroDisplayName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = bgConfig.textPrimary,
+                                    text = cat.name,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) itemGlow else bgConfig.textPrimary,
                                     maxLines = 1
                                 )
-                                if (heroSubtitle.isNotBlank()) {
+
+                                if (isExpense && isSelected && currentSub.isNotBlank() && currentSub != "其他" && currentSub != cat.name) {
                                     Text(
-                                        text = heroSubtitle,
-                                        style = MaterialTheme.typography.labelSmall,
+                                        text = currentSub,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         color = bgConfig.textTertiary,
                                         maxLines = 1
                                     )
                                 }
                             }
                         }
-
-                        // Right: Large Amount Display
-                        val displayAmount = if (amountInput.isEmpty()) "0.00" else amountInput
-                        Text(
-                            text = displayAmount,
-                            style = MaterialTheme.typography.headlineLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = if (displayAmount.length > 8) 28.sp else 34.sp,
-                                letterSpacing = (-0.5).sp
-                            ),
-                            color = bgConfig.textPrimary,
-                            textAlign = TextAlign.End,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.testTag("expense_amount_display")
-                        )
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(6.dp))
+            val focusManager = LocalFocusManager.current
+            val density = LocalDensity.current
+            val isImeOpen = WindowInsets.ime.getBottom(density) > 0
 
-                // 4. Middle Content: 4-Column Category Grid or Transfer View
-                Box(
+            // 5. Note Input Field & Metadata Capsules Row (Frosted Glass Style)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp)
+            ) {
+                // Note input line with glass card container
+                GlassCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 12.dp)
+                        .padding(vertical = 3.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    if (isTransfer) {
-                        // Transfer View: From Account -> To Account
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "资金调拨与转账",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = bgConfig.textSecondary
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                // From Card
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(if (bgConfig.isLight) Color.White else Color(0xFF1E222B))
-                                        .border(1.dp, activeThemeColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                                        .clickable { showAccountPickerSheet = true }
-                                        .padding(14.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("转出账户", style = MaterialTheme.typography.labelSmall, color = bgConfig.textTertiary)
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(
-                                            text = selectedAccount?.name ?: "选择账户",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = bgConfig.textPrimary,
-                                            maxLines = 1
-                                        )
-                                    }
-                                }
-
-                                Icon(
-                                    imageVector = Icons.Default.ArrowForward,
-                                    contentDescription = "转入",
-                                    tint = activeThemeColor,
-                                    modifier = Modifier.padding(horizontal = 8.dp).size(24.dp)
-                                )
-
-                                // To Card
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(if (bgConfig.isLight) Color.White else Color(0xFF1E222B))
-                                        .border(1.dp, activeThemeColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                                        .clickable { showTransferTargetPickerSheet = true }
-                                        .padding(14.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("转入账户", style = MaterialTheme.typography.labelSmall, color = bgConfig.textTertiary)
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(
-                                            text = targetTransferAccount?.name ?: "选择目标账户",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = bgConfig.textPrimary,
-                                            maxLines = 1
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // 4-Column Category Grid
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(4),
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(vertical = 6.dp)
-                        ) {
-                            items(allCategories, key = { it.name }) { cat ->
-                                val isSelected = selectedCategory == cat.name
-                                val itemGlow = CategoryManager.getCategoryGlowColor(cat.name)
-                                val itemIcon = CategoryManager.getCategoryIcon(cat.name)
-                                val currentSub = if (isSelected) selectedSubCategory else ""
-
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = ripple()
-                                        ) {
-                                            selectedCategory = cat.name
-                                            if (isIncome) {
-                                                selectedSubCategory = cat.name
-                                            } else {
-                                                selectedSubCategory = CategoryManager.getDefaultSubcategory(
-                                                    context = context,
-                                                    categoryName = cat.name,
-                                                    type = currentType,
-                                                    isFreshCreation = false
-                                                )
-                                                // Open subcategory picker drawer
-                                                showCategoryPickerSheet = true
-                                            }
-                                        }
-                                        .padding(vertical = 6.dp, horizontal = 2.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(52.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (isSelected) itemGlow
-                                                else if (bgConfig.isLight) Color(0xFFEDF2F7)
-                                                else Color(0xFF232630)
-                                            )
-                                            .border(
-                                                width = if (isSelected) 2.dp else 0.dp,
-                                                color = if (isSelected) Color.White.copy(alpha = 0.8f) else Color.Transparent,
-                                                shape = CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = itemIcon,
-                                            contentDescription = cat.name,
-                                            tint = if (isSelected) Color.White else (if (bgConfig.isLight) Color(0xFF4A5568) else Color(0xFFA0AEC0)),
-                                            modifier = Modifier.size(26.dp)
-                                        )
-                                        if (isExpense) {
-                                            // Small down tag on bottom right
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomEnd)
-                                                    .padding(3.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ArrowDropDown,
-                                                    contentDescription = null,
-                                                    tint = if (isSelected) Color.White.copy(alpha = 0.9f) else bgConfig.textTertiary,
-                                                    modifier = Modifier.size(10.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                    Text(
-                                        text = cat.name,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) itemGlow else bgConfig.textPrimary,
-                                        maxLines = 1
-                                    )
-
-                                    if (isExpense && isSelected && currentSub.isNotBlank() && currentSub != "其他" && currentSub != cat.name) {
-                                        Text(
-                                            text = currentSub,
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                            color = bgConfig.textTertiary,
-                                            maxLines = 1
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                val focusManager = LocalFocusManager.current
-                val density = LocalDensity.current
-                val isImeOpen = WindowInsets.ime.getBottom(density) > 0
-
-                // 5. Note Input Field & Metadata Capsules Row
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 2.dp)
-                        .then(if (isImeOpen) Modifier.imePadding().padding(bottom = 8.dp) else Modifier)
-                ) {
-                    // Note input line
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 3.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (bgConfig.isLight) Color(0xFFF1F5F9) else Color(0xFF1E222B))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -749,72 +693,68 @@ fun ExpenseAddEditDialog(
                             }
                         }
                     }
-
-                    // Metadata Capsules (Time capsule + Account capsule) - Hidden when typing note
-                    if (!isImeOpen) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Time Capsule: e.g. "今天 16:59"
-                            val timeFormatted = remember(selectedTimestamp) {
-                                val cal = Calendar.getInstance().apply { timeInMillis = selectedTimestamp }
-                                val todayCal = Calendar.getInstance()
-                                val isToday = cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
-                                        cal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
-                                val timePart = SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(selectedTimestamp))
-                                if (isToday) "今天 $timePart" else SimpleDateFormat("MM月dd日 HH:mm", Locale.CHINA).format(Date(selectedTimestamp))
-                            }
-
-                            CapsuleChip(
-                                text = timeFormatted,
-                                onClick = { showTimePickerSheet = true }
-                            )
-
-                            // Account Capsule: e.g. "微信钱包"
-                            val accName = selectedAccount?.name ?: "选择账户"
-                            CapsuleChip(
-                                text = accName,
-                                onClick = { showAccountPickerSheet = true }
-                            )
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            // Camera icon placeholder (decorative/ready)
-                            IconButton(
-                                onClick = { },
-                                modifier = Modifier.size(34.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "拍照票据",
-                                    tint = bgConfig.textTertiary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
                 }
 
-                // 6. Professional Integrated Keypad - Hidden when typing note with system keyboard
-                if (!isImeOpen) {
-                    AccountingNumpad(
-                        expression = amountInput,
-                        onExpressionChange = { amountInput = it },
-                        onConfirm = { doSave(closeOnFinish = true) },
-                        onSaveAndNext = { doSave(closeOnFinish = false) },
-                        confirmColor = activeThemeColor,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(216.dp)
-                            .padding(bottom = 2.dp)
+                // Metadata Capsules (Time capsule + Account capsule) - Clean, Camera icon removed
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Time Capsule: e.g. "今天 16:59"
+                    val timeFormatted = remember(selectedTimestamp) {
+                        val cal = Calendar.getInstance().apply { timeInMillis = selectedTimestamp }
+                        val todayCal = Calendar.getInstance()
+                        val isToday = cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
+                                cal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
+                        val timePart = SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(selectedTimestamp))
+                        if (isToday) "今天 $timePart" else SimpleDateFormat("MM月dd日 HH:mm", Locale.CHINA).format(Date(selectedTimestamp))
+                    }
+
+                    CapsuleChip(
+                        text = timeFormatted,
+                        icon = Icons.Default.AccessTime,
+                        onClick = { showTimePickerSheet = true }
+                    )
+
+                    // Account Capsule: e.g. "微信钱包"
+                    val accName = selectedAccount?.name ?: "选择账户"
+                    CapsuleChip(
+                        text = accName,
+                        icon = Icons.Default.AccountBalanceWallet,
+                        onClick = { showAccountPickerSheet = true }
                     )
                 }
             }
+
+            // 6. Professional Integrated Keypad - Smooth animated transition to eliminate jitter
+            AnimatedVisibility(
+                visible = !isImeOpen,
+                enter = fadeIn(animationSpec = tween(180)) + expandVertically(
+                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                    expandFrom = Alignment.Bottom
+                ),
+                exit = fadeOut(animationSpec = tween(120)) + shrinkVertically(
+                    animationSpec = tween(180, easing = FastOutSlowInEasing),
+                    shrinkTowards = Alignment.Bottom
+                )
+            ) {
+                AccountingNumpad(
+                    expression = amountInput,
+                    onExpressionChange = { amountInput = it },
+                    onConfirm = { doSave(closeOnFinish = true) },
+                    onSaveAndNext = { doSave(closeOnFinish = false) },
+                    confirmColor = activeThemeColor,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(216.dp)
+                        .padding(bottom = 2.dp)
+                )
+            }
         }
+    }
 
     // Modal Sheet 1: Wheel Time Picker
     if (showTimePickerSheet) {
@@ -891,10 +831,8 @@ fun ExpenseAddEditDialog(
         var newSubCatListText by remember { mutableStateOf("") }
 
         Dialog(onDismissRequest = { showAddCategoryDialog = false }) {
-            Surface(
+            GlassCard(
                 shape = RoundedCornerShape(22.dp),
-                color = if (bgConfig.isLight) Color.White else Color(0xFF1E222B),
-                shadowElevation = 8.dp,
                 modifier = Modifier.fillMaxWidth().padding(16.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -973,10 +911,8 @@ fun ExpenseAddEditDialog(
         var newSubName by remember { mutableStateOf("") }
 
         Dialog(onDismissRequest = { showAddSubCategoryDialog = false }) {
-            Surface(
+            GlassCard(
                 shape = RoundedCornerShape(22.dp),
-                color = if (bgConfig.isLight) Color.White else Color(0xFF1E222B),
-                shadowElevation = 8.dp,
                 modifier = Modifier.fillMaxWidth().padding(16.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -1037,22 +973,34 @@ fun ExpenseAddEditDialog(
 @Composable
 private fun CapsuleChip(
     text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     onClick: () -> Unit
 ) {
     val bgConfig = LocalAppBackgroundConfig.current
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(if (bgConfig.isLight) Color(0xFFF1F5F9) else Color(0xFF232630))
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 7.dp),
-        contentAlignment = Alignment.Center
+    GlassCard(
+        modifier = Modifier,
+        shape = RoundedCornerShape(18.dp),
+        onClick = onClick
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-            color = bgConfig.textPrimary
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = bgConfig.textTertiary,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = bgConfig.textPrimary
+            )
+        }
     }
 }

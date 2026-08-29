@@ -42,8 +42,8 @@ fun AccountingNumpad(
 ) {
     val bgConfig = LocalAppBackgroundConfig.current
 
-    val keyBg = if (bgConfig.isLight) Color(0xFFF1F5F9) else Color(0xFF23262F)
-    val opKeyBg = if (bgConfig.isLight) Color(0xFFE2E8F0) else Color(0xFF2D313E)
+    val keyBg = if (bgConfig.isLight) Color(0xFFF1F5F9).copy(alpha = 0.92f) else Color(0xFF1E2330).copy(alpha = 0.75f)
+    val opKeyBg = if (bgConfig.isLight) Color(0xFFE2E8F0).copy(alpha = 0.92f) else Color(0xFF282F40).copy(alpha = 0.85f)
     val textColor = bgConfig.textPrimary
     val textMuted = bgConfig.textSecondary
 

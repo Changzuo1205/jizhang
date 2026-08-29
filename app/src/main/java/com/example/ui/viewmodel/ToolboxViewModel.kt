@@ -1134,12 +1134,32 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
      * 注：allExpenses 为未删除流，状态恒「有效」；导出已删除数据属回收站功能范围。
      */
     fun generateCsvData(): String {
+        val accountsList = allAccounts.value
         val list = allExpenses.value
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
         val sb = StringBuilder()
-        sb.append("v2,uuid,日期时间,类型,一级分类,二级分类,账户,对方账户,金额(元),备注,状态\n")
         fun esc(raw: String): String =
             "\"" + raw.replace(",", "，").replace("\"", "'") + "\""
+
+        // 1. Accounts Section
+        sb.append("# === 资产账户记录 (ACCOUNTS) ===\n")
+        sb.append("v3_account,uuid,账户名称,类型,初始余额(元),颜色,备注\n")
+        accountsList.forEach { acc ->
+            sb.append(
+                listOf(
+                    "v3_account",
+                    esc(""),
+                    esc(acc.name),
+                    esc(acc.type),
+                    String.format(Locale.US, "%.2f", acc.balance),
+                    esc(acc.colorHex),
+                    esc(acc.note)
+                ).joinToString(",") + "\n"
+            )
+        }
+
+        sb.append("\n# === 收支明细记录 (TRANSACTIONS) ===\n")
+        sb.append("v2,uuid,日期时间,类型,一级分类,二级分类,账户,对方账户,金额(元),备注,状态\n")
         list.forEach { item ->
             val dateStr = sdf.format(Date(item.dateTimestamp))
             val typeStr = when (item.type) {
@@ -1239,30 +1259,48 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         }
 
         var successCount = 0
+        var accountCount = 0
 
         viewModelScope.launch {
             seedReady.await()
             for (line in lines) {
-                // Skip header lines
-                if (line.contains("收支类型") || line.contains("一级分类") || line.startsWith("ID,") || line.startsWith("ID，")) {
+                if (line.startsWith("#") || line.contains("收支类型") || line.contains("一级分类") || line.startsWith("ID,") || line.startsWith("ID，") || line.contains("账户名称")) {
                     continue
                 }
 
                 val tokens = splitCsvRow(line)
-                if (tokens.size < 3) continue
-
-                var dateTimestamp = System.currentTimeMillis()
-                var type = "EXPENSE"
-                var category = "餐饮"
-                var subCategory = "午餐"
-                var accountName = "默认账户"
-                var amount = 0.0
-                var note = ""
-                var transferToAccountId: Long? = null
+                if (tokens.isEmpty()) continue
 
                 try {
+                    // Check if account record: v3_account,uuid,账户名称,类型,初始余额,颜色,备注
+                    if (tokens[0].equals("v3_account", ignoreCase = true) && tokens.size >= 5) {
+                        val accName = tokens[2].ifBlank { "导入账户" }
+                        val accType = tokens[3].ifBlank { "储蓄卡" }
+                        val initBal = tokens[4].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
+                        val colorHex = tokens.getOrNull(5)?.takeIf { it.isNotBlank() } ?: "#3B82F6"
+                        val note = tokens.getOrNull(6) ?: ""
+
+                        val existing = currentAccounts.find { it.name.equals(accName, ignoreCase = true) }
+                        if (existing == null) {
+                            val newId = repository.addAccount(accName, accType, initBal, colorHex, note)
+                            currentAccounts.add(AccountEntity(id = newId, name = accName, type = accType, balance = initBal, colorHex = colorHex, note = note))
+                            accountCount++
+                        }
+                        continue
+                    }
+
+                    if (tokens.size < 3) continue
+
+                    var dateTimestamp = System.currentTimeMillis()
+                    var type = "EXPENSE"
+                    var category = "餐饮"
+                    var subCategory = "午餐"
+                    var accountName = "默认账户"
+                    var amount = 0.0
+                    var note = ""
+                    var transferToAccountId: Long? = null
+
                     if (tokens.size >= 11 && tokens[0].equals("v2", ignoreCase = true)) {
-                        // v2 定位解析：v2,uuid,日期时间,类型,一级,二级,账户,对方账户,金额,备注,状态
                         dateTimestamp = parseTimestamp(tokens[2])
                         type = when {
                             tokens[3].contains("收") || tokens[3].equals("INCOME", ignoreCase = true) -> "INCOME"
@@ -1274,12 +1312,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         accountName = tokens[6].ifBlank { "默认账户" }
                         amount = tokens[8].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[9]
-                        if ((tokens[10]).contains("删")) {
-                            // v2 导出的均为有效行；若手工置为已删除则跳过导入
-                            continue
-                        }
+                        if ((tokens[10]).contains("删")) continue
                     } else if (tokens.size >= 8) {
-                        // ID, 日期时间, 收支类型, 一级分类, 二级细分, 账户, 金额, 备注
                         dateTimestamp = parseTimestamp(tokens[1])
                         type = if (tokens[2].contains("收") || tokens[2].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
                         category = tokens[3].ifBlank { "其他" }
@@ -1288,7 +1322,6 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         amount = tokens[6].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[7]
                     } else if (tokens.size == 7) {
-                        // 日期时间, 收支类型, 一级分类, 二级细分, 账户, 金额, 备注
                         dateTimestamp = parseTimestamp(tokens[0])
                         type = if (tokens[1].contains("收") || tokens[1].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
                         category = tokens[2].ifBlank { "其他" }
@@ -1297,7 +1330,6 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         amount = tokens[5].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[6]
                     } else if (tokens.size == 6) {
-                        // 日期时间, 收支类型, 一级分类, 账户, 金额, 备注
                         dateTimestamp = parseTimestamp(tokens[0])
                         type = if (tokens[1].contains("收") || tokens[1].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
                         category = tokens[2].ifBlank { "其他" }
@@ -1306,7 +1338,6 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         amount = tokens[4].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[5]
                     } else if (tokens.size == 5) {
-                        // 日期, 分类, 账户, 金额, 备注
                         if (tokens[0].contains("20") || tokens[0].contains("-") || tokens[0].contains("/")) {
                             dateTimestamp = parseTimestamp(tokens[0])
                             category = tokens[1].ifBlank { "餐饮" }
@@ -1336,15 +1367,26 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
 
                     if (amount <= 0.0) continue
 
-                    val matchedAcc = currentAccounts.find { it.name.equals(accountName, ignoreCase = true) }
-                        ?: currentAccounts.firstOrNull()
+                    var matchedAcc = currentAccounts.find { it.name.equals(accountName, ignoreCase = true) }
+                    if (matchedAcc == null) {
+                        val newAccId = repository.addAccount(accountName, "储蓄卡", 0.0, "#3B82F6", "导入自动创建")
+                        val newAcc = AccountEntity(id = newAccId, name = accountName, type = "储蓄卡", balance = 0.0, colorHex = "#3B82F6", note = "导入自动创建")
+                        currentAccounts.add(newAcc)
+                        matchedAcc = newAcc
+                    }
 
-                    val accId = matchedAcc?.id ?: 1L
-                    val safeAccName = matchedAcc?.name ?: accountName
+                    val accId = matchedAcc.id
 
                     if (type == "TRANSFER") {
-                        // 对端账户按名称回查 id；找不到则放弃本行
-                        val targetId = currentAccounts.find { it.name.equals(tokens.getOrNull(7)?.trim() ?: "", ignoreCase = true) }?.id
+                        val targetAccName = tokens.getOrNull(7)?.trim() ?: ""
+                        var targetMatched = currentAccounts.find { it.name.equals(targetAccName, ignoreCase = true) }
+                        if (targetMatched == null && targetAccName.isNotBlank()) {
+                            val newTargetId = repository.addAccount(targetAccName, "储蓄卡", 0.0, "#8B5CF6", "转账导入自动创建")
+                            val newTargetAcc = AccountEntity(id = newTargetId, name = targetAccName, type = "储蓄卡", balance = 0.0, colorHex = "#8B5CF6", note = "转账导入自动创建")
+                            currentAccounts.add(newTargetAcc)
+                            targetMatched = newTargetAcc
+                        }
+                        val targetId = targetMatched?.id
                         if (targetId == null || targetId == accId) continue
                         transferToAccountId = targetId
                     }
@@ -1366,15 +1408,15 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     )
                     successCount++
                 } catch (e: Exception) {
-                    // Skip malformed item
+                    // Skip malformed item safely ensuring 100% continuation
                 }
             }
         }
 
-        return if (successCount > 0) {
-            Pair(successCount, "已成功导入 $successCount 笔账目记录！")
+        return if (successCount > 0 || accountCount > 0) {
+            Pair(successCount, "成功导入 $successCount 笔账目记录" + if (accountCount > 0) "及 $accountCount 个账户" else "")
         } else {
-            Pair(0, "未解析到符合格式的有效账目记录，请核对格式")
+            Pair(0, "未解析到符合格式的有效记录，请核对格式")
         }
     }
 
