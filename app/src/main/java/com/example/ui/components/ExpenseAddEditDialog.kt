@@ -86,12 +86,13 @@ fun ExpenseAddEditDialog(
     val isTransfer = selectedTypeIndex == 2
     val currentType = if (isIncome) "INCOME" else "EXPENSE"
 
-    val accentOrange = Color(0xFFF97316)
+    val expenseGreen = Color(0xFF10B981)
+    val incomeRed = Color(0xFFEF4444)
     val transferViolet = Color(0xFF8B5CF6)
     val activeThemeColor = when (selectedTypeIndex) {
-        1 -> colorScheme.incomeColor
+        1 -> incomeRed
         2 -> transferViolet
-        else -> colorScheme.expenseColor
+        else -> expenseGreen
     }
 
     var transferToAccountId by remember {

@@ -1375,10 +1375,12 @@ fun GlassAddOrEditExpenseDialog(
     val currentType = if (selectedTypeIndex == 1) "INCOME" else "EXPENSE"
     // 转账 Tab 的紫罗兰语义色（与分类发光映射中「转账」一致）
     val transferColor = Color(0xFF8B5CF6)
+    val expenseGreen = Color(0xFF10B981)
+    val incomeRed = Color(0xFFEF4444)
     val fieldActiveColor = when (selectedTypeIndex) {
-        1 -> colorScheme.incomeColor
+        1 -> incomeRed
         2 -> transferColor
-        else -> colorScheme.expenseColor
+        else -> expenseGreen
     }
 
     // 转账对端账户；编辑既有转账回填，新建默认取与转出不同的第一个账户
@@ -1502,7 +1504,7 @@ fun GlassAddOrEditExpenseDialog(
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
                             .background(
-                                if (selectedTypeIndex == 0) colorScheme.expenseColor.copy(alpha = 0.85f)
+                                if (selectedTypeIndex == 0) Color(0xFF10B981).copy(alpha = 0.85f)
                                 else Color.Transparent
                             )
                             .clickable {
@@ -1526,7 +1528,7 @@ fun GlassAddOrEditExpenseDialog(
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
                             .background(
-                                if (selectedTypeIndex == 1) colorScheme.incomeColor.copy(alpha = 0.85f)
+                                if (selectedTypeIndex == 1) Color(0xFFEF4444).copy(alpha = 0.85f)
                                 else Color.Transparent
                             )
                             .clickable {
