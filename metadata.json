@@ -1,6 +1,7 @@
 {
-  "name": "日常记账",
+  "name": "Ledger",
   "description": "专为日常收支打造的轻量级记账应用，融入现代毛玻璃光效与沉浸式卡片设计，支持资产概览、分类统计、收支明细与本地离线持久化存储。",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
+

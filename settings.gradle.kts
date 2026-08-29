@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "日常记账"
+rootProject.name = "Ledger"
 
 include(":app")
