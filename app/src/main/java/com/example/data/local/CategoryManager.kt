@@ -63,6 +63,7 @@ object CategoryManager {
     private const val KEY_CUSTOM_CATEGORIES = "custom_categories_v1"
     private const val KEY_CUSTOM_SUBCATEGORIES = "custom_subcategories_v1"
     private const val KEY_LAST_SELECTED_SUBCAT = "last_selected_subcategories_v1"
+    private const val KEY_LAST_INCOME_CATEGORY = "last_income_category_v1"
 
     // 1. 系统预置支出一级分类及二级分类
     val DEFAULT_EXPENSE_CATEGORIES = listOf(
@@ -283,6 +284,17 @@ object CategoryManager {
         } catch (e: Exception) {
             ""
         }
+    }
+
+    /** 保存用户最后选择的收入分类 */
+    fun saveLastIncomeCategory(context: Context, categoryName: String) {
+        if (categoryName.isBlank()) return
+        getPrefs(context).edit().putString(KEY_LAST_INCOME_CATEGORY, categoryName).apply()
+    }
+
+    /** 读取用户最后选择的收入分类 */
+    fun getLastIncomeCategory(context: Context): String {
+        return getPrefs(context).getString(KEY_LAST_INCOME_CATEGORY, "") ?: ""
     }
 
     /**

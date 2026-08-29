@@ -31,6 +31,9 @@ object DatabaseSeeder {
     /** 老用户自定义分类是否已完成 v11 导入的幂等标记（存于 category_preferences） */
     private const val LEGACY_CUSTOM_IMPORT_FLAG = "custom_imported_v11"
 
+    /** syncUserAccountBalances 是否已执行过的幂等标记（存于 category_preferences） */
+    private const val ACCOUNT_SYNC_DONE_FLAG = "account_sync_done_v1"
+
     data class UserAccountSpec(
         val name: String,
         val type: String,
@@ -525,6 +528,8 @@ object DatabaseSeeder {
      * 通过事务根据所有活跃交易反推并设置 initialBalance，使得当前各账户余额精确等于指定值。
      */
     suspend fun syncUserAccountBalances(context: Context, db: DailyToolboxDatabase) {
+        val prefs = context.getSharedPreferences("category_preferences", Context.MODE_PRIVATE)
+        if (prefs.getBoolean(ACCOUNT_SYNC_DONE_FLAG, false)) return
         db.withTransaction {
             val book = db.bookDao().getDefault() ?: return@withTransaction
             val existingAccounts = db.accountDao().getActive().toMutableList()
@@ -599,6 +604,7 @@ object DatabaseSeeder {
                 }
             }
         }
+        prefs.edit().putBoolean(ACCOUNT_SYNC_DONE_FLAG, true).apply()
     }
 
     /** 旧类型标识 → 新账户类型（目标 schema 使用小写语义标签） */

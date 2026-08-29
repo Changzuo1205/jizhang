@@ -1,40 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 主底色：深空蓝黑渐变（左上 → 右下） -->
-    <path android:pathData="M0,0h108v108h-108z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="0"
-                android:startY="0"
-                android:endX="108"
-                android:endY="108"
-                android:type="linear">
-                <item android:offset="0.0" android:color="#0B1426" />
-                <item android:offset="1.0" android:color="#1B2D4A" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <!-- 顶部蓝色高光（极淡，质感） -->
     <path
-        android:fillColor="#22234B7E"
-        android:pathData="M0,0 L108,0 L108,28 L0,28 Z" />
-    <!-- 右下角金色光晕（径向渐变，模拟金币反射） -->
-    <path android:pathData="M58,108 m-50,0 a50,50 0 1,0 100,0 a50,50 0 1,0 -100,0">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:centerX="84"
-                android:centerY="92"
-                android:gradientRadius="46"
-                android:type="radial">
-                <item android:offset="0.0" android:color="#66F5C76A" />
-                <item android:offset="0.7" android:color="#22F5C76A" />
-                <item android:offset="1.0" android:color="#00F5C76A" />
-            </gradient>
-        </aapt:attr>
-    </path>
+        android:fillColor="#141414"
+        android:pathData="M0,0h108v108h-108z" />
 </vector>

@@ -50,9 +50,16 @@ fun CategoryPickerSheet(
         CategoryManager.getSubcategories(context, currentCategoryName, currentType)
     }
 
-    val filteredSubcategories = remember(subcategories, searchQuery) {
-        if (searchQuery.isBlank()) subcategories
+    val filteredSubcategories = remember(subcategories, searchQuery, currentCategoryName, currentType) {
+        val base = if (searchQuery.isBlank()) subcategories
         else subcategories.filter { it.contains(searchQuery, ignoreCase = true) }
+        // Move default/last-selected subcategory to top (for expense categories)
+        if (searchQuery.isBlank() && currentType == "EXPENSE" && base.size > 1) {
+            val defaultSub = CategoryManager.getDefaultSubcategory(context, currentCategoryName, "EXPENSE", false)
+            if (defaultSub.isNotBlank() && base.contains(defaultSub) && base.first() != defaultSub) {
+                listOf(defaultSub) + base.filter { it != defaultSub }
+            } else base
+        } else base
     }
 
     val catGlow = CategoryManager.getCategoryGlowColor(currentCategoryName)

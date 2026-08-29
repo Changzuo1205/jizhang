@@ -1097,8 +1097,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
 
     /**
      * 更新账户元信息并处理余额校准：
-     * 新旧展示余额不一致时插入「漏记款」调整记录，保持派生守恒。
-     * [saveAsMissedRecord] 为旧 API 兼容参数，当前统一按可见记录口径实现。
+     * [saveAsMissedRecord] 为 true 时插入「漏记款」交易；为 false 时直接更新 initialBalance。
      */
     fun updateAccount(
         account: AccountEntity,
@@ -1114,7 +1113,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                 colorHex = account.colorHex,
                 note = account.note,
                 targetBalanceYuan = account.balance,
-                previousBalanceYuan = oldBalance
+                previousBalanceYuan = oldBalance,
+                createCalibrationTx = saveAsMissedRecord
             )
         }
     }

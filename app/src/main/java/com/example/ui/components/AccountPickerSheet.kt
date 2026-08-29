@@ -29,6 +29,7 @@ import java.util.Locale
 fun AccountPickerSheet(
     accounts: List<AccountEntity>,
     selectedAccountId: Long,
+    recentAccountIds: List<Long> = emptyList(),
     onDismiss: () -> Unit,
     onSelectAccount: (AccountEntity) -> Unit,
     onAddAccount: (() -> Unit)? = null,
@@ -43,9 +44,13 @@ fun AccountPickerSheet(
         else accounts.filter { it.name.contains(searchQuery, ignoreCase = true) || it.cardSuffix.contains(searchQuery) }
     }
 
-    // Grouping accounts
-    val frequentAccounts = remember(filteredAccounts) {
-        filteredAccounts.take(2)
+    // Grouping accounts - use recently used accounts
+    val frequentAccounts = remember(filteredAccounts, recentAccountIds) {
+        if (recentAccountIds.isNotEmpty()) {
+            recentAccountIds.mapNotNull { id -> filteredAccounts.find { it.id == id } }.take(2)
+        } else {
+            filteredAccounts.take(2)
+        }
     }
 
     val cashAccounts = remember(filteredAccounts) {

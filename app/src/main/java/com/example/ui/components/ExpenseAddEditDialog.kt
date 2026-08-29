@@ -129,7 +129,9 @@ fun ExpenseAddEditDialog(
             } else if (isExpense) {
                 "餐饮"
             } else {
-                allCategories.firstOrNull()?.name ?: "工资薪水"
+                val lastInc = CategoryManager.getLastIncomeCategory(context)
+                if (lastInc.isNotBlank() && allCategories.any { it.name == lastInc }) lastInc
+                else allCategories.firstOrNull()?.name ?: "工资薪水"
             }
         )
     }
@@ -215,6 +217,9 @@ fun ExpenseAddEditDialog(
         if (calculatedAmount > 0 && isAccountSelected && transferTargetValid) {
             if (!isTransfer && selectedSubCategory.isNotBlank()) {
                 CategoryManager.saveLastSelectedSubcategory(context, selectedCategory, selectedSubCategory)
+            }
+            if (isIncome) {
+                CategoryManager.saveLastIncomeCategory(context, selectedCategory)
             }
             onConfirm(
                 when (selectedTypeIndex) {
@@ -346,10 +351,12 @@ fun ExpenseAddEditDialog(
                                         selectedCategory = "餐饮"
                                         selectedSubCategory = CategoryManager.getDefaultSubcategory(context, "餐饮", "EXPENSE", true)
                                     } else if (index == 1) {
+                                        val lastInc = CategoryManager.getLastIncomeCategory(context)
                                         val incCats = CategoryManager.getCategories(context, "INCOME")
-                                        val firstCat = incCats.firstOrNull()?.name ?: "工资薪水"
-                                        selectedCategory = firstCat
-                                        selectedSubCategory = firstCat
+                                        val defaultCat = if (lastInc.isNotBlank() && incCats.any { it.name == lastInc }) lastInc
+                                            else incCats.firstOrNull()?.name ?: "工资薪水"
+                                        selectedCategory = defaultCat
+                                        selectedSubCategory = defaultCat
                                     } else if (index == 2) {
                                         ensureTransferTargetValid(selectedAccountId)
                                     }
@@ -824,9 +831,17 @@ fun ExpenseAddEditDialog(
 
     // Modal Sheet 2: Account Picker Sheet
     if (showAccountPickerSheet) {
+        val recentAccountIds = remember(allExpenses) {
+            allExpenses
+                .sortedByDescending { it.dateTimestamp }
+                .map { it.accountId }
+                .distinct()
+                .take(2)
+        }
         AccountPickerSheet(
             accounts = accounts,
             selectedAccountId = selectedAccountId,
+            recentAccountIds = recentAccountIds,
             onDismiss = { showAccountPickerSheet = false },
             onSelectAccount = { acc ->
                 selectedAccountId = acc.id

@@ -4,98 +4,18 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- 钱包金色主体（圆角矩形 + 弧顶，66x54 居中） -->
-    <!-- 阴影底色（深金） -->
-    <path
-        android:fillColor="#9A7423"
-        android:pathData="M22,46 L22,84 a4,4 0 0,0 4,4 h56 a4,4 0 0,0 4,-4 L86,46 L72,38 a4,4 0 0,0 -3,-1 L39,37 a4,4 0 0,0 -3,1 Z" />
-    <!-- 钱包亮面（亮金渐变） -->
-    <path
-        android:pathData="M24,48 L24,82 a4,4 0 0,0 4,4 h52 a4,4 0 0,0 4,-4 L84,48 L72,40 L36,40 Z">
-        <aapt:attr name="android:fillColor" xmlns:aapt="http://schemas.android.com/aapt">
-            <gradient
-                android:startX="24"
-                android:startY="40"
-                android:endX="84"
-                android:endY="86"
-                android:type="linear">
-                <item android:offset="0.0" android:color="#F5D78C" />
-                <item android:offset="0.5" android:color="#E8B85A" />
-                <item android:offset="1.0" android:color="#B48A2C" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <!-- 钱包顶部接缝高光（细弧线 stroke） -->
+    <!-- 白色上线条 -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#F5D78C"
-        android:strokeWidth="1.5"
+        android:strokeColor="#FAFAF7"
+        android:strokeWidth="3.6"
         android:strokeLineCap="round"
-        android:pathData="M28,48 L80,48" />
-    <!-- 钱包翻盖装饰（中央小三角形） -->
-    <path
-        android:fillColor="#9A7423"
-        android:pathData="M44,48 L64,48 L60,55 L48,55 Z" />
-
-    <!-- 中央币章（金色圆章 + 深色¥ 字符） -->
-    <!-- 圆章外圈（亮金） -->
-    <path
-        android:fillColor="#F5C76A"
-        android:pathData="M54,54 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0" />
-    <!-- 圆章内圈（暗金边） -->
+        android:pathData="M28.8,45 L79.2,45" />
+    <!-- 铜红色下线条 -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#B48A2C"
-        android:strokeWidth="1.2"
-        android:pathData="M54,54 m-11,0 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0" />
-    <!-- ¥ 字符：V-Shape -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#0B1426"
-        android:strokeWidth="2.6"
+        android:strokeColor="#C4623D"
+        android:strokeWidth="3.6"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M46,48 L54,58 L62,48" />
-    <!-- ¥ 字符：竖干 -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#0B1426"
-        android:strokeWidth="2.6"
-        android:strokeLineCap="round"
-        android:pathData="M54,58 L54,66" />
-    <!-- ¥ 字符：上横 -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#0B1426"
-        android:strokeWidth="2.6"
-        android:strokeLineCap="round"
-        android:pathData="M47,57 H61" />
-    <!-- ¥ 字符：下横 -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#0B1426"
-        android:strokeWidth="2.6"
-        android:strokeLineCap="round"
-        android:pathData="M48,62 H60" />
-
-    <!-- 点缀：左上 + 右上小金点（洒落的金币） -->
-    <path
-        android:fillColor="#CCF5D78C"
-        android:pathData="M18,22 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
-    <path
-        android:fillColor="#AAF5D78C"
-        android:pathData="M88,18 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" />
-
-    <!-- 点缀：右下角上扬的金色增长曲线（细线） -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#D9E8B85A"
-        android:strokeWidth="1.8"
-        android:strokeLineCap="round"
-        android:pathData="M64,92 L74,86 L82,90 L92,80" />
-    <!-- 曲线终点小圆点 -->
-    <path
-        android:fillColor="#F5C76A"
-        android:pathData="M92,80 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" />
+        android:pathData="M28.8,63 L79.2,63" />
 </vector>

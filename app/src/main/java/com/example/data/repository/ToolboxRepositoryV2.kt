@@ -313,8 +313,8 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
     // ---------- 内部工具 ----------
 
     /**
-     * 更新账户元信息，并在展示余额变化时插入「漏记款」校准记录。
-     * 事务内先改元信息再校准，保证余额派生口径一致。
+     * 更新账户元信息，并在展示余额变化时校准。
+     * [createCalibrationTx] 为 true 时插入「漏记款」交易；为 false 时直接更新 initialBalance。
      */
     suspend fun updateAccountMeta(
         accountId: Long,
@@ -323,7 +323,8 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         colorHex: String,
         note: String,
         targetBalanceYuan: Double?,
-        previousBalanceYuan: Double
+        previousBalanceYuan: Double,
+        createCalibrationTx: Boolean = true
     ) = db.withTransaction {
         val row = accountDao.getById(accountId) ?: return@withTransaction
         accountDao.upsert(
@@ -337,7 +338,14 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         if (targetBalanceYuan != null &&
             kotlin.math.abs(targetBalanceYuan - previousBalanceYuan) > 0.001
         ) {
-            calibrateToBalanceLocked(accountId, targetBalanceYuan)
+            if (createCalibrationTx) {
+                calibrateToBalanceLocked(accountId, targetBalanceYuan)
+            } else {
+                val currentCents = derivedBalanceCents(accountId, row.initialBalance)
+                val targetCents = AmountFormatter.yuanToCents(targetBalanceYuan)
+                val newInitialCents = row.initialBalance + (targetCents - currentCents)
+                accountDao.updateInitialBalance(accountId, newInitialCents, System.currentTimeMillis())
+            }
         }
     }
 
