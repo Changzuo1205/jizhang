@@ -1,34 +1,48 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush as GraphicsBrush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.ui.theme.LocalAppBackgroundConfig
+import kotlinx.coroutines.delay
 
 /**
- * 开屏等待页：纯延时 600ms 显示品牌 logo + 加载圈，让背景等数据先行加载完成。
- * 由 [splashDone] 控制显隐；splash 阶段覆盖在 MainScreen 顶层。
- *
- * 设计目标：splash 期间用户看到的不应该是带动画的首页（背景加载与动画竞争主线程会卡顿），
- * 而是一个静态的等待页面，加载完后淡出，首页进度条动画才开始跑。
+ * 广受好评的 Wide 极致美学开屏动效 (Cream / Forest Edition)
+ * 根据应用内背景设置的 isLight 自动选择：
+ * - Light 模式: 背景 #FAFAF7，标题纯黑，砖红装饰线 (#C4623D)
+ * - Dark 模式: 背景 #2D3A2E，标题米白，砖红装饰线 (#C4623D)
+ * 时序与属性：总时长 1.4s，采用 ease-out 缓动，零弹跳、零旋转、纯净落定。
  */
 @Composable
 fun SplashScreen(
@@ -36,6 +50,46 @@ fun SplashScreen(
     modifier: Modifier = Modifier
 ) {
     val bgConfig = LocalAppBackgroundConfig.current
+    val isLight = bgConfig.isLight
+
+    // 配色定义
+    val backgroundColor = if (isLight) Color(0xFFFAFAF7) else Color(0xFF2D3A2E)
+    val titleColor = if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7)
+    val sloganColor = if (isLight) Color(0x99141414) else Color(0xA6FAFAF7)
+    val footerColor = if (isLight) Color(0x4D141414) else Color(0x4DFAFAF7)
+    val accentColor = Color(0xFFC4623D)
+
+    // 动画触发状态
+    var startAnim by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(50)
+        startAnim = true
+    }
+
+    // 阶段控制动画值
+    val titleAnimProgress by animateFloatAsState(
+        targetValue = if (startAnim) 1f else 0f,
+        animationSpec = tween(durationMillis = 700, delayMillis = 250, easing = FastOutSlowInEasing),
+        label = "titleAnim"
+    )
+
+    val lineAnimProgress by animateFloatAsState(
+        targetValue = if (startAnim) 1f else 0f,
+        animationSpec = tween(durationMillis = 350, delayMillis = 800, easing = FastOutSlowInEasing),
+        label = "lineAnim"
+    )
+
+    val sloganAnimProgress by animateFloatAsState(
+        targetValue = if (startAnim) 1f else 0f,
+        animationSpec = tween(durationMillis = 500, delayMillis = 950, easing = FastOutSlowInEasing),
+        label = "sloganAnim"
+    )
+
+    val footerAnimProgress by animateFloatAsState(
+        targetValue = if (startAnim) 1f else 0f,
+        animationSpec = tween(durationMillis = 500, delayMillis = 1100, easing = FastOutSlowInEasing),
+        label = "footerAnim"
+    )
 
     AnimatedVisibility(
         visible = !splashDone,
@@ -46,31 +100,86 @@ fun SplashScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    GraphicsBrush.verticalGradient(
-                        listOf(
-                            if (bgConfig.isLight) Color(0xFFF6F8FC) else Color(0xFF090D16),
-                            if (bgConfig.isLight) Color(0xFFEEF2F8) else Color(0xFF131C35)
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center
+                .background(backgroundColor)
+                .padding(horizontal = 32.dp, vertical = 50.dp),
+            contentAlignment = Alignment.TopStart
         ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 120.dp),
+                horizontalAlignment = Alignment.Start
             ) {
+                // 主标题 "Ledger" (支持 Serif 衬线斜体)
                 Text(
-                    text = "\uD83D\uDCB0",
-                    fontSize = 56.sp
+                    text = "Ledger",
+                    fontFamily = FontFamily.Serif,
+                    fontStyle = FontStyle.Italic,
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = titleColor,
+                    modifier = Modifier.graphicsLayer {
+                        alpha = titleAnimProgress
+                        translationY = (1f - titleAnimProgress) * 8.dp.toPx()
+                    }
                 )
-                Spacer(modifier = Modifier.height(14.dp))
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 砖红装饰线 (#C4623D)
+                Box(
+                    modifier = Modifier
+                        .height(1.dp)
+                        .width(40.dp * lineAnimProgress)
+                        .background(accentColor)
+                        .graphicsLayer { alpha = lineAnimProgress }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Slogan 副文案
                 Text(
-                    text = "日常记账",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = bgConfig.textPrimary
+                    text = "A quiet bookkeeper,\nfor one.",
+                    fontFamily = FontFamily.SansSerif,
+                    fontStyle = FontStyle.Italic,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Light,
+                    lineHeight = 20.sp,
+                    color = sloganColor,
+                    modifier = Modifier.graphicsLayer {
+                        alpha = sloganAnimProgress
+                        translationY = (1f - sloganAnimProgress) * 4.dp.toPx()
+                    }
                 )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // 底栏版本号与年份
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            alpha = footerAnimProgress
+                            translationY = (1f - footerAnimProgress) * 4.dp.toPx()
+                        },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = "v 1.0",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 9.sp,
+                        letterSpacing = 2.sp,
+                        color = footerColor
+                    )
+                    Text(
+                        text = "EST. 2026",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 9.sp,
+                        letterSpacing = 2.sp,
+                        color = footerColor
+                    )
+                }
             }
         }
     }

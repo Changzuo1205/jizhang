@@ -75,7 +75,8 @@ object DatabaseSeeder {
             }
             val book = db.bookDao().getDefault() ?: return@withTransaction
 
-            // 3. 七个标准资产账户（现金、农业银行储蓄卡 9278、招商银行储蓄卡 0741、支付宝、微信钱包、基金、黄金）
+            // 3. 七个标准资产账户（已禁用预置，首次进入无已创建账户）
+            /*
             if (db.accountDao().count() == 0) {
                 fun hex(seed: String): String = UUID.nameUUIDFromBytes(seed.toByteArray()).toString().replace("-", "")
                 db.accountDao().upsertAll(
@@ -93,6 +94,7 @@ object DatabaseSeeder {
                     }
                 )
             }
+            */
 
             // 4. 内置分类树（支出一/二级 + 收入一/二级；自定义分类由 Phase 2 导入）
             if (db.categoryDao().count() == 0) {
@@ -137,8 +139,8 @@ object DatabaseSeeder {
                 }
             }
 
-            // 5. 真实历史流水（tools/seed_converter.py 的产物；无则保持空库）
-            seedRealTransactionsIfEmpty(context, db, book)
+            // 5. 真实历史流水（已取消自动加载种子流水数据，所有流水均由用户记录或导入）
+            // seedRealTransactionsIfEmpty(context, db, book)
         }
     }
 

@@ -23,6 +23,8 @@ import com.example.ui.theme.ColorSchemeOption
 import com.example.ui.theme.FontScaleOption
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -1260,8 +1262,9 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
 
         var successCount = 0
         var accountCount = 0
+        val accountTargetBalances = mutableMapOf<String, Double>()
 
-        viewModelScope.launch {
+        runBlocking(Dispatchers.IO) {
             seedReady.await()
             for (line in lines) {
                 if (line.startsWith("#") || line.contains("收支类型") || line.contains("一级分类") || line.startsWith("ID,") || line.startsWith("ID，") || line.contains("账户名称")) {
@@ -1280,6 +1283,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         val colorHex = tokens.getOrNull(5)?.takeIf { it.isNotBlank() } ?: "#3B82F6"
                         val note = tokens.getOrNull(6) ?: ""
 
+                        accountTargetBalances[accName] = initBal
                         val existing = currentAccounts.find { it.name.equals(accName, ignoreCase = true) }
                         if (existing == null) {
                             val newId = repository.addAccount(accName, accType, initBal, colorHex, note)
@@ -1373,6 +1377,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         val newAcc = AccountEntity(id = newAccId, name = accountName, type = "储蓄卡", balance = 0.0, colorHex = "#3B82F6", note = "导入自动创建")
                         currentAccounts.add(newAcc)
                         matchedAcc = newAcc
+                        accountCount++
                     }
 
                     val accId = matchedAcc.id
@@ -1385,6 +1390,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                             val newTargetAcc = AccountEntity(id = newTargetId, name = targetAccName, type = "储蓄卡", balance = 0.0, colorHex = "#8B5CF6", note = "转账导入自动创建")
                             currentAccounts.add(newTargetAcc)
                             targetMatched = newTargetAcc
+                            accountCount++
                         }
                         val targetId = targetMatched?.id
                         if (targetId == null || targetId == accId) continue
@@ -1410,6 +1416,11 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                 } catch (e: Exception) {
                     // Skip malformed item safely ensuring 100% continuation
                 }
+            }
+
+            // Reverse engineer initial balances based on target balances and transaction history for asset trends
+            if (accountTargetBalances.isNotEmpty()) {
+                repository.calibrateImportedAccounts(accountTargetBalances)
             }
         }
 

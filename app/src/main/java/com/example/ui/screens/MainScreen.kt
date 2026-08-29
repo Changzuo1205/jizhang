@@ -71,10 +71,10 @@ fun MainScreen(
     var expenseToEdit by remember { mutableStateOf<ExpenseEntity?>(null) }
     var addExpenseTimestamp by remember { mutableStateOf<Long?>(null) }
 
-    // Splash overlay：纯延时 600ms 后切到正常首页，让背景等数据先行加载完成
+    // Splash overlay：总时长 2200ms（1.4s 动效 + 800ms 停留），确保完整展示动效
     var splashDone by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(600)
+        delay(2200)
         splashDone = true
     }
 

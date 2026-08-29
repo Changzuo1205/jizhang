@@ -403,6 +403,30 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         return categoryDao.findFallbackCategory(type)
     }
 
+    /** 根据导入的账户目标余额与明细流水反推并校准各账户 initialBalance，确保资产变化趋势及实时余额绝对精确 */
+    suspend fun calibrateImportedAccounts(accountTargetBalances: Map<String, Double>) = db.withTransaction {
+        val allActiveTxs = transactionDao.getActiveOnce()
+        val accounts = accountDao.getActive()
+        for (acc in accounts) {
+            val targetYuan = accountTargetBalances[acc.name] ?: continue
+            var inc = 0L; var exp = 0L; var out = 0L; var inn = 0L
+            for (tx in allActiveTxs) {
+                when (tx.type) {
+                    TransactionType.INCOME -> if (tx.accountId == acc.id) inc += tx.amount
+                    TransactionType.EXPENSE -> if (tx.accountId == acc.id) exp += tx.amount
+                    TransactionType.TRANSFER -> {
+                        if (tx.accountId == acc.id) out += tx.amount
+                        if (tx.transferToAccountId == acc.id) inn += tx.amount
+                    }
+                }
+            }
+            val netDelta = inc - exp - out + inn
+            val targetCents = AmountFormatter.yuanToCents(targetYuan)
+            val calculatedInitialBalance = (targetCents - netDelta).toInt()
+            accountDao.updateInitialBalance(acc.id, calculatedInitialBalance, System.currentTimeMillis())
+        }
+    }
+
     data class ExpenseSnapshot(
         val id: Long,
         val type: String,

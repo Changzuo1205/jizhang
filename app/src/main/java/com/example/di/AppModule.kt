@@ -54,8 +54,8 @@ class AppContainerImpl(context: Context) : AppContainer {
             DatabaseSeeder.syncMissedCategoryUnderHome(appContext, database)
             // 同步确保扁平化 19 个标准收入分类，移除收入端「居家」，迁移「漏记款」为收入一级分类
             DatabaseSeeder.syncFlatIncomeCategories(appContext, database)
-            // 同步并校准七个标准资产账户信息与目标余额
-            DatabaseSeeder.syncUserAccountBalances(appContext, database)
+            // 同步并校准七个标准资产账户信息与目标余额（已禁用种子数据，保持初始状态）
+            // DatabaseSeeder.syncUserAccountBalances(appContext, database)
         }
     }
 
