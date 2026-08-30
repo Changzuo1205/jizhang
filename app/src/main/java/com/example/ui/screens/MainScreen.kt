@@ -409,16 +409,15 @@ private fun MainScreenContent(
                             playEntranceAnimation = !homeEntranceAnimationPlayed,
                             onEntranceAnimationPlayed = { homeEntranceAnimationPlayed = true }
                         )
-                        AppTab.DESIGN -> EditorialExpenseAddEditScreen(
-                            expenseToEdit = null,
-                            allExpenses = allExpenses,
-                            accounts = accounts,
-                            initialTimestamp = System.currentTimeMillis(),
-                            isPreviewMode = true,
-                            onDismiss = { onCurrentTabChange(AppTab.HOME) },
-                            onConfirm = { type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId ->
-                                viewModel.addExpense(type, cat, subCat, amount, note, accId, accName, timestamp, transferToAccountId)
-                            }
+                        AppTab.DESIGN -> EditorialAccountsDesignPreviewScreen(
+                            realAccounts = accounts,
+                            realExpenses = allExpenses,
+                            realTotalNetAssets = totalNetAssets,
+                            realTotalPositiveAssets = totalPositiveAssets,
+                            realTotalDebts = totalDebts,
+                            onAddAccount = { name, type, balance, suffix, color, note -> viewModel.addAccount(name, type, balance, suffix, color, note) },
+                            onUpdateAccount = { account, saveAsMissedRecord, oldBalance -> viewModel.updateAccount(account, saveAsMissedRecord, oldBalance) },
+                            onDeleteAccount = { viewModel.deleteAccount(it) }
                         )
                         AppTab.ACCOUNTS -> AccountsScreen(
                             accounts = accounts,

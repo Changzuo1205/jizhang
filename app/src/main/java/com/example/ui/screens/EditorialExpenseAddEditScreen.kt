@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
@@ -91,6 +93,10 @@ fun EditorialExpenseAddEditScreen(
 
     // 深浅色独立预览开关
     var forceDarkPreview by remember { mutableStateOf<Boolean?>(null) }
+
+    val prefs = context.getSharedPreferences("expense_settings", android.content.Context.MODE_PRIVATE)
+    var keyboardLayout by remember { mutableIntStateOf(prefs.getInt("keyboard_layout", 0)) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     val isLight = forceDarkPreview?.let { !it } ?: globalBgConfig.isLight
 
     // 配色令牌
@@ -133,11 +139,16 @@ fun EditorialExpenseAddEditScreen(
     val isTransfer = selectedTypeIndex == 2
     val currentType = if (isIncome) "INCOME" else "EXPENSE"
 
-    val activeAccentColor = when (selectedTypeIndex) {
-        1 -> forestSage
+    val targetAccentColor = when (selectedTypeIndex) {
+        1 -> clayAccent
         2 -> royalIndigo
-        else -> clayAccent
+        else -> forestSage
     }
+    val activeAccentColor by androidx.compose.animation.animateColorAsState(
+        targetValue = targetAccentColor,
+        animationSpec = androidx.compose.animation.core.tween(350),
+        label = "activeAccentColor"
+    )
 
     // 2. 资金账户
     var selectedAccountId by remember {
@@ -199,6 +210,13 @@ fun EditorialExpenseAddEditScreen(
         )
     }
 
+    var isCategoryDrillDown by remember { mutableStateOf(expenseToEdit != null) }
+    LaunchedEffect(currentType) {
+        if (expenseToEdit == null) {
+            isCategoryDrillDown = false
+        }
+    }
+
     val currentSubcategories = remember(selectedCategory, currentType, categoriesRefreshKey) {
         if (isTransfer) emptyList()
         else CategoryManager.getSubcategories(context, selectedCategory, currentType)
@@ -223,21 +241,6 @@ fun EditorialExpenseAddEditScreen(
     var showAddSubCategoryDialog by remember { mutableStateOf(false) }
     var showSavedToast by remember { mutableStateOf(false) }
     var toastMessage by remember { mutableStateOf("") }
-
-    // 灵感便签标签池
-    val quickNotes = remember(selectedCategory, selectedSubCategory, isExpense, isIncome, isTransfer) {
-        when {
-            isTransfer -> listOf("生活费转账", "信用卡还款", "零钱充值", "亲友借还", "备用金")
-            isIncome -> listOf("月度工资", "季度奖金", "理财收益", "副业兼职", "公积金提现", "红包礼金")
-            selectedCategory == "餐饮" -> listOf("日常三餐", "外卖便当", "手冲咖啡", "朋友小聚", "夜宵烧烤", "生鲜买菜")
-            selectedCategory == "交通" -> listOf("早晚高峰打车", "地铁通勤", "加油充值", "路桥停车", "高铁出行")
-            selectedCategory == "购物" -> listOf("日用杂货", "当季服饰", "数码配件", "美妆护肤", "图书杂志")
-            selectedCategory == "居家" -> listOf("月度房租", "水电燃气", "物业杂费", "宽带充值", "家居清洁")
-            selectedCategory == "娱乐" -> listOf("院线电影", "周末桌游", "运动健身", "游戏订阅", "展览演出")
-            selectedCategory == "医教" -> listOf("日常配药", "体检套餐", "课程培训", "书籍学习")
-            else -> listOf("日常消费", "临时开销", "生活补贴", "周末聚餐")
-        }
-    }
 
     // 保存逻辑
     fun doSave(closeOnFinish: Boolean) {
@@ -324,7 +327,7 @@ fun EditorialExpenseAddEditScreen(
                 isLight = isLight,
                 isPreviewMode = isPreviewMode,
                 onBack = onDismiss,
-                onToggleLightDark = { forceDarkPreview = !(isLight) }
+                onOpenSettings = { showSettingsDialog = true }
             )
 
             // ── 2. 手帐纸感核心画布区（金额光晕、二级分类、便签纸条） ──────
@@ -365,32 +368,44 @@ fun EditorialExpenseAddEditScreen(
                             onSelectTo = { showTransferTargetPickerSheet = true }
                         )
                     } else {
-                        // 一级大类：杂志风排版单行 (Magazine Primary Stream)
+                        // 一级大类与二级联动动画 (Category Drill-down)
                         TactileMagazineCategoryRow(
                             categories = allCategories,
                             selectedCategory = selectedCategory,
+                            isCategoryDrillDown = isCategoryDrillDown,
                             activeColor = activeAccentColor,
                             inkPrimary = inkPrimary,
                             inkSecondary = inkSecondary,
                             onSelectCategory = { catName ->
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                selectedCategory = catName
                                 if (isIncome) {
+                                    selectedCategory = catName
                                     selectedSubCategory = catName
+                                    isCategoryDrillDown = false
                                 } else {
-                                    selectedSubCategory = CategoryManager.getDefaultSubcategory(
-                                        context = context,
-                                        categoryName = catName,
-                                        type = currentType,
-                                        isFreshCreation = false
-                                    )
+                                    if (isCategoryDrillDown && selectedCategory == catName) {
+                                        isCategoryDrillDown = false
+                                    } else {
+                                        selectedCategory = catName
+                                        isCategoryDrillDown = true
+                                        selectedSubCategory = CategoryManager.getDefaultSubcategory(
+                                            context = context,
+                                            categoryName = catName,
+                                            type = currentType,
+                                            isFreshCreation = false
+                                        )
+                                    }
                                 }
                             },
                             onAddCategory = { showAddCategoryDialog = true }
                         )
 
                         // 二级细分：纸张微浮雕实体印章胶囊 (Tactile Paper Chips)
-                        if (isExpense && currentSubcategories.isNotEmpty()) {
+                        AnimatedVisibility(
+                            visible = isCategoryDrillDown && isExpense && currentSubcategories.isNotEmpty(),
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
                             TactileSubcategoryPaperChips(
                                 subcategories = currentSubcategories,
                                 selectedSubCategory = selectedSubCategory,
@@ -409,26 +424,27 @@ fun EditorialExpenseAddEditScreen(
                         }
                     }
 
-                    // ── 3. 手帐便签纸条元数据行 (Dot-Grid Metadata Slip) ──────
-                    TactileDotGridMetaSlip(
-                        selectedTimestamp = selectedTimestamp,
-                        accountName = selectedAccount?.name ?: "选择账户",
-                        isTransfer = isTransfer,
-                        note = noteInput,
-                        onNoteChange = { noteInput = it },
-                        quickNotes = quickNotes,
-                        inkPrimary = inkPrimary,
-                        inkSecondary = inkSecondary,
-                        inkMuted = inkMuted,
-                        paperSlipBg = paperSlipBg,
-                        borderSubtle = borderSubtle,
-                        activeColor = activeAccentColor,
-                        onOpenTimePicker = { showTimePickerSheet = true },
-                        onOpenAccountPicker = { showAccountPickerSheet = true }
-                    )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.weight(1f))
+
+                // ── 3. 手帐便签纸条元数据行 (Dot-Grid Metadata Slip) 紧贴键盘 ──────
+                TactileDotGridMetaSlip(
+                    selectedTimestamp = selectedTimestamp,
+                    accountName = selectedAccount?.name ?: "选择账户",
+                    isTransfer = isTransfer,
+                    note = noteInput,
+                    onNoteChange = { noteInput = it },
+                    inkPrimary = inkPrimary,
+                    inkSecondary = inkSecondary,
+                    inkMuted = inkMuted,
+                    paperSlipBg = paperSlipBg,
+                    borderSubtle = borderSubtle,
+                    activeColor = activeAccentColor,
+                    onOpenTimePicker = { showTimePickerSheet = true },
+                    onOpenAccountPicker = { showAccountPickerSheet = true }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
             // ── 4. 专业 5 列陶瓷触感紧凑计算键盘 ───────────────────────────
@@ -443,7 +459,8 @@ fun EditorialExpenseAddEditScreen(
                 inkPrimary = inkPrimary,
                 inkSecondary = inkSecondary,
                 borderSubtle = borderSubtle,
-                isLight = isLight
+                isLight = isLight,
+                keyboardLayout = keyboardLayout
             )
         }
 
@@ -469,6 +486,163 @@ fun EditorialExpenseAddEditScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = if (isLight) Color(0xFFFAF9F4) else Color(0xFF111316)
                 )
+            }
+        }
+
+        // ── 5. 设置键盘布局全局遮罩弹窗 (在根 Box 顶层，保证 100% 正常弹出) ───────
+        AnimatedVisibility(
+            visible = showSettingsDialog,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(150)),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showSettingsDialog = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.88f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(paperBg)
+                        .border(1.dp, borderSubtle, RoundedCornerShape(20.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { /* 消费点击，防止透过遮罩关闭 */ }
+                        .padding(22.dp)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "键盘布局偏好",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = inkPrimary
+                            )
+                            IconButton(
+                                onClick = { showSettingsDialog = false },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "关闭",
+                                    tint = inkMuted,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 布局 0: 计算器标准布局
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (keyboardLayout == 0) chipSurface else Color.Transparent)
+                                .border(
+                                    1.dp,
+                                    if (keyboardLayout == 0) activeAccentColor.copy(alpha = 0.5f) else borderSubtle,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    keyboardLayout = 0
+                                    prefs.edit().putInt("keyboard_layout", 0).apply()
+                                    showSettingsDialog = false
+                                }
+                                .padding(14.dp)
+                        ) {
+                            RadioButton(
+                                selected = keyboardLayout == 0,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(selectedColor = activeAccentColor)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "计算器标准布局",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = inkPrimary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "7-8-9 在上，1-2-3 在下（财务计算器惯用）",
+                                    fontSize = 12.sp,
+                                    color = inkSecondary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // 布局 1: 拨号盘布局
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (keyboardLayout == 1) chipSurface else Color.Transparent)
+                                .border(
+                                    1.dp,
+                                    if (keyboardLayout == 1) activeAccentColor.copy(alpha = 0.5f) else borderSubtle,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    keyboardLayout = 1
+                                    prefs.edit().putInt("keyboard_layout", 1).apply()
+                                    showSettingsDialog = false
+                                }
+                                .padding(14.dp)
+                        ) {
+                            RadioButton(
+                                selected = keyboardLayout == 1,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(selectedColor = activeAccentColor)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "电话拨号盘布局",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = inkPrimary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "1-2-3 在上，7-8-9 在下（手机拨号习惯）",
+                                    fontSize = 12.sp,
+                                    color = inkSecondary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Button(
+                                onClick = { showSettingsDialog = false },
+                                colors = ButtonDefaults.buttonColors(containerColor = activeAccentColor),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("完成", color = Color.White, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -651,7 +825,7 @@ private fun TactileTopNavigationBar(
     isLight: Boolean,
     isPreviewMode: Boolean,
     onBack: () -> Unit,
-    onToggleLightDark: () -> Unit
+    onOpenSettings: () -> Unit
 ) {
     val types = listOf("支出", "收入", "转账")
 
@@ -710,18 +884,19 @@ private fun TactileTopNavigationBar(
             }
         }
 
-        // 昼夜预览微调
+        // 设置
         IconButton(
-            onClick = onToggleLightDark,
-            modifier = Modifier.size(34.dp)
+            onClick = onOpenSettings,
+            modifier = Modifier.size(48.dp)
         ) {
             Icon(
-                imageVector = if (isLight) Icons.Default.DarkMode else Icons.Default.LightMode,
-                contentDescription = "切换预览昼夜",
+                imageVector = Icons.Default.Settings,
+                contentDescription = "键盘布局设置",
                 tint = inkSecondary,
-                modifier = Modifier.size(17.dp)
+                modifier = Modifier.size(24.dp)
             )
         }
+
     }
 }
 
@@ -751,7 +926,8 @@ private fun TactileAmbientAmountSection(
         // 背景温润墨水微光晕 (Ambient Ink Glow)
         Box(
             modifier = Modifier
-                .size(160.dp, 60.dp)
+                .fillMaxWidth()
+                .height(60.dp)
                 .blur(32.dp)
                 .background(
                     activeColor.copy(alpha = if (isLight) 0.08f else 0.12f),
@@ -760,13 +936,13 @@ private fun TactileAmbientAmountSection(
         )
 
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            horizontalAlignment = Alignment.Start,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
         ) {
             // 算式即时求值微弱提示
             Box(
-                modifier = Modifier.height(18.dp),
-                contentAlignment = Alignment.Center
+                modifier = Modifier.height(18.dp).fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd
             ) {
                 if (evaluatedPreview.isNotEmpty()) {
                     Text(
@@ -784,7 +960,7 @@ private fun TactileAmbientAmountSection(
             // 巨幅 Serif 金额与手写斜体 ¥
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -794,99 +970,133 @@ private fun TactileAmbientAmountSection(
                     fontWeight = FontWeight.Normal,
                     fontFamily = FontFamily.Serif,
                     color = activeColor,
-                    modifier = Modifier.padding(end = 8.dp, bottom = 2.dp)
+                    modifier = Modifier.padding(bottom = 2.dp)
                 )
 
-                Text(
-                    text = if (expression.isEmpty()) "0.00" else expression,
-                    fontSize = if (expression.length > 9) 34.sp else 44.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Serif,
-                    color = if (expression.isEmpty()) inkMuted.copy(alpha = 0.5f) else inkPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                if (expression.isNotEmpty()) {
-                    IconButton(
-                        onClick = onClear,
-                        modifier = Modifier
-                            .padding(start = 6.dp)
-                            .size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "清空",
-                            tint = inkMuted,
-                            modifier = Modifier.size(16.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    AnimatedContent(
+                        targetState = if (expression.isEmpty()) "0.00" else expression,
+                        transitionSpec = {
+                            if (targetState.length > initialState.length) {
+                                (slideInVertically { height -> height } + fadeIn()).togetherWith(slideOutVertically { height -> -height } + fadeOut())
+                            } else {
+                                (slideInVertically { height -> -height } + fadeIn()).togetherWith(slideOutVertically { height -> height } + fadeOut())
+                            }
+                        },
+                        label = "amount_animation"
+                    ) { targetText ->
+                        Text(
+                            text = targetText,
+                            fontSize = if (targetText.length > 9) 34.sp else 44.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Serif,
+                            color = if (targetText == "0.00") inkMuted.copy(alpha = 0.5f) else inkPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                    }
+
+                    if (expression.isNotEmpty()) {
+                        IconButton(
+                            onClick = onClear,
+                            modifier = Modifier
+                                .padding(start = 6.dp)
+                                .size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "清空",
+                                tint = inkMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = inkMuted.copy(alpha = 0.2f)
+            )
         }
+
     }
 }
 
 // ── 组件 3: 杂志风一级大类排版 ───────────────────────────────────────
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TactileMagazineCategoryRow(
     categories: List<CategoryItem>,
     selectedCategory: String,
+    isCategoryDrillDown: Boolean,
     activeColor: Color,
     inkPrimary: Color,
     inkSecondary: Color,
     onSelectCategory: (String) -> Unit,
     onAddCategory: () -> Unit
 ) {
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        items(categories, key = { it.name }) { cat ->
-            val isSelected = selectedCategory == cat.name
-            val icon = CategoryManager.getCategoryIcon(cat.name)
+    androidx.compose.animation.AnimatedContent(
+        targetState = isCategoryDrillDown,
+        label = "category_drill_down_anim",
+        transitionSpec = {
+            androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+        }
+    ) { drillDown ->
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val itemsToShow = if (drillDown) categories.filter { it.name == selectedCategory } else categories
+            itemsToShow.forEach { cat ->
+                val isSelected = selectedCategory == cat.name
+                val icon = CategoryManager.getCategoryIcon(cat.name)
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { onSelectCategory(cat.name) }
-                    .padding(vertical = 4.dp, horizontal = 2.dp)
-            ) {
-                if (isSelected) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onSelectCategory(cat.name) }
+                        .padding(vertical = 4.dp, horizontal = 2.dp)
+                ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = activeColor,
+                        tint = if (isSelected) activeColor else inkSecondary.copy(alpha = 0.6f),
                         modifier = Modifier.size(16.dp)
                     )
-                }
 
+                    Text(
+                        text = cat.name,
+                        fontSize = if (isSelected) 15.sp else 14.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) inkPrimary else inkSecondary.copy(alpha = 0.65f)
+                    )
+                }
+            }
+
+            if (!drillDown) {
                 Text(
-                    text = cat.name,
-                    fontSize = if (isSelected) 15.sp else 14.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) inkPrimary else inkSecondary.copy(alpha = 0.65f)
+                    text = "+ 新增",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = activeColor,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { onAddCategory() }
+                        .padding(horizontal = 4.dp, vertical = 4.dp)
                 )
             }
-        }
-
-        item {
-            Text(
-                text = "+ 新增",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = activeColor,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .clickable { onAddCategory() }
-                    .padding(horizontal = 4.dp, vertical = 4.dp)
-            )
         }
     }
 }
@@ -956,6 +1166,7 @@ private fun TactileSubcategoryPaperChips(
                 color = inkSecondary.copy(alpha = 0.7f)
             )
         }
+
     }
 }
 
@@ -1011,6 +1222,7 @@ private fun TactileMagneticTransferCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(toAccount, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = accentColor)
         }
+
     }
 }
 
@@ -1022,7 +1234,7 @@ private fun TactileDotGridMetaSlip(
     isTransfer: Boolean,
     note: String,
     onNoteChange: (String) -> Unit,
-    quickNotes: List<String>,
+
     inkPrimary: Color,
     inkSecondary: Color,
     inkMuted: Color,
@@ -1041,38 +1253,51 @@ private fun TactileDotGridMetaSlip(
         if (isToday) "今天 $timeStr" else SimpleDateFormat("MM.dd $timeStr", Locale.CHINA).format(Date(selectedTimestamp))
     }
 
-    var showQuickTagPool by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+    // 主便签条 (Dot-grid style slip)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(paperSlipBg)
+            .border(1.dp, borderSubtle, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // 主便签条 (Dot-grid style slip)
+        // 时间印章
         Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(paperSlipBg)
-                .border(1.dp, borderSubtle, RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clickable(onClick = onOpenTimePicker)
+                .padding(end = 4.dp)
         ) {
-            // 时间印章
+            Icon(
+                imageVector = Icons.Default.CalendarToday,
+                contentDescription = null,
+                tint = activeColor,
+                modifier = Modifier.size(12.dp)
+            )
+            Text(
+                text = dateText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = inkSecondary
+            )
+        }
+
+        Text("┆", fontSize = 12.sp, color = inkMuted.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 4.dp))
+
+        // 账户选择 (非转账模式)
+        if (!isTransfer) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier
-                    .clickable(onClick = onOpenTimePicker)
+                    .clickable(onClick = onOpenAccountPicker)
                     .padding(end = 4.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.CalendarToday,
-                    contentDescription = null,
-                    tint = activeColor,
-                    modifier = Modifier.size(12.dp)
-                )
                 Text(
-                    text = dateText,
+                    text = accountName,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = inkSecondary
@@ -1080,87 +1305,29 @@ private fun TactileDotGridMetaSlip(
             }
 
             Text("┆", fontSize = 12.sp, color = inkMuted.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 4.dp))
+        }
 
-            // 账户选择 (非转账模式)
-            if (!isTransfer) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier
-                        .clickable(onClick = onOpenAccountPicker)
-                        .padding(end = 4.dp)
-                ) {
-                    Text(
-                        text = accountName,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = inkSecondary
-                    )
-                }
-
-                Text("┆", fontSize = 12.sp, color = inkMuted.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 4.dp))
-            }
-
-            // 备注输入框
-            BasicTextField(
-                value = note,
-                onValueChange = onNoteChange,
-                singleLine = true,
-                textStyle = TextStyle(
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = inkPrimary
-                ),
-                cursorBrush = SolidColor(inkPrimary),
-                modifier = Modifier.weight(1f),
-                decorationBox = { innerTextField ->
+        // 备注输入框
+        BasicTextField(
+            value = note,
+            onValueChange = onNoteChange,
+            singleLine = true,
+            textStyle = TextStyle(
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = inkPrimary
+            ),
+            cursorBrush = SolidColor(inkPrimary),
+            modifier = Modifier.weight(1f).padding(start = 2.dp),
+            decorationBox = { innerTextField ->
+                Box(contentAlignment = Alignment.CenterStart) {
                     if (note.isEmpty()) {
                         Text("添写备注...", fontSize = 12.sp, color = inkMuted)
                     }
                     innerTextField()
                 }
-            )
-
-            // 便签快捷标签展开按钮
-            IconButton(
-                onClick = { showQuickTagPool = !showQuickTagPool },
-                modifier = Modifier.size(22.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Tag,
-                    contentDescription = "标签池",
-                    tint = if (showQuickTagPool) activeColor else inkMuted,
-                    modifier = Modifier.size(15.dp)
-                )
             }
-        }
-
-        // 展开的便利贴灵感标签池 (Quick Tag Pool)
-        AnimatedVisibility(
-            visible = showQuickTagPool,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut()
-        ) {
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(quickNotes) { qNote ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(paperSlipBg)
-                            .border(1.dp, borderSubtle, RoundedCornerShape(8.dp))
-                            .clickable {
-                                onNoteChange(if (note.isBlank()) qNote else "$note $qNote")
-                            }
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(qNote, fontSize = 11.sp, color = inkSecondary)
-                    }
-                }
-            }
-        }
+        )
     }
 }
 
@@ -1177,7 +1344,8 @@ private fun TactileFiveColumnNumpad(
     inkPrimary: Color,
     inkSecondary: Color,
     borderSubtle: Color,
-    isLight: Boolean
+    isLight: Boolean,
+    keyboardLayout: Int
 ) {
     val view = LocalView.current
     val hasOp = hasOperator(expression)
@@ -1191,19 +1359,22 @@ private fun TactileFiveColumnNumpad(
             .navigationBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // 第一行：7, 8, 9, ÷, ⌫ (退格)
+        val r1 = if (keyboardLayout == 1) listOf("1", "2", "3") else listOf("7", "8", "9")
+        val r3 = if (keyboardLayout == 1) listOf("7", "8", "9") else listOf("1", "2", "3")
+
+        // 第一行
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            TactileNumpadBtn("7", isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
-                handleInput("7", expression, onExpressionChange, onConfirm)
+            TactileNumpadBtn(r1[0], isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
+                handleInput(r1[0], expression, onExpressionChange, onConfirm)
             }
-            TactileNumpadBtn("8", isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
-                handleInput("8", expression, onExpressionChange, onConfirm)
+            TactileNumpadBtn(r1[1], isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
+                handleInput(r1[1], expression, onExpressionChange, onConfirm)
             }
-            TactileNumpadBtn("9", isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
-                handleInput("9", expression, onExpressionChange, onConfirm)
+            TactileNumpadBtn(r1[2], isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
+                handleInput(r1[2], expression, onExpressionChange, onConfirm)
             }
             TactileOperatorBtn("÷", isLight, inkSecondary, borderSubtle, Modifier.weight(1f)) {
                 handleInput("÷", expression, onExpressionChange, onConfirm)
@@ -1267,19 +1438,19 @@ private fun TactileFiveColumnNumpad(
                 modifier = Modifier.weight(4f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Row 3 (1, 2, 3, -)
+                // Row 3
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    TactileNumpadBtn("1", isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
-                        handleInput("1", expression, onExpressionChange, onConfirm)
+                    TactileNumpadBtn(r3[0], isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
+                        handleInput(r3[0], expression, onExpressionChange, onConfirm)
                     }
-                    TactileNumpadBtn("2", isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
-                        handleInput("2", expression, onExpressionChange, onConfirm)
+                    TactileNumpadBtn(r3[1], isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
+                        handleInput(r3[1], expression, onExpressionChange, onConfirm)
                     }
-                    TactileNumpadBtn("3", isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
-                        handleInput("3", expression, onExpressionChange, onConfirm)
+                    TactileNumpadBtn(r3[2], isLight, chipSurface, inkPrimary, borderSubtle, Modifier.weight(1f)) {
+                        handleInput(r3[2], expression, onExpressionChange, onConfirm)
                     }
                     TactileOperatorBtn("-", isLight, inkSecondary, borderSubtle, Modifier.weight(1f)) {
                         handleInput("-", expression, onExpressionChange, onConfirm)
@@ -1370,6 +1541,7 @@ private fun TactileFiveColumnNumpad(
                 }
             }
         }
+
     }
 }
 

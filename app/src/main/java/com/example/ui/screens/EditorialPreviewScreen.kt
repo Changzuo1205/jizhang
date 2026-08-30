@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -8,6 +10,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,13 +30,24 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.pager.HorizontalPager
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LightMode
@@ -46,6 +61,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,11 +70,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.AccountEntity
 import com.example.data.local.ExpenseEntity
 import com.example.model.AmountFormatter
@@ -115,6 +137,7 @@ fun EditorialPreviewScreen(
     onOpenBudgetSettings: () -> Unit,
     onOpenAddExpense: () -> Unit,
     onEditExpense: (ExpenseEntity) -> Unit,
+    onDeleteExpense: (ExpenseEntity) -> Unit = {},
     selectedDateMillis: Long?,
     onSelectedDateChange: (Long?) -> Unit,
     isCalendarExpanded: Boolean,
@@ -143,6 +166,8 @@ fun EditorialPreviewScreen(
         SimpleDateFormat("yyyy.MM.dd · EEEE", Locale.CHINESE).format(Date())
     }
 
+    val listState = rememberLazyListState()
+
     val currentMonthOffset by remember(isCalendarExpanded) {
         derivedStateOf { if (isCalendarExpanded) pagerState.currentPage - 500 else 0 }
     }
@@ -168,7 +193,8 @@ fun EditorialPreviewScreen(
             }
             val y = cal.get(Calendar.YEAR)
             val m = cal.get(Calendar.MONTH)
-            val firstDow = cal.get(Calendar.DAY_OF_WEEK) - 1
+            val dow = cal.get(Calendar.DAY_OF_WEEK)
+            val firstDow = (dow + 5) % 7
             val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
 
             val monthExpenses = expensesByYearMonth[y * 100 + m] ?: emptyList()
@@ -317,10 +343,12 @@ fun EditorialPreviewScreen(
         dailyAverageValue = if (activeSpent > 0) activeSpent / totalDaysInDisplayMonth else 0.0
     }
 
+    var expenseForActionDialog by remember { mutableStateOf<ExpenseEntity?>(null) }
+
     // 下方明细：
-    // 1. 展开日历时默认不渲染明细，只在选中日期时渲染所选日期明细；
+    // 1. 展开日历时未选中日期则默认显示当前日历展示月份的全部明细，若选中日期则显示所选日期明细；
     // 2. 收拢日历时若未选日期则默认展示本周记录，若选中日期则展示所选日期明细。
-    val displayedExpenses = remember(allExpenses, selectedDateMillis, isCalendarExpanded) {
+    val displayedExpenses = remember(allExpenses, selectedDateMillis, isCalendarExpanded, currentMonthOffset) {
         if (isCalendarExpanded) {
             if (selectedDateMillis != null) {
                 val targetCal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis!! }
@@ -329,7 +357,16 @@ fun EditorialPreviewScreen(
                     isSameDay(expCal, targetCal)
                 }
             } else {
-                emptyList()
+                val targetCal = Calendar.getInstance().apply {
+                    set(Calendar.DAY_OF_MONTH, 1)
+                    add(Calendar.MONTH, currentMonthOffset)
+                }
+                val targetYear = targetCal.get(Calendar.YEAR)
+                val targetMonth = targetCal.get(Calendar.MONTH)
+                allExpenses.filter { exp ->
+                    val expCal = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
+                    expCal.get(Calendar.YEAR) == targetYear && expCal.get(Calendar.MONTH) == targetMonth
+                }
             }
         } else {
             if (selectedDateMillis != null) {
@@ -506,6 +543,7 @@ fun EditorialPreviewScreen(
 
             // 2. 主体流式排版内容
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 14.dp, bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -572,12 +610,19 @@ fun EditorialPreviewScreen(
                     }
                 }
 
-                // 2.3 过滤状态提示条（选中日期时展示，再次点击所选日期可取消选中）
-                if (selectedDateMillis != null) {
+                // 2.3 过滤状态提示条（选中日期或展开日历时展示）
+                if (selectedDateMillis != null || isCalendarExpanded) {
                     item {
-                        val dateLabel = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINESE).format(Date(selectedDateMillis!!))
-                        val dayExpenseTotal = displayedExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-                        val dayExpenseStr = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(dayExpenseTotal))
+                        val headerLabel: String
+                        val totalAmount = displayedExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                        val totalStr = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(totalAmount))
+                        if (selectedDateMillis != null) {
+                            val dLabel = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINESE).format(Date(selectedDateMillis!!))
+                            headerLabel = "$dLabel · 当日支出 ¥$totalStr"
+                        } else {
+                            val mLabel = "${currentMonthData.year}年${String.format(Locale.getDefault(), "%02d", currentMonthData.month + 1)}月"
+                            headerLabel = "$mLabel · 当月支出 ¥$totalStr"
+                        }
 
                         Row(
                             modifier = Modifier
@@ -590,22 +635,29 @@ fun EditorialPreviewScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = "● $dateLabel · 当日支出 ¥$dayExpenseStr",
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = inkPrimary
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(4.5.dp)
+                                        .clip(CircleShape)
+                                        .background(inkPrimary)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = headerLabel,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = inkPrimary
+                                )
+                            }
                         }
                         HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
                     }
                 }
 
                 // 2.4 流水明细区域 (带进场级联动画)
-                if (isCalendarExpanded && selectedDateMillis == null) {
-                    // 展开日历且未选中具体日期时：默认下方不渲染明细
-                } else if (displayedExpenses.isEmpty()) {
+                if (displayedExpenses.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -619,7 +671,7 @@ fun EditorialPreviewScreen(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = if (selectedDateMillis != null) "该日暂无支出记录" else "本周暂无交易记录",
+                                    text = if (selectedDateMillis != null) "该日暂无支出记录" else if (isCalendarExpanded) "该月份暂无交易记录" else "本周暂无交易记录",
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 13.sp,
                                     color = inkMuted
@@ -684,13 +736,226 @@ fun EditorialPreviewScreen(
                             ) {
                                 JournalTransactionRow(
                                     expense = expense,
+                                    canvasBg = canvasBg,
                                     dividerColor = dividerColor,
                                     inkPrimary = inkPrimary,
                                     inkSecondary = inkSecondary,
                                     inkMuted = inkMuted,
                                     clayAccent = clayAccent,
                                     forestGreen = forestGreen,
-                                    onEditExpense = { onEditExpense(expense) }
+                                    onItemClick = { expenseForActionDialog = expense },
+                                    onDeleteExpense = { onDeleteExpense(expense) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 3. 明细操作选项弹窗（独立窗口覆盖状态栏，仅背景渐变与弹窗卡片缩放淡入） ───────────────
+        if (expenseForActionDialog != null) {
+            val exp = expenseForActionDialog!!
+            var isDismissing by remember { mutableStateOf(false) }
+            val animProgress by animateFloatAsState(
+                targetValue = if (isDismissing) 0f else 1f,
+                animationSpec = if (isDismissing) tween(160) else tween(220),
+                label = "dialog_anim",
+                finishedListener = { value ->
+                    if (value == 0f && isDismissing) {
+                        expenseForActionDialog = null
+                    }
+                }
+            )
+
+            val dialogScale by animateFloatAsState(
+                targetValue = if (isDismissing) 0.90f else 1f,
+                animationSpec = if (isDismissing) tween(160) else spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+                label = "dialog_scale"
+            )
+
+            Dialog(
+                onDismissRequest = {
+                    if (!isDismissing) isDismissing = true
+                },
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = false
+                )
+            ) {
+                val isExpenseType = exp.type == "EXPENSE"
+                val isIncomeType = exp.type == "INCOME"
+                val amountCents = AmountFormatter.yuanToCents(exp.amount)
+                val amountStr = AmountFormatter.formatCentsAsYuan(abs(amountCents))
+                val dateStr = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.getDefault()).format(Date(exp.dateTimestamp))
+                val categoryTitle = exp.displaySubCategory.ifEmpty { exp.displayCategory }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.55f * animProgress))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            if (!isDismissing) isDismissing = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.86f)
+                            .graphicsLayer {
+                                scaleX = dialogScale
+                                scaleY = dialogScale
+                                alpha = animProgress
+                            }
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(canvasBg)
+                            .border(1.dp, dividerColor, RoundedCornerShape(20.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { /* 阻止冒泡 */ }
+                            .padding(horizontal = 22.dp, vertical = 18.dp)
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = { if (!isDismissing) isDismissing = true },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "关闭",
+                                        tint = inkMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // 账目信息小面板
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(dividerColor.copy(alpha = 0.35f))
+                                    .padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = categoryTitle,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = inkPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = dateStr,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 11.5.sp,
+                                        color = inkMuted
+                                    )
+                                    if (exp.note.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = exp.note,
+                                            fontSize = 12.sp,
+                                            color = inkSecondary
+                                        )
+                                    }
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.End
+                                ) {
+                                    Text(
+                                        text = "${if (isExpenseType) "-" else if (isIncomeType) "+" else ""}¥$amountStr",
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isExpenseType) inkPrimary else if (isIncomeType) clayAccent else inkSecondary
+                                    )
+                                    if (exp.accountName.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Text(
+                                            text = exp.accountName,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 11.5.sp,
+                                            color = inkMuted
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // 选项 1: 编辑账目
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(clayAccent.copy(alpha = 0.12f))
+                                    .clickable {
+                                        val targetExp = exp
+                                        expenseForActionDialog = null
+                                        onEditExpense(targetExp)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = clayAccent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "编辑账目",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = clayAccent
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // 选项 2: 删除账目
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFDC2626).copy(alpha = 0.12f))
+                                    .clickable {
+                                        val targetExp = exp
+                                        expenseForActionDialog = null
+                                        onDeleteExpense(targetExp)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteOutline,
+                                    contentDescription = null,
+                                    tint = Color(0xFFDC2626),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "删除账目",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFDC2626)
                                 )
                             }
                         }
@@ -943,7 +1208,7 @@ private fun JournalDateRuler(
     }
     val currentMonthData = getMonthData(currentMonthOffset)
 
-    val daysOfWeek = listOf("日", "一", "二", "三", "四", "五", "六")
+    val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")
 
     Column(
         modifier = Modifier
@@ -996,7 +1261,8 @@ private fun JournalDateRuler(
             if (!expanded) {
                 val weekDays = remember {
                     val cal = Calendar.getInstance()
-                    cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+                    cal.firstDayOfWeek = Calendar.MONDAY
+                    cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
                     (0..6).map {
                         val dayCal = cal.clone() as Calendar
                         dayCal.add(Calendar.DAY_OF_WEEK, it)
@@ -1008,10 +1274,9 @@ private fun JournalDateRuler(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    weekDays.forEach { dayCal ->
+                    weekDays.forEachIndexed { index, dayCal ->
                         val dayNum = dayCal.get(Calendar.DAY_OF_MONTH)
-                        val dayOfWeekIndex = dayCal.get(Calendar.DAY_OF_WEEK) - 1
-                        val dayOfWeekStr = daysOfWeek[dayOfWeekIndex]
+                        val dayOfWeekStr = daysOfWeek[index]
                         val isToday = isSameDay(dayCal, Calendar.getInstance())
                         val isSelected = selectedDateMillis != null && isSameDay(dayCal.timeInMillis, selectedDateMillis)
 
@@ -1097,13 +1362,15 @@ private fun JournalDateRuler(
 @Composable
 private fun JournalTransactionRow(
     expense: ExpenseEntity,
+    canvasBg: Color,
     dividerColor: Color,
     inkPrimary: Color,
     inkSecondary: Color,
     inkMuted: Color,
     clayAccent: Color,
     forestGreen: Color,
-    onEditExpense: () -> Unit
+    onItemClick: () -> Unit,
+    onDeleteExpense: () -> Unit
 ) {
     val isExpense = expense.type == "EXPENSE"
     val isIncome = expense.type == "INCOME"
@@ -1113,78 +1380,169 @@ private fun JournalTransactionRow(
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(expense.dateTimestamp))
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onEditExpense() }
-    ) {
-        Row(
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
+    val deleteBtnWidthDp = 60.dp
+    val gapDp = 12.dp
+    val maxSwipePx = with(density) { (deleteBtnWidthDp + gapDp).toPx() }
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = offsetX,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "row_swipe_offset"
+    )
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .clip(RoundedCornerShape(8.dp))
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Box(
+            // 删除按钮：仅在左滑（animatedOffsetX < -0.5f）时实时渲染，位于右侧留白区域，不添加任何明细背景色
+            if (animatedOffsetX < -0.5f) {
+                val revealWidthDp = remember(animatedOffsetX) {
+                    val swipedDp = with(density) { (-animatedOffsetX).toDp() }
+                    (swipedDp - gapDp).coerceAtLeast(0.dp).coerceAtMost(deleteBtnWidthDp)
+                }
+
+                Row(
                     modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(if (isExpense) forestGreen else clayAccent)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
-                    Text(
-                        text = expense.displaySubCategory.ifEmpty { expense.displayCategory },
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = inkPrimary,
-                        maxLines = 1
-                    )
-                    Spacer(modifier = Modifier.height(1.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = timeFormatted,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            color = inkMuted
-                        )
-                        if (expense.note.isNotBlank()) {
-                            Text(
-                                text = " · ${expense.note}",
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp,
-                                color = inkMuted,
-                                maxLines = 1
-                            )
+                        .matchParentSize()
+                        .padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(revealWidthDp)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFE53935))
+                            .clickable {
+                                offsetX = 0f
+                                onDeleteExpense()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (revealWidthDp >= 35.dp) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteOutline,
+                                    contentDescription = "删除",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "删除",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Column(
-                horizontalAlignment = Alignment.End
+            // 明细内容：无背景色（保持透明度），随着手势左移，右侧留出与删除按钮的间隙
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+                    .fillMaxWidth()
+                    .pointerInput(expense.id) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                if (offsetX < -maxSwipePx * 0.4f) {
+                                    offsetX = -maxSwipePx
+                                } else {
+                                    offsetX = 0f
+                                }
+                            },
+                            onDragCancel = { offsetX = 0f },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                val newOffset = (offsetX + dragAmount).coerceIn(-maxSwipePx, 0f)
+                                offsetX = newOffset
+                            }
+                        )
+                    }
+                    .clickable {
+                        if (offsetX < -10f) {
+                            offsetX = 0f
+                        } else {
+                            onItemClick()
+                        }
+                    }
             ) {
-                Text(
-                    text = "${if (isExpense) "-" else if (isIncome) "+" else ""}¥$amountFormatted",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isExpense) inkPrimary else if (isIncome) clayAccent else inkSecondary
-                )
-                if (expense.accountName.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(1.dp))
-                    Text(
-                        text = expense.accountName,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        color = inkMuted
-                    )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(if (isExpense) forestGreen else clayAccent)
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = expense.displaySubCategory.ifEmpty { expense.displayCategory },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = inkPrimary,
+                                maxLines = 1
+                            )
+                            Spacer(modifier = Modifier.height(1.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = timeFormatted,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    color = inkMuted
+                                )
+                                if (expense.note.isNotBlank()) {
+                                    Text(
+                                        text = " · ${expense.note}",
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 11.sp,
+                                        color = inkMuted,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "${if (isExpense) "-" else if (isIncome) "+" else ""}¥$amountFormatted",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isExpense) inkPrimary else if (isIncome) clayAccent else inkSecondary
+                        )
+                        if (expense.accountName.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(1.dp))
+                            Text(
+                                text = expense.accountName,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                color = inkMuted
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1207,7 +1565,7 @@ private fun EditorialMonthGrid(
     val maxDaysInMonth = monthData.maxDaysInMonth
     val dayAggregates = monthData.dayAggregates
 
-    val daysOfWeek = listOf("日", "一", "二", "三", "四", "五", "六")
+    val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -1267,7 +1625,7 @@ private fun EditorialMonthGrid(
                             if (hasRecord) {
                                 if (dayIncome > 0) {
                                     Text(
-                                        text = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(dayIncome)),
+                                        text = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(dayIncome), withThousandsSeparator = false),
                                         fontSize = 7.5.sp,
                                         lineHeight = 8.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1277,7 +1635,7 @@ private fun EditorialMonthGrid(
                                 }
                                 if (dayExpense > 0) {
                                     Text(
-                                        text = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(dayExpense)),
+                                        text = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(dayExpense), withThousandsSeparator = false),
                                         fontSize = 7.5.sp,
                                         lineHeight = 8.sp,
                                         fontFamily = FontFamily.Monospace,

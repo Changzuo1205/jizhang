@@ -1,8 +1,12 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,9 +28,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -57,7 +58,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,13 +72,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,19 +87,16 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.AccountEntity
 import com.example.data.local.ExpenseEntity
-import com.example.ui.components.GlassBackgroundWithGlow
-import com.example.ui.components.GlassCard
-import com.example.ui.components.GlassChip
-import com.example.ui.components.GlowAmber
-import com.example.ui.components.GlowCyan
-import com.example.ui.components.GlowEmerald
-import com.example.ui.components.GlowPink
-import com.example.ui.components.GlowViolet
+import com.example.model.AmountFormatter
 import com.example.ui.theme.LocalAppBackgroundConfig
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 data class AssetHistoryPoint(
@@ -120,16 +118,33 @@ fun AccountsScreen(
     modifier: Modifier = Modifier
 ) {
     val bgConfig = LocalAppBackgroundConfig.current
+    val isLight = bgConfig.isLight
+
+    // Editorial Color Palette
+    val canvasBg = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
+    val cardBg = if (isLight) Color(0xFFF6F4EE) else Color(0xFF1E281E)
+    val itemBg = if (isLight) Color.White.copy(alpha = 0.85f) else Color(0xFF2B372B)
+    val dividerColor = if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637)
+    val inkPrimary = if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7)
+    val inkSecondary = if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA)
+    val inkMuted = if (isLight) Color(0xFF8A8780) else Color(0xFF889689)
+    val clayAccent = Color(0xFFC4623D)
+    val forestGreen = if (isLight) Color(0xFF2D6A4F) else Color(0xFF52B788)
+    val debtRed = if (isLight) Color(0xFFDC2626) else Color(0xFFEF4444)
+
     var showAddDialog by remember { mutableStateOf(false) }
     var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
 
-    // Dynamically calculate the real historical asset values from the earliest recorded data to now
+    val todayDateStr = remember {
+        SimpleDateFormat("yyyy.MM.dd · EEEE", Locale.CHINESE).format(Date())
+    }
+
+    // Calculate historical asset values from earliest data to now
     val assetHistory = remember(accounts, expenses, totalPositiveAssets, totalNetAssets, totalDebts) {
         val currentAsset = if (totalDebts > 0.0) totalNetAssets else totalPositiveAssets
         val points = mutableListOf<AssetHistoryPoint>()
         
         if (expenses.isEmpty()) {
-            // Default 6 months if no transactions
             for (i in 5 downTo 0) {
                 val monthCal = Calendar.getInstance().apply {
                     add(Calendar.MONTH, -i)
@@ -157,7 +172,6 @@ fun AccountsScreen(
             }
             val nowCal = Calendar.getInstance()
             
-            // Build list of months from start month to current month
             val cursorCal = startCal.clone() as Calendar
             while (cursorCal.get(Calendar.YEAR) < nowCal.get(Calendar.YEAR) ||
                 (cursorCal.get(Calendar.YEAR) == nowCal.get(Calendar.YEAR) && cursorCal.get(Calendar.MONTH) <= nowCal.get(Calendar.MONTH))
@@ -185,7 +199,6 @@ fun AccountsScreen(
                     "${month}月"
                 }
 
-                // Asset(t) = currentAsset + sum_{tx > t}(Expense) - sum_{tx > t}(Income)
                 val laterExpenses = expenses.filter { it.dateTimestamp > targetTimestamp }
                 val netChangeAfterT = laterExpenses.sumOf { if (it.type == "EXPENSE") it.amount else -it.amount }
                 val historicalAsset = (currentAsset + netChangeAfterT).coerceAtLeast(0.0)
@@ -194,7 +207,6 @@ fun AccountsScreen(
                 cursorCal.add(Calendar.MONTH, 1)
             }
             
-            // If only 1 point, add previous month baseline
             if (points.size == 1) {
                 val prevCal = (nowCal.clone() as Calendar).apply { add(Calendar.MONTH, -1) }
                 val prevLabel = if (nowCal.get(Calendar.YEAR) != startCal.get(Calendar.YEAR)) {
@@ -209,7 +221,6 @@ fun AccountsScreen(
     }
 
     val currentMonthAsset = assetHistory.lastOrNull()?.value ?: (if (totalDebts > 0.0) totalNetAssets else totalPositiveAssets)
-    val earliestAsset = assetHistory.firstOrNull()?.value ?: currentMonthAsset
     val lastMonthAsset = assetHistory.getOrNull(assetHistory.size - 2)?.value ?: currentMonthAsset
     val monthGrowthRate = if (lastMonthAsset > 0.0) {
         ((currentMonthAsset - lastMonthAsset) / lastMonthAsset) * 100.0
@@ -220,132 +231,111 @@ fun AccountsScreen(
     }
 
     val growthRateFormatted = if (monthGrowthRate > 0.0) {
-        "+${String.format(Locale.CHINA, "%.1f", monthGrowthRate)}% 本月"
+        "+${String.format(Locale.CHINA, "%.1f", monthGrowthRate)}% 环比"
     } else if (monthGrowthRate < 0.0) {
-        "${String.format(Locale.CHINA, "%.1f", monthGrowthRate)}% 本月"
+        "${String.format(Locale.CHINA, "%.1f", monthGrowthRate)}% 环比"
     } else {
-        "持平 本月"
+        "持平 环比"
     }
 
-    val rateColor = if (monthGrowthRate >= 0.0) {
-        if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald
-    } else {
-        if (bgConfig.isLight) Color(0xFFE11D48) else GlowPink
-    }
+    val rateColor = if (monthGrowthRate >= 0.0) forestGreen else debtRed
 
-    GlassBackgroundWithGlow(modifier = modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(canvasBg)
+            .statusBarsPadding()
+    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header Title
+            // 1. Editorial Masthead Header
             item {
-                Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Column {
                         Text(
-                            text = "资产与账户",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = bgConfig.textPrimary
+                            text = "Accounts",
+                            fontFamily = FontFamily.Serif,
+                            fontStyle = FontStyle.Italic,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = inkPrimary,
+                            letterSpacing = (-0.5).sp
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "全景多账户资金管理与余额跟踪",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = bgConfig.textSecondary
+                            text = "LEDGER & ASSETS · $todayDateStr",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = inkMuted,
+                            letterSpacing = 0.5.sp
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Add Account Quick Button
-                    GlassCard(
-                        shape = RoundedCornerShape(14.dp),
-                        backgroundColor = if (bgConfig.isLight) Color(0xFF6366F1).copy(alpha = 0.12f) else Color(0xFF6366F1).copy(alpha = 0.25f),
-                        borderColor = Brush.linearGradient(
-                            listOf(
-                                Color(0xFF818CF8).copy(alpha = 0.8f),
-                                if (bgConfig.isLight) Color(0xFF6366F1).copy(alpha = 0.2f) else Color.White.copy(alpha = 0.2f)
-                            )
-                        ),
-                        onClick = {
-                            accountToEdit = null
-                            showAddDialog = true
-                        },
-                        modifier = Modifier.testTag("add_account_button")
+                    // Add Account Button (Editorial Pill Style)
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(clayAccent.copy(alpha = 0.12f))
+                            .border(1.dp, clayAccent.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .clickable {
+                                accountToEdit = null
+                                showAddDialog = true
+                            }
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                            .testTag("add_account_button"),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "添加账户",
-                                tint = if (bgConfig.isLight) Color(0xFF4F46E5) else Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "添加账户",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (bgConfig.isLight) Color(0xFF4F46E5) else Color.White
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "添加账户",
+                            tint = clayAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "添加账户",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = clayAccent
+                        )
                     }
                 }
             }
 
-            // Top Total Assets Panoramic Card
+            // 2. Editorial Top Balance Ticket Card (Panoramic Asset Banner)
             item {
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(26.dp),
-                    backgroundColor = if (bgConfig.isLight) Color.White.copy(alpha = 0.95f) else Color(0xFF131C35).copy(alpha = 0.65f),
-                    borderColor = Brush.linearGradient(
-                        if (bgConfig.isLight) listOf(
-                            Color(0xFFE2E8F0),
-                            Color(0xFFCBD5E1)
-                        ) else listOf(
-                            Color.White.copy(alpha = 0.45f),
-                            GlowCyan.copy(alpha = 0.4f),
-                            GlowViolet.copy(alpha = 0.3f),
-                            Color.White.copy(alpha = 0.1f)
-                        )
-                    ),
-                    borderWidth = 1.5.dp
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(cardBg)
+                        .border(1.dp, dividerColor, RoundedCornerShape(20.dp))
+                        .padding(20.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(22.dp)
-                    ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Card Top Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .background(if (bgConfig.isLight) Color(0xFF0284C7) else GlowCyan, CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (totalDebts > 0.0) "净资产总值 (元)" else "当前总资产 (元)",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = bgConfig.textSecondary
-                                )
-                            }
+                            Text(
+                                text = if (totalDebts > 0.0) "NET ASSETS · 净资产" else "TOTAL ASSETS · 当前总资产",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = inkMuted,
+                                letterSpacing = 0.5.sp
+                            )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -353,216 +343,181 @@ fun AccountsScreen(
                                 if (totalDebts <= 0.0) {
                                     Box(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(
-                                                if (bgConfig.isLight) Color(0xFFECFDF5) else GlowEmerald.copy(alpha = 0.18f)
-                                            )
-                                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(forestGreen.copy(alpha = 0.12f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
                                     ) {
                                         Text(
                                             text = "零负债",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 10.5.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald
+                                            color = forestGreen
                                         )
                                     }
                                 }
                                 Text(
-                                    text = "${accounts.size} 个有效账户",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = bgConfig.textTertiary
+                                    text = "${accounts.size} 个账户",
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    color = inkMuted
                                 )
                             }
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Large Asset Number with rolling number animation (Total Net Assets when debts exist, or Current Total Assets when no debt)
+                        // Large Net Asset Number (Monospace)
                         val targetNetAsset = if (totalDebts > 0.0) totalNetAssets else totalPositiveAssets
-                        val animatedNetAsset = remember { androidx.compose.animation.core.Animatable(0f) }
+                        val animatedNetAsset = remember { Animatable(0f) }
                         LaunchedEffect(targetNetAsset) {
                             animatedNetAsset.animateTo(
                                 targetValue = targetNetAsset.toFloat(),
-                                animationSpec = androidx.compose.animation.core.tween(durationMillis = 800)
+                                animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
                             )
                         }
+
+                        val targetCents = AmountFormatter.yuanToCents(animatedNetAsset.value.toDouble())
+                        val displayNetAssetStr = AmountFormatter.formatCentsAsYuan(targetCents)
+
                         Text(
-                            text = "¥ ${String.format(Locale.CHINA, "%,.2f", animatedNetAsset.value)}",
-                            style = MaterialTheme.typography.headlineLarge.copy(
-                                fontSize = 34.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = (-0.5).sp
-                            ),
-                            color = bgConfig.textPrimary
+                            text = "¥ $displayNetAssetStr",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = inkPrimary,
+                            letterSpacing = (-0.5).sp
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Positive Assets vs Debt OR Asset Trend Graph (When no debt)
+                        // Conditional: Two-column ledger summary when debts exist, or Asset Trend Sparkline when no debt
                         if (totalDebts > 0.0) {
-                            // Current layout when there are debts
+                            // Total Positive Assets vs Total Debts (Dual-Column Ledger Layout)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                // Total Positive Assets
-                                GlassCard(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(16.dp),
-                                    backgroundColor = if (bgConfig.isLight) Color(0xFFECFDF5) else GlowEmerald.copy(alpha = 0.12f),
-                                    borderColor = Brush.linearGradient(
-                                        listOf(GlowEmerald.copy(alpha = 0.5f), Color.White.copy(alpha = 0.1f))
-                                    )
+                                // 资产总额 (存款/理财)
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(canvasBg)
+                                        .border(1.dp, dividerColor, RoundedCornerShape(14.dp))
+                                        .padding(12.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .background(GlowEmerald.copy(alpha = 0.20f), CircleShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
                                                 imageVector = Icons.Default.ArrowUpward,
-                                                contentDescription = "总资产",
-                                                tint = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald,
-                                                modifier = Modifier.size(16.dp)
+                                                contentDescription = "资产总额",
+                                                tint = forestGreen,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "资产总额 (储蓄/理财)",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = inkMuted
                                             )
                                         }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text(
-                                                text = "总资产 (存款/理财)",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (bgConfig.isLight) Color(0xFF047857) else Color.White.copy(alpha = 0.65f),
-                                                fontSize = 10.sp
-                                            )
-                                            Text(
-                                                text = "¥ ${String.format(Locale.CHINA, "%,.2f", totalPositiveAssets)}",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        val posCents = AmountFormatter.yuanToCents(totalPositiveAssets)
+                                        Text(
+                                            text = "¥${AmountFormatter.formatCentsAsYuan(posCents)}",
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = forestGreen,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
                                 }
 
-                                // Total Debts
-                                GlassCard(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(16.dp),
-                                    backgroundColor = if (bgConfig.isLight) Color(0xFFFFF1F2) else GlowPink.copy(alpha = 0.12f),
-                                    borderColor = Brush.linearGradient(
-                                        listOf(GlowPink.copy(alpha = 0.5f), Color.White.copy(alpha = 0.1f))
-                                    )
+                                // 负债总额 (信用卡透支/借贷)
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(canvasBg)
+                                        .border(1.dp, dividerColor, RoundedCornerShape(14.dp))
+                                        .padding(12.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .background(GlowPink.copy(alpha = 0.20f), CircleShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
                                                 imageVector = Icons.Default.ArrowDownward,
                                                 contentDescription = "总负债",
-                                                tint = if (bgConfig.isLight) Color(0xFFE11D48) else GlowPink,
-                                                modifier = Modifier.size(16.dp)
+                                                tint = debtRed,
+                                                modifier = Modifier.size(13.dp)
                                             )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
+                                            Spacer(modifier = Modifier.width(4.dp))
                                             Text(
                                                 text = "总负债 (信用卡透支)",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (bgConfig.isLight) Color(0xFFBE123C) else Color.White.copy(alpha = 0.65f),
-                                                fontSize = 10.sp
-                                            )
-                                            Text(
-                                                text = "¥ ${String.format(Locale.CHINA, "%,.2f", totalDebts)}",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (bgConfig.isLight) Color(0xFFE11D48) else GlowPink,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = inkMuted
                                             )
                                         }
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        val debtCents = AmountFormatter.yuanToCents(totalDebts)
+                                        Text(
+                                            text = "¥${AmountFormatter.formatCentsAsYuan(debtCents)}",
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = debtRed,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
                                 }
                             }
                         } else {
-                            // 无负债时：只显示资产变化趋势图
-                            GlassCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                backgroundColor = if (bgConfig.isLight) Color(0xFFEEF2FF) else GlowCyan.copy(alpha = 0.10f),
-                                borderColor = Brush.linearGradient(
-                                    listOf(
-                                        (if (bgConfig.isLight) Color(0xFF818CF8) else GlowCyan).copy(alpha = 0.45f),
-                                        Color.White.copy(alpha = 0.1f)
-                                    )
-                                )
+                            // 无负债时展示：资产走势折线 (Asset Trend Sparkline)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(canvasBg)
+                                    .border(1.dp, dividerColor, RoundedCornerShape(14.dp))
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 12.dp)
-                                ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(28.dp)
-                                                    .background((if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan).copy(alpha = 0.20f), CircleShape),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.TrendingUp,
-                                                    contentDescription = "资产趋势",
-                                                    tint = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan,
-                                                    modifier = Modifier.size(15.dp)
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
-                                                Text(
-                                                    text = "资产变化趋势",
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (bgConfig.isLight) Color(0xFF3730A3) else Color.White
-                                                )
-                                                Text(
-                                                    text = "有数据以来资产趋势 · 零负债",
-                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                                    color = bgConfig.textSecondary
-                                                )
-                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.TrendingUp,
+                                                contentDescription = "资产走势",
+                                                tint = clayAccent,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "历史资产走势",
+                                                fontSize = 12.5.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = inkPrimary
+                                            )
                                         }
 
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(rateColor.copy(alpha = if (bgConfig.isLight) 0.12f else 0.20f))
-                                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(rateColor.copy(alpha = 0.12f))
+                                                .padding(horizontal = 7.dp, vertical = 2.5.dp)
                                         ) {
                                             Text(
                                                 text = growthRateFormatted,
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 10.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = rateColor
                                             )
@@ -571,10 +526,13 @@ fun AccountsScreen(
 
                                     Spacer(modifier = Modifier.height(10.dp))
 
-                                    // Canvas Asset Trend Sparkline Chart drawn from actual history
-                                    AssetTrendMiniChart(
+                                    // Canvas Bezier Asset Trend Chart
+                                    EditorialAssetTrendChart(
                                         historyPoints = assetHistory,
-                                        isLight = bgConfig.isLight,
+                                        isLight = isLight,
+                                        inkPrimary = inkPrimary,
+                                        inkMuted = inkMuted,
+                                        accentColor = clayAccent,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(64.dp)
@@ -586,69 +544,78 @@ fun AccountsScreen(
                 }
             }
 
-            // Account List Header
+            // 3. Account List Section Title
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp),
+                        .padding(top = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "我的账户列表",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "账户明细",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = bgConfig.textPrimary
+                        color = inkPrimary
                     )
                     Text(
                         text = "左滑可删除 · 点击可编辑",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = bgConfig.textTertiary
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = inkMuted
                     )
                 }
             }
 
-            // Account Items
+            // 4. Account Items Matrix
             if (accounts.isEmpty()) {
                 item {
-                    GlassCard(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        shape = RoundedCornerShape(20.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(cardBg)
+                            .border(1.dp, dividerColor, RoundedCornerShape(18.dp))
+                            .padding(vertical = 36.dp, horizontal = 20.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 imageVector = Icons.Default.AccountBalance,
                                 contentDescription = null,
-                                tint = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan,
-                                modifier = Modifier.size(40.dp)
+                                tint = inkMuted,
+                                modifier = Modifier.size(36.dp)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "暂无自定义账户",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = bgConfig.textPrimary
+                                text = "暂无账户",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = inkPrimary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "点击右上角「添加账户」自定义微信、支付宝或银行卡",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = bgConfig.textSecondary
+                                text = "点击右上角「添加账户」配置微信、支付宝、银行卡或信用卡",
+                                fontSize = 12.sp,
+                                color = inkMuted
                             )
                         }
                     }
                 }
             } else {
                 items(accounts, key = { it.id }) { account ->
-                    AccountCardItem(
+                    EditorialAccountCardItem(
                         account = account,
+                        canvasBg = canvasBg,
+                        itemBg = itemBg,
+                        dividerColor = dividerColor,
+                        inkPrimary = inkPrimary,
+                        inkSecondary = inkSecondary,
+                        inkMuted = inkMuted,
+                        clayAccent = clayAccent,
+                        forestGreen = forestGreen,
+                        debtRed = debtRed,
                         onEdit = {
                             accountToEdit = account
                             showAddDialog = true
@@ -661,14 +628,22 @@ fun AccountsScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(90.dp)) // padding for bottom nav
+                Spacer(modifier = Modifier.height(96.dp))
             }
         }
     }
 
     if (showAddDialog) {
-        AddOrEditAccountDialog(
+        EditorialAddOrEditAccountDialog(
             accountToEdit = accountToEdit,
+            canvasBg = canvasBg,
+            dividerColor = dividerColor,
+            inkPrimary = inkPrimary,
+            inkSecondary = inkSecondary,
+            inkMuted = inkMuted,
+            clayAccent = clayAccent,
+            forestGreen = forestGreen,
+            debtRed = debtRed,
             onDismiss = { showAddDialog = false },
             onConfirm = { name, type, balance, suffix, color, saveAsMissedRecord, oldBalance ->
                 if (accountToEdit == null) {
@@ -693,12 +668,20 @@ fun AccountsScreen(
 }
 
 @Composable
-fun AccountCardItem(
+fun EditorialAccountCardItem(
     account: AccountEntity,
+    canvasBg: Color,
+    itemBg: Color,
+    dividerColor: Color,
+    inkPrimary: Color,
+    inkSecondary: Color,
+    inkMuted: Color,
+    clayAccent: Color,
+    forestGreen: Color,
+    debtRed: Color,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val bgConfig = LocalAppBackgroundConfig.current
     val density = LocalDensity.current
     val accountColor = try {
         Color(android.graphics.Color.parseColor(account.colorHex))
@@ -709,41 +692,38 @@ fun AccountCardItem(
     val typeIcon = getAccountTypeIcon(account.type)
     val typeName = getAccountTypeName(account.type)
 
-    // Swipe-to-delete state and smooth spring animation
     var isRevealed by remember { mutableStateOf(false) }
-    val maxSwipeDp = 84.dp
+    val maxSwipeDp = 80.dp
     val maxSwipePx = with(density) { maxSwipeDp.toPx() }
     var dragAmountAccumulated by remember { mutableFloatStateOf(0f) }
 
     val animatedOffsetPx by animateFloatAsState(
         targetValue = if (isRevealed) -maxSwipePx else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "accountCardSwipeOffset"
+        label = "editorialAccountSwipeOffset"
     )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
     ) {
-        // Red Delete Action revealed on the right (Only rendered when swiped or revealed so it never bleeds through translucent card before swiping)
+        // Revealed Red Delete Button
         if (isRevealed || animatedOffsetPx < -1f) {
-            val swipeProgress = (kotlin.math.abs(animatedOffsetPx) / maxSwipePx).coerceIn(0f, 1f)
+            val swipeProgress = (abs(animatedOffsetPx) / maxSwipePx).coerceIn(0f, 1f)
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .graphicsLayer {
-                        alpha = swipeProgress
-                    }
-                    .clip(RoundedCornerShape(20.dp)),
+                    .graphicsLayer { alpha = swipeProgress }
+                    .clip(RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Box(
                     modifier = Modifier
                         .width(maxSwipeDp)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFFEF4444))
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFDC2626))
                         .clickable {
                             isRevealed = false
                             onDelete()
@@ -759,12 +739,12 @@ fun AccountCardItem(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "删除",
                             tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "删除",
-                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
@@ -801,10 +781,12 @@ fun AccountCardItem(
                     )
                 }
         ) {
-            GlassCard(
-                shape = RoundedCornerShape(20.dp),
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(itemBg)
+                    .border(1.dp, dividerColor, RoundedCornerShape(16.dp))
                     .clickable {
                         if (isRevealed) {
                             isRevealed = false
@@ -812,85 +794,85 @@ fun AccountCardItem(
                             onEdit()
                         }
                     }
+                    .padding(14.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Colored Brand/Type Icon Bubble
+                    // Vintage Stamp Icon Bubble
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(accountColor.copy(alpha = if (bgConfig.isLight) 0.15f else 0.22f))
-                            .border(1.dp, accountColor.copy(alpha = 0.6f), RoundedCornerShape(14.dp)),
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accountColor.copy(alpha = 0.14f))
+                            .border(1.dp, accountColor.copy(alpha = 0.45f), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = typeIcon,
                             contentDescription = account.name,
                             tint = accountColor,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
                     // Account Details
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = account.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = bgConfig.textPrimary
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = inkPrimary
                             )
                             if (account.cardSuffix.isNotBlank()) {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "(${account.cardSuffix})",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = bgConfig.textTertiary
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.5.sp,
+                                    color = inkMuted
                                 )
                             }
                         }
 
                         Spacer(modifier = Modifier.height(3.dp))
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = typeName,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = accountColor
-                            )
-                        }
+                        Text(
+                            text = typeName,
+                            fontSize = 11.5.sp,
+                            color = inkSecondary
+                        )
                     }
 
-                    // Balance & Edit Action
+                    // Balance Display (Monospace)
                     Column(horizontalAlignment = Alignment.End) {
                         val isNegative = account.balance < 0
+                        val balanceCents = AmountFormatter.yuanToCents(abs(account.balance))
+                        val formattedBalance = AmountFormatter.formatCentsAsYuan(balanceCents)
+
                         Text(
-                            text = "¥ ${String.format(Locale.CHINA, "%,.2f", account.balance)}",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            ),
-                            color = if (isNegative) GlowPink else bgConfig.textPrimary
+                            text = "${if (isNegative) "-" else ""}¥$formattedBalance",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 16.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isNegative) debtRed else inkPrimary
                         )
 
                         Spacer(modifier = Modifier.height(2.dp))
 
                         IconButton(
                             onClick = onEdit,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(26.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = "编辑账户",
-                                tint = bgConfig.textTertiary,
-                                modifier = Modifier.size(15.dp)
+                                tint = inkMuted,
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
@@ -902,12 +884,37 @@ fun AccountCardItem(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddOrEditAccountDialog(
+fun EditorialAddOrEditAccountDialog(
     accountToEdit: AccountEntity?,
+    canvasBg: Color,
+    dividerColor: Color,
+    inkPrimary: Color,
+    inkSecondary: Color,
+    inkMuted: Color,
+    clayAccent: Color,
+    forestGreen: Color,
+    debtRed: Color,
     onDismiss: () -> Unit,
     onConfirm: (name: String, type: String, balance: Double, suffix: String, color: String, saveAsMissedRecord: Boolean, oldBalance: Double) -> Unit
 ) {
-    val bgConfig = LocalAppBackgroundConfig.current
+    var isDismissing by remember { mutableStateOf(false) }
+    val animProgress by animateFloatAsState(
+        targetValue = if (isDismissing) 0f else 1f,
+        animationSpec = if (isDismissing) tween(160) else tween(220),
+        label = "account_dialog_anim",
+        finishedListener = { value ->
+            if (value == 0f && isDismissing) {
+                onDismiss()
+            }
+        }
+    )
+
+    val dialogScale by animateFloatAsState(
+        targetValue = if (isDismissing) 0.90f else 1f,
+        animationSpec = if (isDismissing) tween(160) else spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+        label = "account_dialog_scale"
+    )
+
     var nameInput by remember { mutableStateOf(accountToEdit?.name ?: "") }
     var balanceInput by remember { mutableStateOf(if (accountToEdit != null) accountToEdit.balance.toString() else "0.0") }
     var suffixInput by remember { mutableStateOf(accountToEdit?.cardSuffix ?: "") }
@@ -915,13 +922,13 @@ fun AddOrEditAccountDialog(
     val originalBalance = remember(accountToEdit) { accountToEdit?.balance ?: 0.0 }
     val currentBalanceParsed = balanceInput.toDoubleOrNull()
     val balanceDiff = if (currentBalanceParsed != null && accountToEdit != null) currentBalanceParsed - originalBalance else 0.0
-    val hasBalanceChanged = accountToEdit != null && kotlin.math.abs(balanceDiff) > 0.001
+    val hasBalanceChanged = accountToEdit != null && abs(balanceDiff) > 0.001
     var saveAsMissedRecord by remember { mutableStateOf(true) }
 
     val accountTypes = listOf(
         "WECHAT" to "微信钱包",
         "ALIPAY" to "支付宝",
-        "BANK_CARD" to "银行储蓄卡",
+        "BANK_CARD" to "储蓄卡",
         "CREDIT_CARD" to "信用卡",
         "CASH" to "现金零钱",
         "INVESTMENT" to "投资理财",
@@ -933,306 +940,345 @@ fun AddOrEditAccountDialog(
     }
 
     val presetColors = listOf(
-        "#07C160", "#1677FF", "#E60012", "#8B5CF6", "#F59E0B", "#EC4899", "#06B6D4", "#64748B"
+        "#07C160", "#1677FF", "#E60012", "#C4623D", "#8B5CF6", "#F59E0B", "#06B6D4", "#52525B"
     )
 
     var selectedColor by remember {
         mutableStateOf(accountToEdit?.colorHex ?: "#1677FF")
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        GlassCard(
-            shape = RoundedCornerShape(26.dp),
-            backgroundColor = bgConfig.dialogBackground,
+    BackHandler {
+        if (!isDismissing) isDismissing = true
+    }
+
+    Dialog(
+        onDismissRequest = {
+            if (!isDismissing) isDismissing = true
+        },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp)
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f * animProgress))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    if (!isDismissing) isDismissing = true
+                },
+            contentAlignment = Alignment.Center
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .padding(22.dp)
-                    .verticalScroll(rememberScrollState())
+                    .fillMaxWidth(0.88f)
+                    .graphicsLayer {
+                        scaleX = dialogScale
+                        scaleY = dialogScale
+                        alpha = animProgress
+                    }
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(canvasBg)
+                    .border(1.dp, dividerColor, RoundedCornerShape(20.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { /* 阻止冒泡 */ }
+                    .padding(20.dp)
             ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (accountToEdit == null) "添加新账户" else "编辑账户信息",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = bgConfig.textPrimary
-                    )
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "关闭",
-                            tint = bgConfig.textSecondary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Account Name
-                OutlinedTextField(
-                    value = nameInput,
-                    onValueChange = { nameInput = it },
-                    label = { Text("账户名称", color = bgConfig.textSecondary) },
-                    placeholder = { Text("如：招商银行卡、微信零钱通", color = bgConfig.textTertiary) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = bgConfig.textPrimary,
-                        unfocusedTextColor = bgConfig.textPrimary,
-                        focusedContainerColor = bgConfig.inputFieldBg,
-                        unfocusedContainerColor = bgConfig.inputFieldBg,
-                        focusedBorderColor = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan,
-                        unfocusedBorderColor = bgConfig.inputFieldBorder,
-                        cursorColor = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("account_name_input")
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Current Balance（v2 语义：此处输入的是基准余额 initial_balance，实时余额由交易派生）
-                OutlinedTextField(
-                    value = balanceInput,
-                    onValueChange = { balanceInput = it },
-                    label = { Text("基准余额 (¥)", color = bgConfig.textSecondary) },
-                    placeholder = { Text("0.00 (负数代表信用卡已透支)", color = bgConfig.textTertiary) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = bgConfig.textPrimary,
-                        unfocusedTextColor = bgConfig.textPrimary,
-                        focusedContainerColor = bgConfig.inputFieldBg,
-                        unfocusedContainerColor = bgConfig.inputFieldBg,
-                        focusedBorderColor = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald,
-                        unfocusedBorderColor = bgConfig.inputFieldBorder,
-                        cursorColor = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("account_balance_input")
-                )
-
-                // Option: Save as Missed Transaction ("保存为漏记款")
-                if (hasBalanceChanged) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    val isIncome = balanceDiff > 0
-                    val absDiff = kotlin.math.abs(balanceDiff)
-                    
-                    GlassCard(
-                        shape = RoundedCornerShape(16.dp),
-                        backgroundColor = if (bgConfig.isLight) Color(0xFFF1F5F9).copy(alpha = 0.9f) else Color.White.copy(alpha = 0.08f),
-                        borderColor = if (saveAsMissedRecord) {
-                            if (isIncome) SolidColor(if (bgConfig.isLight) Color(0xFF10B981).copy(alpha = 0.5f) else GlowEmerald.copy(alpha = 0.6f))
-                            else SolidColor(if (bgConfig.isLight) Color(0xFFF43F5E).copy(alpha = 0.5f) else GlowPink.copy(alpha = 0.6f))
-                        } else null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { saveAsMissedRecord = !saveAsMissedRecord }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = saveAsMissedRecord,
-                                onCheckedChange = { saveAsMissedRecord = it },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = if (isIncome) (if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald) else (if (bgConfig.isLight) Color(0xFFE11D48) else GlowPink),
-                                    uncheckedColor = bgConfig.textTertiary,
-                                    checkmarkColor = Color.White
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = "保存为漏记款",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = bgConfig.textPrimary
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(
-                                                if (isIncome)
-                                                    (if (bgConfig.isLight) Color(0xFFDCFCE7) else Color(0xFF065F46))
-                                                else
-                                                    (if (bgConfig.isLight) Color(0xFFFEE2E2) else Color(0xFF991B1B))
-                                            )
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = if (isIncome) "+¥${String.format(Locale.CHINA, "%.2f", absDiff)} 收入" else "-¥${String.format(Locale.CHINA, "%.2f", absDiff)} 支出",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isIncome)
-                                                (if (bgConfig.isLight) Color(0xFF166534) else Color(0xFF6EE7B7))
-                                            else
-                                                (if (bgConfig.isLight) Color(0xFF991B1B) else Color(0xFFFCA5A5))
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = if (isIncome)
-                                        "勾选后将自动在明细中生成一笔 ¥${String.format(Locale.CHINA, "%.2f", absDiff)} 的【漏记款】收入记录"
-                                    else
-                                        "勾选后将自动在明细中生成一笔 ¥${String.format(Locale.CHINA, "%.2f", absDiff)} 的【漏记款】支出记录",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                    color = bgConfig.textSecondary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Account Type Chips
-                Text(
-                    text = "账户类型",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = bgConfig.textSecondary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // 账户类型 Chip：条目固定有限，改用 FlowRow 平铺换行，
-                // 消除外层可滚动 Column 内嵌套 Lazy 横向滚动容器的嵌套滚动反模式
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    accountTypes.forEach { (typeKey, typeLabel) ->
-                        val isSelected = selectedType == typeKey
-                        GlassChip(
-                            selected = isSelected,
-                            onClick = { selectedType = typeKey },
-                            selectedGlowColor = GlowViolet
-                        ) {
-                            Text(
-                                text = typeLabel,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) GlowViolet else bgConfig.textSecondary,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Color Theme Selector
-                Text(
-                    text = "账户卡片配色",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = bgConfig.textSecondary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    presetColors.forEach { hex ->
-                        val color = Color(android.graphics.Color.parseColor(hex))
-                        val isSelected = selectedColor == hex
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .border(
-                                    width = if (isSelected) 2.5.dp else 1.dp,
-                                    color = if (isSelected) Color.White else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable { selectedColor = hex },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isSelected) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .background(Color.White, CircleShape)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Card Suffix: Only shown if selectedType is BANK_CARD or CREDIT_CARD
-                if (selectedType == "BANK_CARD" || selectedType == "CREDIT_CARD") {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = suffixInput,
-                        onValueChange = { suffixInput = it },
-                        label = { Text("卡号尾号 (选填)", color = bgConfig.textSecondary) },
-                        placeholder = { Text("如：8899", color = bgConfig.textTertiary) },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = bgConfig.textPrimary,
-                            unfocusedTextColor = bgConfig.textPrimary,
-                            focusedContainerColor = bgConfig.inputFieldBg,
-                            unfocusedContainerColor = bgConfig.inputFieldBg,
-                            focusedBorderColor = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan,
-                            unfocusedBorderColor = bgConfig.inputFieldBorder,
-                            cursorColor = if (bgConfig.isLight) Color(0xFF6366F1) else GlowCyan
-                        ),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth().testTag("account_suffix_input")
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Confirm button
-                val isValid = nameInput.isNotBlank() && balanceInput.toDoubleOrNull() != null
-                Button(
-                    onClick = {
-                        val balance = balanceInput.toDoubleOrNull() ?: 0.0
-                        val finalSuffix = if (selectedType == "BANK_CARD" || selectedType == "CREDIT_CARD") suffixInput.trim() else ""
-                        onConfirm(
-                            nameInput.trim(),
-                            selectedType,
-                            balance,
-                            finalSuffix,
-                            selectedColor,
-                            saveAsMissedRecord && hasBalanceChanged,
-                            originalBalance
-                        )
-                    },
-                    enabled = isValid,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF6366F1),
-                        disabledContainerColor = if (bgConfig.isLight) Color(0xFFE2E8F0) else Color.White.copy(alpha = 0.12f)
-                    ),
-                    shape = RoundedCornerShape(14.dp),
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .testTag("save_account_button")
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Text(
-                        text = if (accountToEdit == null) "保存新账户" else "更新账户信息",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (accountToEdit == null) "添加新账户" else "编辑账户信息",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = inkPrimary
+                        )
+                        IconButton(
+                            onClick = { if (!isDismissing) isDismissing = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "关闭",
+                                tint = inkMuted,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Account Name
+                    OutlinedTextField(
+                        value = nameInput,
+                        onValueChange = { nameInput = it },
+                        label = { Text("账户名称", color = inkSecondary, fontSize = 13.sp) },
+                        placeholder = { Text("如：招商银行卡、微信零钱", color = inkMuted, fontSize = 13.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = inkPrimary,
+                            unfocusedTextColor = inkPrimary,
+                            focusedContainerColor = dividerColor.copy(alpha = 0.25f),
+                            unfocusedContainerColor = dividerColor.copy(alpha = 0.15f),
+                            focusedBorderColor = clayAccent,
+                            unfocusedBorderColor = dividerColor,
+                            cursorColor = clayAccent
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("account_name_input")
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Current Balance
+                    OutlinedTextField(
+                        value = balanceInput,
+                        onValueChange = { balanceInput = it },
+                        label = { Text("基准余额 (¥)", color = inkSecondary, fontSize = 13.sp) },
+                        placeholder = { Text("0.00 (负数代表信用卡已透支)", color = inkMuted, fontSize = 13.sp) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = inkPrimary,
+                            unfocusedTextColor = inkPrimary,
+                            focusedContainerColor = dividerColor.copy(alpha = 0.25f),
+                            unfocusedContainerColor = dividerColor.copy(alpha = 0.15f),
+                            focusedBorderColor = forestGreen,
+                            unfocusedBorderColor = dividerColor,
+                            cursorColor = forestGreen
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("account_balance_input")
+                    )
+
+                    // Option: Save as Missed Transaction
+                    if (hasBalanceChanged) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        val isIncome = balanceDiff > 0
+                        val absDiff = abs(balanceDiff)
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(dividerColor.copy(alpha = 0.35f))
+                                .border(
+                                    1.dp,
+                                    if (saveAsMissedRecord) (if (isIncome) forestGreen.copy(alpha = 0.5f) else debtRed.copy(alpha = 0.5f)) else dividerColor,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable { saveAsMissedRecord = !saveAsMissedRecord }
+                                .padding(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = saveAsMissedRecord,
+                                    onCheckedChange = { saveAsMissedRecord = it },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = if (isIncome) forestGreen else debtRed,
+                                        uncheckedColor = inkMuted,
+                                        checkmarkColor = Color.White
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "保存为漏记款",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = inkPrimary
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(
+                                                    if (isIncome) forestGreen.copy(alpha = 0.15f) else debtRed.copy(alpha = 0.15f)
+                                                )
+                                                .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                                        ) {
+                                            Text(
+                                                text = if (isIncome) "+¥${String.format(Locale.CHINA, "%.2f", absDiff)}" else "-¥${String.format(Locale.CHINA, "%.2f", absDiff)}",
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isIncome) forestGreen else debtRed
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (isIncome) "自动生成一笔【漏记款】收入" else "自动生成一笔【漏记款】支出",
+                                        fontSize = 11.sp,
+                                        color = inkMuted
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Account Type Chips
+                    Text(
+                        text = "账户类型",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = inkSecondary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        accountTypes.forEach { (typeKey, typeLabel) ->
+                            val isSelected = selectedType == typeKey
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (isSelected) clayAccent.copy(alpha = 0.15f) else dividerColor.copy(alpha = 0.3f)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) clayAccent else Color.Transparent,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { selectedType = typeKey }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = typeLabel,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) clayAccent else inkSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Color Theme Selector
+                    Text(
+                        text = "账户卡片配色",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = inkSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        presetColors.forEach { hex ->
+                            val color = Color(android.graphics.Color.parseColor(hex))
+                            val isSelected = selectedColor == hex
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .border(
+                                        width = if (isSelected) 2.5.dp else 1.dp,
+                                        color = if (isSelected) inkPrimary else Color.Transparent,
+                                        shape = CircleShape
+                                    )
+                                    .clickable { selectedColor = hex },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .background(Color.White, CircleShape)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Card Suffix
+                    if (selectedType == "BANK_CARD" || selectedType == "CREDIT_CARD") {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = suffixInput,
+                            onValueChange = { suffixInput = it },
+                            label = { Text("卡号尾号 (选填)", color = inkSecondary, fontSize = 13.sp) },
+                            placeholder = { Text("如：8899", color = inkMuted, fontSize = 13.sp) },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = inkPrimary,
+                                unfocusedTextColor = inkPrimary,
+                                focusedContainerColor = dividerColor.copy(alpha = 0.25f),
+                                unfocusedContainerColor = dividerColor.copy(alpha = 0.15f),
+                                focusedBorderColor = clayAccent,
+                                unfocusedBorderColor = dividerColor,
+                                cursorColor = clayAccent
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().testTag("account_suffix_input")
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // Confirm button
+                    val isValid = nameInput.isNotBlank() && balanceInput.toDoubleOrNull() != null
+                    Button(
+                        onClick = {
+                            val balance = balanceInput.toDoubleOrNull() ?: 0.0
+                            val finalSuffix = if (selectedType == "BANK_CARD" || selectedType == "CREDIT_CARD") suffixInput.trim() else ""
+                            onConfirm(
+                                nameInput.trim(),
+                                selectedType,
+                                balance,
+                                finalSuffix,
+                                selectedColor,
+                                saveAsMissedRecord && hasBalanceChanged,
+                                originalBalance
+                            )
+                        },
+                        enabled = isValid,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = clayAccent,
+                            disabledContainerColor = dividerColor
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .testTag("save_account_button")
+                    ) {
+                        Text(
+                            text = if (accountToEdit == null) "保存新账户" else "更新账户信息",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
@@ -1264,24 +1310,27 @@ fun getAccountTypeName(type: String): String {
 }
 
 /**
- * Asset Trend Mini Sparkline Chart for the Zero-Debt Asset Header Card with Animation & Interactive Scrubbing
+ * Editorial Asset Trend Bezier Chart with Interactive Scrubbing
  */
 @Composable
-fun AssetTrendMiniChart(
+fun EditorialAssetTrendChart(
     historyPoints: List<AssetHistoryPoint>,
     isLight: Boolean,
+    inkPrimary: Color,
+    inkMuted: Color,
+    accentColor: Color,
     modifier: Modifier = Modifier
 ) {
     if (historyPoints.isEmpty()) return
 
-    val animProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+    val animProgress = remember { Animatable(0f) }
     LaunchedEffect(historyPoints) {
         animProgress.snapTo(0f)
         animProgress.animateTo(
             targetValue = 1f,
-            animationSpec = androidx.compose.animation.core.tween(
-                durationMillis = 900,
-                easing = androidx.compose.animation.core.FastOutSlowInEasing
+            animationSpec = tween(
+                durationMillis = 800,
+                easing = FastOutSlowInEasing
             )
         )
     }
@@ -1302,6 +1351,7 @@ fun AssetTrendMiniChart(
     Column(modifier = modifier) {
         if (selectedIndex != null && selectedIndex in historyPoints.indices) {
             val point = historyPoints[selectedIndex!!]
+            val pointCents = AmountFormatter.yuanToCents(point.value)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1311,15 +1361,17 @@ fun AssetTrendMiniChart(
             ) {
                 Text(
                     text = "时点: ${point.label}",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = if (isLight) Color(0xFF4F46E5) else GlowCyan,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                    color = accentColor,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "净资产: ¥${String.format(Locale.CHINA, "%,.2f", point.value)}",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = if (isLight) Color(0xFF1E293B) else Color.White,
-                    fontWeight = FontWeight.ExtraBold
+                    text = "净资产: ¥${AmountFormatter.formatCentsAsYuan(pointCents)}",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                    color = inkPrimary,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -1368,7 +1420,7 @@ fun AssetTrendMiniChart(
                     Offset(x, y)
                 }
 
-                // Draw Area Gradient under curve
+                // Gradient Area Fill under Bezier curve
                 val fillPath = Path().apply {
                     moveTo(0f, height)
                     lineTo(coords.first().x, coords.first().y)
@@ -1387,13 +1439,13 @@ fun AssetTrendMiniChart(
                     path = fillPath,
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            (if (isLight) Color(0xFF6366F1) else GlowCyan).copy(alpha = 0.25f * progress),
+                            accentColor.copy(alpha = 0.22f * progress),
                             Color.Transparent
                         )
                     )
                 )
 
-                // Draw Smooth Bezier Line
+                // Smooth Bezier Line
                 val strokePath = Path().apply {
                     moveTo(coords.first().x, coords.first().y)
                     for (i in 0 until coords.size - 1) {
@@ -1407,38 +1459,36 @@ fun AssetTrendMiniChart(
 
                 drawPath(
                     path = strokePath,
-                    color = if (isLight) Color(0xFF4F46E5) else GlowCyan,
-                    style = Stroke(width = 2.5.dp.toPx())
+                    color = accentColor,
+                    style = Stroke(width = 2.dp.toPx())
                 )
 
-                // Draw Point Markers
+                // Point Markers
                 coords.forEachIndexed { index, coord ->
                     val isLast = index == coords.size - 1
                     val isSelected = selectedIndex == index
-                    val pointRadius = if (isSelected) 6.dp.toPx() else if (isLast) 4.5.dp.toPx() else 2.5.dp.toPx()
+                    val pointRadius = if (isSelected) 5.dp.toPx() else if (isLast) 4.dp.toPx() else 2.dp.toPx()
 
                     drawCircle(
-                        color = if (isSelected) (if (isLight) Color(0xFF4338CA) else Color.White)
-                                else if (isLast) (if (isLight) Color(0xFF4338CA) else Color.White)
-                                else (if (isLight) Color(0xFF818CF8) else GlowCyan),
+                        color = if (isSelected || isLast) accentColor else accentColor.copy(alpha = 0.6f),
                         radius = pointRadius,
                         center = coord
                     )
                     if (isLast || isSelected) {
                         drawCircle(
-                            color = (if (isLight) Color(0xFF4F46E5) else GlowCyan).copy(alpha = 0.4f * progress),
-                            radius = (if (isSelected) 10.dp else 8.dp).toPx(),
+                            color = accentColor.copy(alpha = 0.25f * progress),
+                            radius = (if (isSelected) 8.dp else 6.5.dp).toPx(),
                             center = coord
                         )
                     }
                 }
 
-                // If selected, draw vertical indicator line
+                // Vertical Scrubbing Line
                 selectedIndex?.let { selIdx ->
                     if (selIdx in coords.indices) {
                         val selCoord = coords[selIdx]
                         drawLine(
-                            color = (if (isLight) Color(0xFF4F46E5) else GlowCyan).copy(alpha = 0.6f),
+                            color = accentColor.copy(alpha = 0.5f),
                             start = Offset(selCoord.x, 0f),
                             end = Offset(selCoord.x, height),
                             strokeWidth = 1.dp.toPx()
@@ -1448,7 +1498,7 @@ fun AssetTrendMiniChart(
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
 
         // Month Labels Row
         val step = if (historyPoints.size > 8) (historyPoints.size / 6).coerceAtLeast(1) else 1
@@ -1463,11 +1513,10 @@ fun AssetTrendMiniChart(
                 if (isSampled) {
                     Text(
                         text = item.label,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 9.sp,
-                            fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal
-                        ),
-                        color = if (isLast) (if (isLight) Color(0xFF4F46E5) else GlowCyan) else (if (isLight) Color(0xFF94A3B8) else Color.White.copy(alpha = 0.4f))
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 9.sp,
+                        fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isLast) accentColor else inkMuted
                     )
                 }
             }
