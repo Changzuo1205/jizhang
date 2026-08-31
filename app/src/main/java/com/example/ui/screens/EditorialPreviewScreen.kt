@@ -97,6 +97,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.abs
 
 /**
@@ -110,6 +111,21 @@ data class DayAggregate(
     val incomeSum: Double,
     val expenseSum: Double,
     val hasRecords: Boolean
+)
+
+@Immutable
+data class WeekDayItem(
+    val dayNum: Int,
+    val timeInMillis: Long,
+    val isToday: Boolean,
+    val hasRecord: Boolean
+)
+
+@Immutable
+data class DayExpenseGroup(
+    val dateHeader: String,
+    val totalExpense: Double,
+    val expenses: List<ExpenseEntity>
 )
 
 @Immutable
@@ -388,6 +404,45 @@ fun EditorialPreviewScreen(
 
     var expenseForActionDialog by remember { mutableStateOf<ExpenseEntity?>(null) }
 
+    // 预计算本周 7 天数据（O(1) 仅在 allExpenses 变动时计算一次，滑动时为 0 开销）
+    val weekDaysData = remember(allExpenses) {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val todayMillis = cal.timeInMillis
+        val todayDow = cal.get(Calendar.DAY_OF_WEEK)
+        val daysFromMonday = if (todayDow == Calendar.SUNDAY) 6 else todayDow - Calendar.MONDAY
+        cal.add(Calendar.DAY_OF_YEAR, -daysFromMonday)
+
+        val weekStart = cal.timeInMillis
+        val weekEnd = weekStart + 7 * 86400000L
+
+        val hasRecords = BooleanArray(7)
+        for (exp in allExpenses) {
+            if (exp.dateTimestamp in weekStart until weekEnd) {
+                val dayIdx = ((exp.dateTimestamp - weekStart) / 86400000L).toInt()
+                if (dayIdx in 0..6) {
+                    hasRecords[dayIdx] = true
+                }
+            }
+        }
+
+        (0..6).map { i ->
+            val dayTime = weekStart + i * 86400000L
+            cal.timeInMillis = dayTime
+            val dayNum = cal.get(Calendar.DAY_OF_MONTH)
+            WeekDayItem(
+                dayNum = dayNum,
+                timeInMillis = dayTime,
+                isToday = (dayTime == todayMillis),
+                hasRecord = hasRecords[i]
+            )
+        }
+    }
+
     // 下方明细：
     // 1. 展开日历时未选中日期则默认显示当前日历展示月份的全部明细，若选中日期则显示所选日期明细；
     // 2. 收拢日历时若未选日期则默认展示本周记录，若选中日期则展示所选日期明细。
@@ -431,6 +486,26 @@ fun EditorialPreviewScreen(
             val weekEnd = weekStart + 7 * 86400000L
 
             allExpenses.filter { it.dateTimestamp in weekStart until weekEnd }
+        }
+    }
+
+    // 预聚合按天分组明细（O(1) 仅在 displayedExpenses 变动时计算一次，滑动时为 0 开销）
+    val groupedExpenses = remember(displayedExpenses) {
+        val sdf = SimpleDateFormat("yyyy.MM.dd · EEEE", Locale.CHINESE)
+        displayedExpenses.groupBy {
+            sdf.format(Date(it.dateTimestamp))
+        }.map { (dateHeader, itemsInDay) ->
+            var daySum = 0.0
+            for (item in itemsInDay) {
+                if (item.type == "EXPENSE") {
+                    daySum += item.amount
+                }
+            }
+            DayExpenseGroup(
+                dateHeader = dateHeader,
+                totalExpense = daySum,
+                expenses = itemsInDay
+            )
         }
     }
 
@@ -569,7 +644,7 @@ fun EditorialPreviewScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // 2.1 融合版 Hero Section (带进场级联动画 & 滑动平滑动画过渡)
-                item {
+                item(key = "hero_section") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -603,7 +678,7 @@ fun EditorialPreviewScreen(
                 }
 
                 // 2.2 日历标尺组件（带进场级联动画 & 预渲染左右两侧视图）
-                item {
+                item(key = "calendar_ruler") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -613,7 +688,7 @@ fun EditorialPreviewScreen(
                             }
                     ) {
                         JournalDateRuler(
-                            allExpenses = allExpenses,
+                            weekDaysData = weekDaysData,
                             selectedDateMillis = selectedDateMillis,
                             isExpanded = isCalendarExpanded,
                             onToggleExpand = { onCalendarExpandedChange(!isCalendarExpanded) },
@@ -633,7 +708,7 @@ fun EditorialPreviewScreen(
 
                 // 2.3 过滤状态提示条（选中日期或展开日历时展示）
                 if (selectedDateMillis != null || isCalendarExpanded) {
-                    item {
+                    item(key = "filter_header") {
                         val headerLabel: String
                         val totalAmount = displayedExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
                         val totalStr = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(totalAmount))
@@ -703,7 +778,7 @@ fun EditorialPreviewScreen(
 
                 // 2.4 流水明细区域 (带进场级联动画)
                 if (displayedExpenses.isEmpty()) {
-                    item {
+                    item(key = "empty_state") {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -735,11 +810,8 @@ fun EditorialPreviewScreen(
                         }
                     }
                 } else {
-                    val grouped = displayedExpenses.groupBy {
-                        SimpleDateFormat("yyyy.MM.dd · EEEE", Locale.CHINESE).format(Date(it.dateTimestamp))
-                    }
-                    grouped.forEach { (dateHeader, itemsInDay) ->
-                        item(key = "j_header_$dateHeader") {
+                    groupedExpenses.forEach { group ->
+                        item(key = "j_header_${group.dateHeader}") {
                             Row(
                                 modifier = Modifier
                                     .animateItem(
@@ -757,17 +829,16 @@ fun EditorialPreviewScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = dateHeader,
+                                    text = group.dateHeader,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = inkMuted,
                                     letterSpacing = 0.8.sp
                                 )
-                                val daySum = itemsInDay.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-                                if (daySum > 0) {
+                                if (group.totalExpense > 0) {
                                     Text(
-                                        text = "小计 ¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(daySum))}",
+                                        text = "小计 ¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(group.totalExpense))}",
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 10.5.sp,
                                         color = inkMuted
@@ -775,7 +846,7 @@ fun EditorialPreviewScreen(
                                 }
                             }
                         }
-                        items(itemsInDay, key = { "j_${it.id}" }) { expense ->
+                        items(group.expenses, key = { "j_${it.id}" }) { expense ->
                             Box(
                                 modifier = Modifier
                                     .animateItem(
@@ -1244,7 +1315,7 @@ private fun MergedEditorialHeroSection(
 
 @Composable
 private fun JournalDateRuler(
-    allExpenses: List<ExpenseEntity>,
+    weekDaysData: List<WeekDayItem>,
     selectedDateMillis: Long?,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
@@ -1267,9 +1338,7 @@ private fun JournalDateRuler(
     val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing))
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1332,30 +1401,12 @@ private fun JournalDateRuler(
             label = "calendar_expansion"
         ) { expanded ->
             if (!expanded) {
-                val weekDays = remember {
-                    val cal = Calendar.getInstance()
-                    cal.firstDayOfWeek = Calendar.MONDAY
-                    cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                    (0..6).map {
-                        val dayCal = cal.clone() as Calendar
-                        dayCal.add(Calendar.DAY_OF_WEEK, it)
-                        dayCal
-                    }
-                }
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    weekDays.forEach { dayCal ->
-                        val dayNum = dayCal.get(Calendar.DAY_OF_MONTH)
-                        val isToday = isSameDay(dayCal, Calendar.getInstance())
-                        val isSelected = selectedDateMillis != null && isSameDay(dayCal.timeInMillis, selectedDateMillis)
-
-                        val hasRecord = allExpenses.any { exp ->
-                            val expCal = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-                            isSameDay(expCal, dayCal)
-                        }
+                    weekDaysData.forEach { item ->
+                        val isSelected = selectedDateMillis != null && isSameDay(item.timeInMillis, selectedDateMillis)
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1364,17 +1415,17 @@ private fun JournalDateRuler(
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(
                                     if (isSelected) clayAccent.copy(alpha = 0.15f)
-                                    else if (isToday) todayBgColor
+                                    else if (item.isToday) todayBgColor
                                     else Color.Transparent
                                 )
-                                .clickable { onSelectDate(dayCal.timeInMillis) }
+                                .clickable { onSelectDate(item.timeInMillis) }
                                 .padding(vertical = 4.dp)
                         ) {
                             Text(
-                                text = "$dayNum",
+                                text = "${item.dayNum}",
                                 fontSize = 13.5.sp,
                                 fontFamily = FontFamily.Monospace,
-                                fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontWeight = if (item.isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) clayAccent else inkPrimary
                             )
                             Spacer(modifier = Modifier.height(3.dp))
@@ -1382,9 +1433,9 @@ private fun JournalDateRuler(
                                 modifier = Modifier
                                     .size(4.dp)
                                     .clip(CircleShape)
-                                    .background(if (hasRecord) clayAccent else if (isSelected) clayAccent else Color.Transparent)
+                                    .background(if (item.hasRecord) clayAccent else if (isSelected) clayAccent else Color.Transparent)
                             )
-                            if (isToday) {
+                            if (item.isToday) {
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Box(
                                     modifier = Modifier
@@ -1715,14 +1766,11 @@ private fun EditorialMonthGrid(
     }
 }
 
-private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
-    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
-}
-
 private fun isSameDay(time1: Long, time2: Long): Boolean {
-    val cal1 = Calendar.getInstance().apply { timeInMillis = time1 }
-    val cal2 = Calendar.getInstance().apply { timeInMillis = time2 }
-    return isSameDay(cal1, cal2)
+    if (time1 == time2) return true
+    val tz = TimeZone.getDefault()
+    val offset1 = tz.getOffset(time1)
+    val offset2 = tz.getOffset(time2)
+    return (time1 + offset1) / 86400000L == (time2 + offset2) / 86400000L
 }
 
