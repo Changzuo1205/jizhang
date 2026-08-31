@@ -13,25 +13,33 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      # The repository contains gradle-wrapper.properties/jar, but not the
-      # gradlew shell script. Install the exact Gradle version declared by
-      # the wrapper instead of calling ./gradlew.
       - name: Set up Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.3.1"
           cache-provider: basic
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # The Android hosted runner already contains the SDK. The previous
+      # setup-android step unnecessarily installed legacy SDK tools/emulator.
+      - name: Create debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Build Debug APK
         run: gradle :app:assembleDebug --stacktrace
