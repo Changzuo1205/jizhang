@@ -137,14 +137,13 @@ fun BottomNavBar(
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(top = 0.5.dp) // 避开顶部分隔线
-                .height(navBarHeight)
+                .height(80.dp)
         ) {
             Row(modifier = Modifier.fillMaxSize()) {
                 Spacer(modifier = Modifier.weight(2f)) // 跳过前两个
                 Box(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.BottomCenter
                 ) {
                     HomeOrQuickAddButton(
                         isHomeSelected = currentTab == AppTab.HOME,
@@ -187,10 +186,10 @@ private fun QuickAddButtonContent(onQuickAdd: () -> Unit) {
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Bottom,
         modifier = Modifier
             .fillMaxSize()
-            .offset(y = (-14).dp)
+            .padding(bottom = 8.dp)
             .pressScale(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
@@ -227,7 +226,7 @@ private fun QuickAddButtonContent(onQuickAdd: () -> Unit) {
                 )
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = "记一笔",
             fontSize = 10.sp,
@@ -243,9 +242,10 @@ private fun HomeButtonContent(onNavigateHome: () -> Unit) {
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Bottom,
         modifier = Modifier
             .fillMaxSize()
+            .padding(bottom = 10.dp)
             .pressScale(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
@@ -259,7 +259,7 @@ private fun HomeButtonContent(onNavigateHome: () -> Unit) {
             tint = Color(0xFF8A8270),
             modifier = Modifier.size(24.dp)
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = "首页",
             fontSize = 10.sp,
@@ -304,7 +304,7 @@ private fun NavItem(
             tint = iconColor,
             modifier = Modifier.size(24.dp)
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = title,
             fontSize = 10.sp,
