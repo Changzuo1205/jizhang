@@ -31,15 +31,28 @@ data class ExpenseEntity(
     /** 业务唯一标识（v2 CSV 导出用；由映射层从 TransactionEntity.uuid 回填） */
     val uuid: String = ""
 ) {
-    /** 显示用分类名称（处理空值和未分类情况） */
-    val displayCategory: String get() = category.takeIf { it.isNotBlank() } ?: "未分类"
+    /** 显示用分类名称（处理空值和未分类情况，转账类型规范返回“转账”） */
+    val displayCategory: String get() = when {
+        type.equals("TRANSFER", ignoreCase = true) -> if (category.isNotBlank() && category != "未分类") category else "转账"
+        category.isNotBlank() -> category
+        else -> "未分类"
+    }
     
     /** 显示用子分类名称（处理空值情况） */
-    val displaySubCategory: String get() = subCategory.takeIf { it.isNotBlank() } ?: ""
+    val displaySubCategory: String get() = when {
+        type.equals("TRANSFER", ignoreCase = true) -> if (subCategory.isNotBlank() && subCategory != "未分类") subCategory else "转账"
+        subCategory.isNotBlank() -> subCategory
+        else -> ""
+    }
     
     /** 完整分类路径显示（主分类 > 子分类） */
     val fullCategoryPath: String get() = when {
-        displaySubCategory.isNotBlank() -> "$displayCategory > $displaySubCategory"
+        type.equals("TRANSFER", ignoreCase = true) -> {
+            val from = accountName.ifBlank { "账户" }
+            val to = transferToAccountName.ifBlank { "账户" }
+            "转账 ($from ➔ $to)"
+        }
+        displaySubCategory.isNotBlank() && displaySubCategory != displayCategory -> "$displayCategory > $displaySubCategory"
         else -> displayCategory
     }
 }

@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
                 onDispose { }
             }
 
-            MyApplicationTheme {
+            MyApplicationTheme(darkTheme = !bgConfig.isLight) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     MainScreen(viewModel = viewModel)
                 }

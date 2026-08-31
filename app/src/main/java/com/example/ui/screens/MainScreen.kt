@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -143,12 +144,18 @@ fun MainScreen(
         LocalAppFontScale provides fontScale,
         LocalAppBackgroundConfig provides backgroundConfig
     ) {
+        val animatedSurfaceColor by animateColorAsState(
+            targetValue = if (backgroundConfig.isLight) Color(0xFFFAFAF7) else Color(0xFF242E24),
+            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+            label = "SurfaceBackgroundAnim"
+        )
+
         MaterialTheme(
             typography = scaledTypography
         ) {
             Surface(
                 modifier = modifier.fillMaxSize(),
-                color = if (backgroundConfig.isLight) Color(0xFFF6F8FC) else Color(0xFF090D16)
+                color = animatedSurfaceColor
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     AnimatedContent(
@@ -399,25 +406,16 @@ private fun MainScreenContent(
                             onOpenBudgetSettings = { onActiveSubScreenChange(ActiveSubScreen.BUDGET_SETTINGS) },
                             onOpenAddExpense = { onOpenAddExpenseWithItem(null, null) },
                             onEditExpense = { exp -> onOpenAddExpenseWithItem(exp.dateTimestamp, exp) },
+                            onDeleteExpense = { viewModel.deleteExpense(it) },
                             selectedDateMillis = homeSelectedDateMillis,
                             onSelectedDateChange = { homeSelectedDateMillis = it },
                             isCalendarExpanded = homeIsCalendarExpanded,
                             onCalendarExpandedChange = { homeIsCalendarExpanded = it },
                             pagerState = homePagerState,
-                            forceDarkPreview = homeForceDarkPreview,
-                            onForceDarkPreviewChange = { homeForceDarkPreview = it },
+                            forceDarkPreview = !backgroundConfig.isLight,
+                            onForceDarkPreviewChange = { isDark -> viewModel.toggleThemeMode(isDark ?: false) },
                             playEntranceAnimation = !homeEntranceAnimationPlayed,
                             onEntranceAnimationPlayed = { homeEntranceAnimationPlayed = true }
-                        )
-                        AppTab.DESIGN -> EditorialAccountsDesignPreviewScreen(
-                            realAccounts = accounts,
-                            realExpenses = allExpenses,
-                            realTotalNetAssets = totalNetAssets,
-                            realTotalPositiveAssets = totalPositiveAssets,
-                            realTotalDebts = totalDebts,
-                            onAddAccount = { name, type, balance, suffix, color, note -> viewModel.addAccount(name, type, balance, suffix, color, note) },
-                            onUpdateAccount = { account, saveAsMissedRecord, oldBalance -> viewModel.updateAccount(account, saveAsMissedRecord, oldBalance) },
-                            onDeleteAccount = { viewModel.deleteAccount(it) }
                         )
                         AppTab.ACCOUNTS -> AccountsScreen(
                             accounts = accounts,
@@ -429,14 +427,12 @@ private fun MainScreenContent(
                             onUpdateAccount = { account, saveAsMissedRecord, oldBalance -> viewModel.updateAccount(account, saveAsMissedRecord, oldBalance) },
                             onDeleteAccount = { viewModel.deleteAccount(it) }
                         )
-                        AppTab.REPORTS -> ReportsScreen(
+                        AppTab.REPORTS -> FinancialReportScreen(
+                            accounts = accounts,
                             expenses = allExpenses,
-                            categoryStats = categoryStats,
-                            incomeCategoryStats = incomeCategoryStats,
-                            weekTrendPoints = weekTrendPoints,
-                            monthTrendPoints = monthTrendPoints,
-                            totalExpense = totalExpense,
-                            totalIncome = totalIncome
+                            totalNetAssets = totalNetAssets,
+                            onEditExpense = { exp -> onOpenAddExpenseWithItem(exp.dateTimestamp, exp) },
+                            onDeleteExpense = { viewModel.deleteExpense(it) }
                         )
                         AppTab.MINE -> MineScreen(
                             expenses = allExpenses,

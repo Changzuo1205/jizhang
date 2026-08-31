@@ -3,9 +3,12 @@ package com.example.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -152,14 +155,18 @@ fun EditorialPreviewScreen(
     val globalBgConfig = LocalAppBackgroundConfig.current
     val isLight = forceDarkPreview?.let { !it } ?: globalBgConfig.isLight
 
-    // 配色令牌
-    val canvasBg = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
-    val dividerColor = if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637)
-    val inkPrimary = if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7)
-    val inkSecondary = if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA)
-    val inkMuted = if (isLight) Color(0xFF8A8780) else Color(0xFF889689)
+    // 配色令牌（平滑主题过渡）
+    val themeAnimSpec = tween<Color>(durationMillis = 400, easing = FastOutSlowInEasing)
+    val canvasBg by animateColorAsState(if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24), animationSpec = themeAnimSpec, label = "canvasBg")
+    val dividerColor by animateColorAsState(if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637), animationSpec = themeAnimSpec, label = "dividerColor")
+    val inkPrimary by animateColorAsState(if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7), animationSpec = themeAnimSpec, label = "inkPrimary")
+    val inkSecondary by animateColorAsState(if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA), animationSpec = themeAnimSpec, label = "inkSecondary")
+    val inkMuted by animateColorAsState(if (isLight) Color(0xFF8A8780) else Color(0xFF889689), animationSpec = themeAnimSpec, label = "inkMuted")
     val clayAccent = Color(0xFFC4623D)
-    val forestGreen = if (isLight) Color(0xFF2D6A4F) else Color(0xFF52B788)
+    val forestGreen by animateColorAsState(if (isLight) Color(0xFF2D6A4F) else Color(0xFF52B788), animationSpec = themeAnimSpec, label = "forestGreen")
+    val togglePillBg by animateColorAsState(if (isLight) Color(0xFFF0ECE1) else Color(0xFF1B231B), animationSpec = themeAnimSpec, label = "togglePillBg")
+    val lightIconTint by animateColorAsState(if (isLight) clayAccent else inkMuted, animationSpec = themeAnimSpec, label = "lightIconTint")
+    val darkIconTint by animateColorAsState(if (!isLight) clayAccent else inkMuted, animationSpec = themeAnimSpec, label = "darkIconTint")
     val warningAmber = Color(0xFFD97706)
 
     val todayDateStr = remember {
@@ -507,7 +514,7 @@ fun EditorialPreviewScreen(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (isLight) Color(0xFFF0ECE1) else Color(0xFF1B231B))
+                        .background(togglePillBg)
                         .padding(horizontal = 4.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -518,7 +525,7 @@ fun EditorialPreviewScreen(
                         Icon(
                             imageVector = Icons.Default.LightMode,
                             contentDescription = "Cream Edition",
-                            tint = if (isLight) clayAccent else inkMuted,
+                            tint = lightIconTint,
                             modifier = Modifier.size(15.dp)
                         )
                     }
@@ -529,7 +536,7 @@ fun EditorialPreviewScreen(
                         Icon(
                             imageVector = Icons.Default.DarkMode,
                             contentDescription = "Forest Edition",
-                            tint = if (!isLight) clayAccent else inkMuted,
+                            tint = darkIconTint,
                             modifier = Modifier.size(15.dp)
                         )
                     }
@@ -697,6 +704,11 @@ fun EditorialPreviewScreen(
                         item(key = "j_header_$dateHeader") {
                             Row(
                                 modifier = Modifier
+                                    .animateItem(
+                                        fadeInSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                                        fadeOutSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                                        placementSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.85f)
+                                    )
                                     .fillMaxWidth()
                                     .graphicsLayer {
                                         alpha = listAnimAlpha.value
@@ -728,6 +740,11 @@ fun EditorialPreviewScreen(
                         items(itemsInDay, key = { "j_${it.id}" }) { expense ->
                             Box(
                                 modifier = Modifier
+                                    .animateItem(
+                                        fadeInSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                                        fadeOutSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                                        placementSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.85f)
+                                    )
                                     .fillMaxWidth()
                                     .graphicsLayer {
                                         alpha = listAnimAlpha.value
@@ -1213,7 +1230,7 @@ private fun JournalDateRuler(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(350))
+            .animateContentSize(animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing))
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1251,10 +1268,27 @@ private fun JournalDateRuler(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        // 统一固定表头（周一至周日），与下方无论是周条还是全月网格的 7 列严格同宽对齐，避免展开/收拢时的重渲染与跳动
+        Row(modifier = Modifier.fillMaxWidth()) {
+            daysOfWeek.forEach { d ->
+                Text(
+                    text = d,
+                    fontSize = 10.5.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = inkMuted,
+                    modifier = Modifier.weight(1f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
         AnimatedContent(
             targetState = isExpanded,
             transitionSpec = {
-                fadeIn(animationSpec = tween(350)) togetherWith fadeOut(animationSpec = tween(350))
+                fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) togetherWith
+                    fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
             },
             label = "calendar_expansion"
         ) { expanded ->
@@ -1274,9 +1308,8 @@ private fun JournalDateRuler(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    weekDays.forEachIndexed { index, dayCal ->
+                    weekDays.forEach { dayCal ->
                         val dayNum = dayCal.get(Calendar.DAY_OF_MONTH)
-                        val dayOfWeekStr = daysOfWeek[index]
                         val isToday = isSameDay(dayCal, Calendar.getInstance())
                         val isSelected = selectedDateMillis != null && isSameDay(dayCal.timeInMillis, selectedDateMillis)
 
@@ -1289,24 +1322,23 @@ private fun JournalDateRuler(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .weight(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(
+                                    if (isSelected) clayAccent.copy(alpha = 0.15f)
+                                    else if (isToday) (if (isLight) Color(0xFFEFECE4) else Color(0xFF1F291F))
+                                    else Color.Transparent
+                                )
                                 .clickable { onSelectDate(dayCal.timeInMillis) }
                                 .padding(vertical = 4.dp)
                         ) {
                             Text(
-                                text = dayOfWeekStr,
-                                fontSize = 10.5.sp,
-                                fontFamily = FontFamily.Monospace,
-                                color = if (isSelected) clayAccent else inkMuted
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
                                 text = "$dayNum",
-                                fontSize = 14.sp,
+                                fontSize = 13.5.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) clayAccent else inkPrimary
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Box(
                                 modifier = Modifier
                                     .size(4.dp)
@@ -1321,6 +1353,8 @@ private fun JournalDateRuler(
                                         .height(1.5.dp)
                                         .background(clayAccent)
                                 )
+                            } else {
+                                Spacer(modifier = Modifier.height(3.5.dp))
                             }
                         }
                     }
@@ -1565,24 +1599,7 @@ private fun EditorialMonthGrid(
     val maxDaysInMonth = monthData.maxDaysInMonth
     val dayAggregates = monthData.dayAggregates
 
-    val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")
-
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            daysOfWeek.forEach { d ->
-                Text(
-                    text = d,
-                    fontSize = 10.5.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = inkMuted,
-                    modifier = Modifier.weight(1f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         var dayCounter = 1
         for (week in 0..5) {
             if (dayCounter > maxDaysInMonth) break

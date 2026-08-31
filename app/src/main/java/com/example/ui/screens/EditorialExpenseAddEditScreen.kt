@@ -267,8 +267,8 @@ fun EditorialExpenseAddEditScreen(
                     2 -> "TRANSFER"
                     else -> "EXPENSE"
                 },
-                if (isTransfer) "" else selectedCategory,
-                if (isTransfer) "" else selectedSubCategory,
+                if (isTransfer) "转账" else selectedCategory,
+                if (isTransfer) "转账" else selectedSubCategory,
                 calculatedAmount,
                 noteInput.trim(),
                 selectedAccount!!.id,

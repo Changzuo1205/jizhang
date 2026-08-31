@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
@@ -52,7 +53,6 @@ import com.example.ui.theme.LocalAppBackgroundConfig
 
 enum class AppTab(val title: String) {
     HOME("首页"),
-    DESIGN("设计稿"),
     ACCOUNTS("账户"),
     REPORTS("报表"),
     MINE("我的")
@@ -87,6 +87,13 @@ fun GlassBottomNavBar(
         label = "HomePlusAlpha"
     )
 
+    val themeAnimSpec = tween<Color>(durationMillis = 400, easing = FastOutSlowInEasing)
+    val animatedNavBarBg by animateColorAsState(
+        targetValue = if (bgConfig.isLight) Color(0xFFFFFFFF).copy(alpha = 0.95f) else Color(0xFF1E281E).copy(alpha = 0.95f),
+        animationSpec = themeAnimSpec,
+        label = "navBarBgAnim"
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -100,7 +107,7 @@ fun GlassBottomNavBar(
                 .fillMaxWidth()
                 .height(68.dp),
             shape = RoundedCornerShape(26.dp),
-            backgroundColor = bgConfig.navBarBackground,
+            backgroundColor = animatedNavBarBg,
             borderColor = bgConfig.navBarBorder,
             borderWidth = 1.2.dp
         ) {
@@ -200,16 +207,7 @@ fun GlassBottomNavBar(
                     }
                 }
 
-                // Tab 2: Design Preview / 编辑页设计稿
-                NavItem(
-                    icon = Icons.Default.Palette,
-                    title = "设计稿",
-                    selected = currentTab == AppTab.DESIGN,
-                    onClick = { onTabSelected(AppTab.DESIGN) },
-                    modifier = Modifier.weight(1f).testTag("nav_tab_design")
-                )
-
-                // Tab 3: Accounts
+                // Tab 2: Accounts
                 NavItem(
                     icon = Icons.Default.AccountBalance,
                     title = "账户",
@@ -218,7 +216,7 @@ fun GlassBottomNavBar(
                     modifier = Modifier.weight(1f).testTag("nav_tab_accounts")
                 )
 
-                // Tab 4: Reports
+                // Tab 3: Reports
                 NavItem(
                     icon = Icons.Default.PieChart,
                     title = "报表",
@@ -227,7 +225,7 @@ fun GlassBottomNavBar(
                     modifier = Modifier.weight(1f).testTag("nav_tab_reports")
                 )
 
-                // Tab 5: Mine
+                // Tab 4: Mine
                 NavItem(
                     icon = Icons.Default.Person,
                     title = "我的",

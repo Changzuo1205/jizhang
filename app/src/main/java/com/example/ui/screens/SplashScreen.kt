@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.BuildConfig
 import com.example.ui.theme.LocalAppBackgroundConfig
 import kotlinx.coroutines.delay
 
@@ -107,16 +108,16 @@ fun SplashScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 120.dp),
+                    .padding(top = 165.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                // 主标题 "Ledger" (支持 Serif 衬线斜体)
+                // 主标题 "Ledger" (加粗加大，Serif 衬线斜体)
                 Text(
                     text = "Ledger",
                     fontFamily = FontFamily.Serif,
                     fontStyle = FontStyle.Italic,
-                    fontSize = 56.sp,
-                    fontWeight = FontWeight.Normal,
+                    fontSize = 64.sp,
+                    fontWeight = FontWeight.Bold,
                     color = titleColor,
                     modifier = Modifier.graphicsLayer {
                         alpha = titleAnimProgress
@@ -166,7 +167,7 @@ fun SplashScreen(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Text(
-                        text = "v 1.0",
+                        text = "v ${BuildConfig.VERSION_NAME}",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 9.sp,
                         letterSpacing = 2.sp,

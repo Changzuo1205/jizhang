@@ -210,8 +210,11 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     }
                     // 收入明细的一级分类与二级分类相同
                     Pair(normalized, normalized)
+                } else if (tx.type == TransactionType.TRANSFER) {
+                    // 转账类型：一级分类与二级分类均规范标识为“转账”，杜绝被显示为未分类
+                    Pair("转账", "转账")
                 } else {
-                    // 支出与转账：分类映射逻辑：优先显示父级名称（二级分类），否则显示自身名称（一级分类）
+                    // 支出：分类映射逻辑：优先显示父级名称（二级分类），否则显示自身名称（一级分类）
                     val resolvedCategory = when {
                         parent != null -> {
                             // 二级分类：显示父级名称
@@ -483,6 +486,25 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     fun setIsLightBackground(isLight: Boolean) {
         val current = _backgroundConfig.value
         setBackgroundConfig(current.copy(isLight = isLight))
+    }
+
+    fun toggleThemeMode(isDark: Boolean) {
+        val current = _backgroundConfig.value
+        val newType = if (isDark) BackgroundOptionType.SLATE_DARK else BackgroundOptionType.PURE_WHITE
+        val newTitle = if (isDark) "墨绿深林 (深色模式)" else "极简纯白 (浅色模式)"
+        val newSubtitle = if (isDark) "沉稳深邃暗黑，极佳夜间视觉" else "极致纯粹净白，无暇纯色"
+        val newSolidColor = if (isDark) Color(0xFF242E24) else Color(0xFFFFFFFF)
+        val newHex = if (isDark) "#242E24" else "#FFFFFF"
+
+        val newConfig = current.copy(
+            type = newType,
+            title = newTitle,
+            subtitle = newSubtitle,
+            solidColor = newSolidColor,
+            customHex = newHex,
+            isLight = !isDark
+        )
+        setBackgroundConfig(newConfig)
     }
 
     fun setCustomBackgroundColor(hex: String, name: String = "自定义纯色") {
@@ -1311,33 +1333,45 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                             tokens[3].contains("转") || tokens[3].equals("TRANSFER", ignoreCase = true) -> "TRANSFER"
                             else -> "EXPENSE"
                         }
-                        category = tokens[4].ifBlank { "其他" }
-                        subCategory = tokens[5]
+                        category = tokens[4].ifBlank { if (type == "TRANSFER") "转账" else "其他" }
+                        subCategory = tokens[5].ifBlank { if (type == "TRANSFER") "转账" else "" }
                         accountName = tokens[6].ifBlank { "默认账户" }
                         amount = tokens[8].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[9]
                         if ((tokens[10]).contains("删")) continue
                     } else if (tokens.size >= 8) {
                         dateTimestamp = parseTimestamp(tokens[1])
-                        type = if (tokens[2].contains("收") || tokens[2].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
-                        category = tokens[3].ifBlank { "其他" }
-                        subCategory = tokens[4].ifBlank { "默认" }
+                        type = when {
+                            tokens[2].contains("转") || tokens[2].equals("TRANSFER", ignoreCase = true) || tokens[3].contains("转账") -> "TRANSFER"
+                            tokens[2].contains("收") || tokens[2].equals("INCOME", ignoreCase = true) || tokens[3].contains("收入") || tokens[3].contains("工资") -> "INCOME"
+                            else -> "EXPENSE"
+                        }
+                        category = tokens[3].ifBlank { if (type == "TRANSFER") "转账" else "其他" }
+                        subCategory = tokens[4].ifBlank { if (type == "TRANSFER") "转账" else "默认" }
                         accountName = tokens[5].ifBlank { "默认账户" }
                         amount = tokens[6].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[7]
                     } else if (tokens.size == 7) {
                         dateTimestamp = parseTimestamp(tokens[0])
-                        type = if (tokens[1].contains("收") || tokens[1].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
-                        category = tokens[2].ifBlank { "其他" }
-                        subCategory = tokens[3].ifBlank { "默认" }
+                        type = when {
+                            tokens[1].contains("转") || tokens[1].equals("TRANSFER", ignoreCase = true) || tokens[2].contains("转账") -> "TRANSFER"
+                            tokens[1].contains("收") || tokens[1].equals("INCOME", ignoreCase = true) || tokens[2].contains("收入") || tokens[2].contains("工资") -> "INCOME"
+                            else -> "EXPENSE"
+                        }
+                        category = tokens[2].ifBlank { if (type == "TRANSFER") "转账" else "其他" }
+                        subCategory = tokens[3].ifBlank { if (type == "TRANSFER") "转账" else "默认" }
                         accountName = tokens[4].ifBlank { "默认账户" }
                         amount = tokens[5].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[6]
                     } else if (tokens.size == 6) {
                         dateTimestamp = parseTimestamp(tokens[0])
-                        type = if (tokens[1].contains("收") || tokens[1].equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
-                        category = tokens[2].ifBlank { "其他" }
-                        subCategory = "默认"
+                        type = when {
+                            tokens[1].contains("转") || tokens[1].equals("TRANSFER", ignoreCase = true) || tokens[2].contains("转账") -> "TRANSFER"
+                            tokens[1].contains("收") || tokens[1].equals("INCOME", ignoreCase = true) || tokens[2].contains("收入") || tokens[2].contains("工资") -> "INCOME"
+                            else -> "EXPENSE"
+                        }
+                        category = tokens[2].ifBlank { if (type == "TRANSFER") "转账" else "其他" }
+                        subCategory = if (type == "TRANSFER") "转账" else "默认"
                         accountName = tokens[3].ifBlank { "默认账户" }
                         amount = tokens[4].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[5]
@@ -1348,10 +1382,18 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                             accountName = tokens[2].ifBlank { "默认账户" }
                             amount = tokens[3].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                             note = tokens[4]
-                            type = if (amount > 0 && (category.contains("工资") || category.contains("奖金") || category.contains("收入"))) "INCOME" else "EXPENSE"
+                            type = when {
+                                category.contains("转账") || category.contains("转入") || category.contains("转出") -> "TRANSFER"
+                                amount > 0 && (category.contains("工资") || category.contains("奖金") || category.contains("收入")) -> "INCOME"
+                                else -> "EXPENSE"
+                            }
                         } else {
-                            type = if (tokens[0].contains("收")) "INCOME" else "EXPENSE"
-                            category = tokens[1].ifBlank { "其他" }
+                            type = when {
+                                tokens[0].contains("转") || tokens[0].contains("TRANSFER") -> "TRANSFER"
+                                tokens[0].contains("收") || tokens[0].contains("INCOME") -> "INCOME"
+                                else -> "EXPENSE"
+                            }
+                            category = tokens[1].ifBlank { if (type == "TRANSFER") "转账" else "其他" }
                             accountName = tokens[2].ifBlank { "默认账户" }
                             amount = tokens[3].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                             note = tokens[4]
@@ -1361,12 +1403,20 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         amount = tokens[1].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         accountName = tokens[2].ifBlank { "默认账户" }
                         note = tokens[3]
-                        type = if (category.contains("工资") || category.contains("奖金") || category.contains("收入")) "INCOME" else "EXPENSE"
+                        type = when {
+                            category.contains("转账") || category.contains("转入") || category.contains("转出") -> "TRANSFER"
+                            category.contains("工资") || category.contains("奖金") || category.contains("收入") -> "INCOME"
+                            else -> "EXPENSE"
+                        }
                     } else if (tokens.size == 3) {
                         category = tokens[0].ifBlank { "餐饮" }
                         amount = tokens[1].replace("¥", "").replace("￥", "").replace(",", "").toDoubleOrNull() ?: 0.0
                         note = tokens[2]
-                        type = if (category.contains("工资") || category.contains("奖金") || category.contains("收入")) "INCOME" else "EXPENSE"
+                        type = when {
+                            category.contains("转账") || category.contains("转入") || category.contains("转出") -> "TRANSFER"
+                            category.contains("工资") || category.contains("奖金") || category.contains("收入") -> "INCOME"
+                            else -> "EXPENSE"
+                        }
                     }
 
                     if (amount <= 0.0) continue
@@ -1383,6 +1433,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     val accId = matchedAcc.id
 
                     if (type == "TRANSFER") {
+                        category = "转账"
+                        subCategory = "转账"
                         val targetAccName = tokens.getOrNull(7)?.trim() ?: ""
                         var targetMatched = currentAccounts.find { it.name.equals(targetAccName, ignoreCase = true) }
                         if (targetMatched == null && targetAccName.isNotBlank()) {
@@ -1392,8 +1444,19 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                             targetMatched = newTargetAcc
                             accountCount++
                         }
-                        val targetId = targetMatched?.id
-                        if (targetId == null || targetId == accId) continue
+                        var targetId = targetMatched?.id
+                        if (targetId == null || targetId == accId) {
+                            val otherAcc = currentAccounts.find { it.id != accId }
+                            if (otherAcc != null) {
+                                targetId = otherAcc.id
+                            } else {
+                                val newTargetId = repository.addAccount("目标账户", "储蓄卡", 0.0, "#8B5CF6", "转账导入自动创建")
+                                val newTargetAcc = AccountEntity(id = newTargetId, name = "目标账户", type = "储蓄卡", balance = 0.0, colorHex = "#8B5CF6", note = "转账导入自动创建")
+                                currentAccounts.add(newTargetAcc)
+                                targetId = newTargetId
+                                accountCount++
+                            }
+                        }
                         transferToAccountId = targetId
                     }
 
