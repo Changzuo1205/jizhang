@@ -36,7 +36,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.ui.screens.ReportTimeRange
 import com.example.ui.components.AppTab
-import com.example.ui.components.GlassBottomNavBar
+import com.example.ui.components.BottomNavBar
 import com.example.data.local.ExpenseEntity
 import com.example.ui.theme.LocalAppBackgroundConfig
 import com.example.ui.theme.LocalAppColorScheme
@@ -508,6 +508,7 @@ private fun MainScreenContent(
                             onUpdateAccount = { account, saveAsMissedRecord, oldBalance -> viewModel.updateAccount(account, saveAsMissedRecord, oldBalance) },
                             onDeleteAccount = { viewModel.deleteAccount(it) }
                         )
+                        AppTab.DESIGN -> DesignDraftPlaceholderScreen()
                         AppTab.REPORTS -> FinancialReportScreen(
                             accounts = accounts,
                             expenses = allExpenses,
@@ -566,7 +567,7 @@ private fun MainScreenContent(
         }
     }
 
-    // Frosted Glass Bottom Navigation Bar
+    // Minimalist Bottom Navigation Bar
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = activeSubScreen == ActiveSubScreen.NONE,
@@ -574,7 +575,7 @@ private fun MainScreenContent(
             exit = fadeOut() + slideOutVertically { it },
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            GlassBottomNavBar(
+            BottomNavBar(
                 currentTab = currentTab,
                 onTabSelected = onCurrentTabChange,
                 onOpenAddExpense = {

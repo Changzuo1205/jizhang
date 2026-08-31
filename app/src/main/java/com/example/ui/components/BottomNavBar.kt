@@ -1,238 +1,210 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.LocalAppBackgroundConfig
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 enum class AppTab(val title: String) {
-    HOME("首页"),
     ACCOUNTS("账户"),
+    DESIGN("设计稿"),
+    HOME("首页"),
     REPORTS("报表"),
     MINE("我的")
 }
 
 @Composable
-fun GlassBottomNavBar(
+fun BottomNavBar(
     currentTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
     onOpenAddExpense: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bgConfig = LocalAppBackgroundConfig.current
-    val infiniteTransition = rememberInfiniteTransition(label = "NavGlow")
+    val isLight = bgConfig.isLight
     
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "HomePlusPulse"
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = if (bgConfig.isLight) 0.35f else 0.5f,
-        targetValue = if (bgConfig.isLight) 0.70f else 0.85f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "HomePlusAlpha"
-    )
-
-    val themeAnimSpec = tween<Color>(durationMillis = 400, easing = FastOutSlowInEasing)
-    val animatedNavBarBg by animateColorAsState(
-        targetValue = if (bgConfig.isLight) Color(0xFFFFFFFF).copy(alpha = 0.95f) else Color(0xFF1E281E).copy(alpha = 0.95f),
-        animationSpec = themeAnimSpec,
-        label = "navBarBgAnim"
-    )
-
-    Box(
+    // 暖纸白背景 #F5F1E6
+    val backgroundColor = if (isLight) Color(0xFFF5F1E6) else Color(0xFF1E281E) // Fallback for dark if needed, but per instruction, background same as page (warm paper white). Assuming dark mode has its own bg, but instruction specifically said "#F5F1E6".
+    // 顶部只有一条 0.5.dp 的分隔线，无阴影
+    val dividerColor = Color(0xFFDCD5C0)
+    
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
+            .background(backgroundColor)
+            .navigationBarsPadding() // 通栏贴底，正常处理系统手势区
     ) {
-        // Outer Frosted Bar
-        GlassCard(
+        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
+        
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(68.dp),
-            shape = RoundedCornerShape(26.dp),
-            backgroundColor = animatedNavBarBg,
-            borderColor = bgConfig.navBarBorder,
-            borderWidth = 1.2.dp
+                .height(60.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(68.dp)
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Tab 1: Home / Add Expense Highlight
-                val isHome = currentTab == AppTab.HOME
-                Box(
+            NavItem(
+                icon = Icons.Outlined.AccountBalance,
+                title = AppTab.ACCOUNTS.title,
+                selected = currentTab == AppTab.ACCOUNTS,
+                onClick = { onTabSelected(AppTab.ACCOUNTS) },
+                modifier = Modifier.weight(1f)
+            )
+            
+            NavItem(
+                icon = Icons.Outlined.Edit,
+                title = AppTab.DESIGN.title,
+                selected = currentTab == AppTab.DESIGN,
+                onClick = { onTabSelected(AppTab.DESIGN) },
+                modifier = Modifier.weight(1f)
+            )
+            
+            HomeOrQuickAddButton(
+                isHomeSelected = currentTab == AppTab.HOME,
+                onNavigateHome = { onTabSelected(AppTab.HOME) },
+                onQuickAdd = onOpenAddExpense,
+                modifier = Modifier.weight(1f)
+            )
+            
+            NavItem(
+                icon = Icons.Outlined.PieChart, // outline pie chart
+                title = AppTab.REPORTS.title,
+                selected = currentTab == AppTab.REPORTS,
+                onClick = { onTabSelected(AppTab.REPORTS) },
+                modifier = Modifier.weight(1f)
+            )
+            
+            NavItem(
+                icon = Icons.Outlined.Person,
+                title = AppTab.MINE.title,
+                selected = currentTab == AppTab.MINE,
+                onClick = { onTabSelected(AppTab.MINE) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun HomeOrQuickAddButton(
+    isHomeSelected: Boolean,
+    onNavigateHome: () -> Unit,
+    onQuickAdd: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxHeight(),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedContent(
+            targetState = isHomeSelected,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(250)) togetherWith fadeOut(animationSpec = tween(250))
+            },
+            label = "home_btn_transition"
+        ) { isHome ->
+            if (isHome) {
+                // 状态 B: 圆形印章造型按钮
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                     modifier = Modifier
-                        .weight(1f)
+                        .offset(y = (-14).dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(
-                                bounded = false, 
-                                color = if (bgConfig.isLight) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.2f)
-                            ),
-                            onClick = {
-                                if (isHome) {
-                                    onOpenAddExpense()
-                                } else {
-                                    onTabSelected(AppTab.HOME)
-                                }
-                            }
+                            indication = null,
+                            onClick = onQuickAdd
                         )
-                        .testTag("nav_tab_home"),
-                    contentAlignment = Alignment.Center
                 ) {
-                    if (isHome) {
-                        // Highlighted Glowing Add button state when on Home
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .drawBehind {
+                                drawCircle(
+                                    color = Color(0xFFC4623D),
+                                    radius = size.minDimension / 2f,
+                                    style = Stroke(
+                                        width = 1.5.dp.toPx(),
+                                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                                    )
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .background(Color(0xFFC4623D), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier.size(36.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // Glowing background halo
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .scale(pulseScale)
-                                        .background(
-                                            Brush.radialGradient(
-                                                listOf(
-                                                    Color(0xFFC4623D).copy(alpha = pulseAlpha),
-                                                    Color(0xFFC4623D).copy(alpha = pulseAlpha * 0.3f),
-                                                    Color.Transparent
-                                                )
-                                            ),
-                                            CircleShape
-                                        )
-                                    )
-
-                                // Illuminated Plus button
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFC4623D))
-                                        .border(1.dp, Color.White.copy(alpha = 0.8f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "记一笔",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "记一笔",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                ),
-                                color = Color(0xFFC4623D)
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "记一笔",
+                                tint = Color(0xFFF5F1E6),
+                                modifier = Modifier.size(24.dp)
                             )
                         }
-                    } else {
-                        // Standard Home tab when not active
-                        NavItem(
-                            icon = Icons.Default.Home,
-                            title = "首页",
-                            selected = false,
-                            onClick = { onTabSelected(AppTab.HOME) }
-                        )
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "记一笔",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFC4623D)
+                    )
                 }
-
-                // Tab 2: Accounts
-                NavItem(
-                    icon = Icons.Default.AccountBalance,
-                    title = "账户",
-                    selected = currentTab == AppTab.ACCOUNTS,
-                    onClick = { onTabSelected(AppTab.ACCOUNTS) },
-                    modifier = Modifier.weight(1f).testTag("nav_tab_accounts")
-                )
-
-                // Tab 3: Reports
-                NavItem(
-                    icon = Icons.Default.PieChart,
-                    title = "报表",
-                    selected = currentTab == AppTab.REPORTS,
-                    onClick = { onTabSelected(AppTab.REPORTS) },
-                    modifier = Modifier.weight(1f).testTag("nav_tab_reports")
-                )
-
-                // Tab 4: Mine
-                NavItem(
-                    icon = Icons.Default.Person,
-                    title = "我的",
-                    selected = currentTab == AppTab.MINE,
-                    onClick = { onTabSelected(AppTab.MINE) },
-                    modifier = Modifier.weight(1f).testTag("nav_tab_mine")
-                )
+            } else {
+                // 状态 A: 朴素的首页图标
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onNavigateHome
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Home,
+                        contentDescription = "首页",
+                        tint = Color(0xFF8A8270),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "首页",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color(0xFF8A8270)
+                    )
+                }
             }
         }
     }
@@ -246,66 +218,36 @@ private fun NavItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bgConfig = LocalAppBackgroundConfig.current
-    val activeColor = if (bgConfig.isLight) Color(0xFF4F46E5) else Color(0xFF818CF8)
-    val inactiveColor = if (bgConfig.isLight) Color(0xFF64748B) else Color.White.copy(alpha = 0.5f)
-
+    val activeColor = Color(0xFF2D6A4F)
+    val inactiveColor = Color(0xFF8A8270)
+    
     val iconColor by animateColorAsState(
         targetValue = if (selected) activeColor else inactiveColor,
         label = "NavIconColor"
     )
-
+    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .fillMaxHeight()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(
-                    bounded = false, 
-                    color = if (bgConfig.isLight) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.15f)
-                ),
+                indication = ripple(bounded = false),
                 onClick = onClick
             )
-            .padding(vertical = 6.dp)
     ) {
-        Box(
-            modifier = Modifier.size(26.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (selected) {
-                // Glow indicator under selected icon
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    activeColor.copy(alpha = if (bgConfig.isLight) 0.25f else 0.45f),
-                                    Color.Transparent
-                                )
-                            ),
-                            CircleShape
-                        )
-                )
-            }
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = iconColor,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = iconColor,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-            ),
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             color = iconColor
         )
     }
