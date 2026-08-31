@@ -90,12 +90,14 @@ fun AnimatedDonutChart(
     }
 
     // 动画驱动器：0f -> 1f (动画加快 1.2 倍至 1625ms)
-    val progress = remember { Animatable(0f) }
-    LaunchedEffect(slices) {
-        progress.snapTo(0f)
-        progress.animateTo(1f, animationSpec = tween(durationMillis = 1625, easing = LinearEasing))
-        internalSelectedIndex = -1
-        onCategorySelected(null)
+    val progress = remember { Animatable(if (selectedCategory != null) 1f else 0f) }
+    LaunchedEffect(selectedCategory) {
+        if (selectedCategory == null) {
+            progress.snapTo(0f)
+            progress.animateTo(1f, animationSpec = tween(durationMillis = 1625, easing = LinearEasing))
+        } else {
+            progress.snapTo(1f)
+        }
     }
 
     val currentTotal = slices.sumOf { it.amount }

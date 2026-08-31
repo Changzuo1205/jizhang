@@ -466,40 +466,18 @@ fun FinancialReportScreen(
             }
 
             // ==================== 2. 下方平滑滚动内容区域 ====================
+            val isExpenseFilterActive = selectedExpensePieCategory != null
+            val isIncomeFilterActive = selectedIncomePieCategory != null
+
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                // 1. 资产/余额走势模块 (平滑动效)
-                item(key = "chart_trend") {
-                    AnimatedVisibility(
-                        visible = showTrendChart,
-                        enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-                        exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
-                    ) {
-                        Column {
-                            AssetTrendSection(
-                                totalNetAssets = selectedAccountsBalance,
-                                monthlyChangeDiff = monthlyChangeInfo.first,
-                                monthlyChangePercent = monthlyChangeInfo.second,
-                                trendPoints = trendPoints,
-                                title = trendTitle
-                            )
-                            HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
-                        }
-                    }
-                }
-
-                // 2. 支出构成模块 (平滑动效)
-                item(key = "chart_expense_breakdown") {
-                    AnimatedVisibility(
-                        visible = showExpenseBreakdown,
-                        enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-                        exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
-                    ) {
-                        Column {
+                if (isExpenseFilterActive) {
+                    item(key = "chart_expense_breakdown") {
+                        Column(modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessMediumLow))) {
                             ExpenseBreakdownSection(
                                 slices = expenseSlices,
                                 totalExpense = currentPeriodExpenseTotal,
@@ -514,16 +492,9 @@ fun FinancialReportScreen(
                             HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
                         }
                     }
-                }
-
-                // 3. 收入构成模块 (平滑动效)
-                item(key = "chart_income_breakdown") {
-                    AnimatedVisibility(
-                        visible = showIncomeBreakdown,
-                        enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-                        exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
-                    ) {
-                        Column {
+                } else if (isIncomeFilterActive) {
+                    item(key = "chart_income_breakdown") {
+                        Column(modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessMediumLow))) {
                             IncomeBreakdownSection(
                                 slices = incomeSlices,
                                 totalIncome = currentPeriodIncomeTotal,
@@ -538,35 +509,108 @@ fun FinancialReportScreen(
                             HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
                         }
                     }
-                }
-
-                // 4. 消费习惯模块 (星期分布 - 平滑动效)
-                item(key = "chart_spending_habits") {
-                    AnimatedVisibility(
-                        visible = showSpendingHabits,
-                        enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-                        exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
-                    ) {
-                        Column {
-                            SpendingHabitsSection(weekdayItems = weekdaySpending)
-                            HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                } else {
+                    // 1. 资产/余额走势模块 (平滑动效)
+                    item(key = "chart_trend") {
+                        AnimatedVisibility(
+                            visible = showTrendChart,
+                            enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                            exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
+                            modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                        ) {
+                            Column {
+                                AssetTrendSection(
+                                    totalNetAssets = selectedAccountsBalance,
+                                    monthlyChangeDiff = monthlyChangeInfo.first,
+                                    monthlyChangePercent = monthlyChangeInfo.second,
+                                    trendPoints = trendPoints,
+                                    title = trendTitle
+                                )
+                                HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                            }
                         }
                     }
-                }
 
-                // 5. 收支对比模块 (近 6 个月双柱 - 平滑动效)
-                item(key = "chart_monthly_comparison") {
-                    AnimatedVisibility(
-                        visible = showMonthlyComparison,
-                        enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-                        exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
-                    ) {
-                        Column {
-                            MonthlyComparisonSection(
-                                compareItems = monthlyCompareList,
-                                expenseChangeRatio = expenseChangeRatio
-                            )
-                            HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                    // 2. 支出构成模块 (平滑动效)
+                    item(key = "chart_expense_breakdown") {
+                        AnimatedVisibility(
+                            visible = showExpenseBreakdown,
+                            enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                            exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
+                            modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                        ) {
+                            Column {
+                                ExpenseBreakdownSection(
+                                    slices = expenseSlices,
+                                    totalExpense = currentPeriodExpenseTotal,
+                                    selectedCategory = selectedExpensePieCategory,
+                                    onCategorySelected = { cat ->
+                                        onSelectedExpensePieCategoryChange(cat)
+                                        if (cat != null) onSelectedIncomePieCategoryChange(null)
+                                    },
+                                    textMain = textMain,
+                                    textMuted = textMuted
+                                )
+                                HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
+                            }
+                        }
+                    }
+
+                    // 3. 收入构成模块 (平滑动效)
+                    item(key = "chart_income_breakdown") {
+                        AnimatedVisibility(
+                            visible = showIncomeBreakdown,
+                            enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                            exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
+                            modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                        ) {
+                            Column {
+                                IncomeBreakdownSection(
+                                    slices = incomeSlices,
+                                    totalIncome = currentPeriodIncomeTotal,
+                                    selectedCategory = selectedIncomePieCategory,
+                                    onCategorySelected = { cat ->
+                                        onSelectedIncomePieCategoryChange(cat)
+                                        if (cat != null) onSelectedExpensePieCategoryChange(null)
+                                    },
+                                    textMain = textMain,
+                                    textMuted = textMuted
+                                )
+                                HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
+                            }
+                        }
+                    }
+
+                    // 4. 消费习惯模块 (星期分布 - 平滑动效)
+                    item(key = "chart_spending_habits") {
+                        AnimatedVisibility(
+                            visible = showSpendingHabits,
+                            enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                            exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
+                            modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                        ) {
+                            Column {
+                                SpendingHabitsSection(weekdayItems = weekdaySpending)
+                                HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                            }
+                        }
+                    }
+
+                    // 5. 收支对比模块 (近 6 个月双柱 - 平滑动效)
+                    item(key = "chart_monthly_comparison") {
+                        AnimatedVisibility(
+                            visible = showMonthlyComparison,
+                            enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                            exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
+                            modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                        ) {
+                            Column {
+                                MonthlyComparisonSection(
+                                    compareItems = monthlyCompareList,
+                                    expenseChangeRatio = expenseChangeRatio
+                                )
+                                HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                            }
                         }
                     }
                 }
