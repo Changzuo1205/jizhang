@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.app.DatePickerDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -899,6 +900,15 @@ fun AssetTrendSection(
     canvasBg: Color = WarmPaperBg,
     modifier: Modifier = Modifier
 ) {
+    val animatedAmount = remember { Animatable(0f) }
+    LaunchedEffect(totalNetAssets) {
+        animatedAmount.snapTo(0f)
+        animatedAmount.animateTo(
+            targetValue = totalNetAssets.toFloat(),
+            animationSpec = tween(durationMillis = 1425, easing = FastOutSlowInEasing)
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -922,13 +932,25 @@ fun AssetTrendSection(
                 .fillMaxWidth()
                 .padding(horizontal = 22.dp)
         ) {
-            Text(
-                text = "¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(totalNetAssets))}",
-                fontSize = 26.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                color = textMain
-            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "¥",
+                    fontFamily = FontFamily.Serif,
+                    fontStyle = FontStyle.Italic,
+                    fontSize = 16.sp,
+                    color = textMuted,
+                    modifier = Modifier.padding(bottom = 3.dp, end = 4.dp)
+                )
+                Text(
+                    text = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(animatedAmount.value.toDouble())),
+                    fontSize = 26.sp,
+                    fontFamily = FontFamily.Serif,
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = (-0.8).sp,
+                    color = textMain
+                )
+            }
 
             // 本月变化指标（移至资产下方，正数墨绿+向上，负数陶红+向下）
             if (monthlyChangeDiff != 0.0) {
@@ -1226,7 +1248,7 @@ private fun JournalTransactionRow(
                                 text = if (isTransfer) "转账" else expense.displaySubCategory.ifEmpty { expense.displayCategory },
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = inkMuted,
+                                color = inkPrimary,
                                 maxLines = 1
                             )
                             Spacer(modifier = Modifier.height(1.dp))
