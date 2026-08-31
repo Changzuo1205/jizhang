@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -18,6 +19,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,13 +70,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -93,6 +101,7 @@ import com.example.ui.theme.LocalAppBackgroundConfig
 import com.example.ui.viewmodel.BudgetConfig
 import com.example.ui.viewmodel.BudgetProgressInfo
 import com.example.ui.viewmodel.CategoryStat
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -509,20 +518,23 @@ fun EditorialPreviewScreen(
         }
     }
 
-    // 选择/取消选择日期统一方法
-    val handleDateSelection: (Long) -> Unit = { clickedMillis ->
-        val currentSelected = selectedDateMillis
-        if (currentSelected != null && isSameDay(currentSelected, clickedMillis)) {
-            onSelectedDateChange(null)
-        } else {
-            val cal = Calendar.getInstance().apply {
-                timeInMillis = clickedMillis
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
+    // 选择/取消选择日期统一方法 (使用 rememberUpdatedState 保证在 pointerInput 闭包中永远读取最新的 selectedDateMillis)
+    val currentSelectedDateMillis by rememberUpdatedState(selectedDateMillis)
+    val handleDateSelection: (Long) -> Unit = remember(onSelectedDateChange) {
+        { clickedMillis ->
+            val current = currentSelectedDateMillis
+            if (current != null && isSameDay(current, clickedMillis)) {
+                onSelectedDateChange(null)
+            } else {
+                val cal = Calendar.getInstance().apply {
+                    timeInMillis = clickedMillis
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                onSelectedDateChange(cal.timeInMillis)
             }
-            onSelectedDateChange(cal.timeInMillis)
         }
     }
 
@@ -593,10 +605,14 @@ fun EditorialPreviewScreen(
                 title = "Ledger",
                 subtitle = todayDateStr,
                 modifier = Modifier
-                    .graphicsLayer {
-                        alpha = headerAnimAlpha.value
-                        translationY = headerAnimSlide.value.dp.toPx()
-                    }
+                    .then(
+                        if (playEntranceAnimation) {
+                            Modifier.graphicsLayer {
+                                alpha = headerAnimAlpha.value
+                                translationY = headerAnimSlide.value.dp.toPx()
+                            }
+                        } else Modifier
+                    )
                     .padding(horizontal = 22.dp, vertical = 12.dp)
             ) {
                 Row(
@@ -648,10 +664,14 @@ fun EditorialPreviewScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .graphicsLayer {
-                                alpha = heroAnimAlpha.value
-                                translationY = heroAnimSlide.value.dp.toPx()
-                            }
+                            .then(
+                                if (playEntranceAnimation) {
+                                    Modifier.graphicsLayer {
+                                        alpha = heroAnimAlpha.value
+                                        translationY = heroAnimSlide.value.dp.toPx()
+                                    }
+                                } else Modifier
+                            )
                     ) {
                         MergedEditorialHeroSection(
                             targetExpense = activeSpent,
@@ -682,10 +702,14 @@ fun EditorialPreviewScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .graphicsLayer {
-                                alpha = rulerAnimAlpha.value
-                                translationY = rulerAnimSlide.value.dp.toPx()
-                            }
+                            .then(
+                                if (playEntranceAnimation) {
+                                    Modifier.graphicsLayer {
+                                        alpha = rulerAnimAlpha.value
+                                        translationY = rulerAnimSlide.value.dp.toPx()
+                                    }
+                                } else Modifier
+                            )
                     ) {
                         JournalDateRuler(
                             weekDaysData = weekDaysData,
@@ -723,15 +747,22 @@ fun EditorialPreviewScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .graphicsLayer {
-                                    alpha = listAnimAlpha.value
-                                    translationY = listAnimSlide.value.dp.toPx()
-                                }
+                                .then(
+                                    if (playEntranceAnimation) {
+                                        Modifier.graphicsLayer {
+                                            alpha = listAnimAlpha.value
+                                            translationY = listAnimSlide.value.dp.toPx()
+                                        }
+                                    } else Modifier
+                                )
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
                                 Box(
                                     modifier = Modifier
                                         .size(4.5.dp)
@@ -752,22 +783,22 @@ fun EditorialPreviewScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .clickable { onOpenAddExpense() }
+                                        .clickable { onSelectedDateChange(null) }
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "记一笔",
-                                        tint = clayAccent,
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "取消选中",
+                                        tint = inkMuted,
                                         modifier = Modifier.size(13.dp)
                                     )
                                     Spacer(modifier = Modifier.width(2.dp))
                                     Text(
-                                        text = "记一笔",
+                                        text = "清除",
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = clayAccent
+                                        fontWeight = FontWeight.Normal,
+                                        color = inkMuted
                                     )
                                 }
                             }
@@ -782,10 +813,14 @@ fun EditorialPreviewScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .graphicsLayer {
-                                    alpha = listAnimAlpha.value
-                                    translationY = listAnimSlide.value.dp.toPx()
-                                }
+                                .then(
+                                    if (playEntranceAnimation) {
+                                        Modifier.graphicsLayer {
+                                            alpha = listAnimAlpha.value
+                                            translationY = listAnimSlide.value.dp.toPx()
+                                        }
+                                    } else Modifier
+                                )
                                 .padding(vertical = 36.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -820,10 +855,14 @@ fun EditorialPreviewScreen(
                                         placementSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.85f)
                                     )
                                     .fillMaxWidth()
-                                    .graphicsLayer {
-                                        alpha = listAnimAlpha.value
-                                        translationY = listAnimSlide.value.dp.toPx()
-                                    }
+                                    .then(
+                                        if (playEntranceAnimation) {
+                                            Modifier.graphicsLayer {
+                                                alpha = listAnimAlpha.value
+                                                translationY = listAnimSlide.value.dp.toPx()
+                                            }
+                                        } else Modifier
+                                    )
                                     .padding(top = 10.dp, bottom = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -855,10 +894,14 @@ fun EditorialPreviewScreen(
                                         placementSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.85f)
                                     )
                                     .fillMaxWidth()
-                                    .graphicsLayer {
-                                        alpha = listAnimAlpha.value
-                                        translationY = listAnimSlide.value.dp.toPx()
-                                    }
+                                    .then(
+                                        if (playEntranceAnimation) {
+                                            Modifier.graphicsLayer {
+                                                alpha = listAnimAlpha.value
+                                                translationY = listAnimSlide.value.dp.toPx()
+                                            }
+                                        } else Modifier
+                                    )
                             ) {
                                 JournalTransactionRow(
                                     expense = expense,
@@ -1330,6 +1373,7 @@ private fun JournalDateRuler(
     isLight: Boolean,
     todayBgColor: Color
 ) {
+    Log.d("CalendarPerf", "JournalDateRuler composed: isExpanded=$isExpanded")
     val currentMonthOffset by remember(isExpanded) {
         derivedStateOf { if (isExpanded) pagerState.currentPage - 500 else 0 }
     }
@@ -1355,6 +1399,12 @@ private fun JournalDateRuler(
                 letterSpacing = 0.5.sp
             )
 
+            val chevronRotation by animateFloatAsState(
+                targetValue = if (isExpanded) 180f else 0f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.85f),
+                label = "calendar_chevron_rot"
+            )
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable { onToggleExpand() }
@@ -1366,10 +1416,12 @@ private fun JournalDateRuler(
                     color = clayAccent
                 )
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    imageVector = Icons.Default.ExpandMore,
                     contentDescription = null,
                     tint = clayAccent,
-                    modifier = Modifier.size(15.dp)
+                    modifier = Modifier
+                        .size(15.dp)
+                        .graphicsLayer { rotationZ = chevronRotation }
                 )
             }
         }
@@ -1392,85 +1444,122 @@ private fun JournalDateRuler(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        AnimatedContent(
-            targetState = isExpanded,
-            transitionSpec = {
-                fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) togetherWith
-                    fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
-            },
-            label = "calendar_expansion"
-        ) { expanded ->
-            if (!expanded) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    weekDaysData.forEach { item ->
-                        val isSelected = selectedDateMillis != null && isSameDay(item.timeInMillis, selectedDateMillis)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize(
+                    animationSpec = spring(
+                        stiffness = Spring.StiffnessMediumLow,
+                        dampingRatio = 0.85f
+                    )
+                )
+        ) {
+            Crossfade(
+                targetState = isExpanded,
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                label = "calendar_expand_crossfade"
+            ) { expanded ->
+                if (!expanded) {
+                    var weekRowWidthPx by remember { mutableFloatStateOf(0f) }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .onSizeChanged { weekRowWidthPx = it.width.toFloat() }
+                            .pointerInput(weekDaysData) {
+                                detectTapGestures { offset ->
+                                    if (weekRowWidthPx > 0 && weekDaysData.size == 7) {
+                                        val col = (offset.x / (weekRowWidthPx / 7f)).toInt().coerceIn(0, 6)
+                                        onSelectDate(weekDaysData[col].timeInMillis)
+                                    }
+                                }
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        weekDaysData.forEach { item ->
+                            val isSelected = selectedDateMillis != null && isSameDay(item.timeInMillis, selectedDateMillis)
+                            val isToday = item.isToday
+                            val hasRecord = item.hasRecord
 
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(
-                                    if (isSelected) clayAccent.copy(alpha = 0.15f)
-                                    else if (item.isToday) todayBgColor
-                                    else Color.Transparent
-                                )
-                                .clickable { onSelectDate(item.timeInMillis) }
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "${item.dayNum}",
-                                fontSize = 13.5.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = if (item.isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) clayAccent else inkPrimary
-                            )
-                            Spacer(modifier = Modifier.height(3.dp))
                             Box(
+                                contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(4.dp)
-                                    .clip(CircleShape)
-                                    .background(if (item.hasRecord) clayAccent else if (isSelected) clayAccent else Color.Transparent)
-                            )
-                            if (item.isToday) {
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .width(12.dp)
-                                        .height(1.5.dp)
-                                        .background(clayAccent)
+                                    .weight(1f)
+                                    .height(46.dp)
+                                    .drawBehind {
+                                        // 1. 选中或今日背景
+                                        if (isSelected) {
+                                            drawRoundRect(
+                                                color = clayAccent.copy(alpha = 0.15f),
+                                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                                            )
+                                        } else if (isToday) {
+                                            drawRoundRect(
+                                                color = todayBgColor,
+                                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                                            )
+                                        }
+
+                                        // 2. 记账记录圆点指示器 (绘制在下方中心)
+                                        if (hasRecord || isSelected) {
+                                            val dotRadius = 2.dp.toPx()
+                                            val dotCenterY = size.height - (if (isToday) 9.dp.toPx() else 7.dp.toPx())
+                                            drawCircle(
+                                                color = clayAccent,
+                                                radius = dotRadius,
+                                                center = androidx.compose.ui.geometry.Offset(size.width / 2f, dotCenterY)
+                                            )
+                                        }
+
+                                        // 3. 今日专属底部横线指示器
+                                        if (isToday) {
+                                            val barWidth = 12.dp.toPx()
+                                            val barHeight = 1.5.dp.toPx()
+                                            val startX = (size.width - barWidth) / 2f
+                                            val startY = size.height - 3.5.dp.toPx()
+                                            drawRoundRect(
+                                                color = clayAccent,
+                                                topLeft = androidx.compose.ui.geometry.Offset(startX, startY),
+                                                size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(barHeight / 2f, barHeight / 2f)
+                                            )
+                                        }
+                                    }
+                                    .padding(bottom = 6.dp)
+                            ) {
+                                Text(
+                                    text = "${item.dayNum}",
+                                    fontSize = 13.5.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) clayAccent else inkPrimary
                                 )
-                            } else {
-                                Spacer(modifier = Modifier.height(3.5.dp))
                             }
                         }
                     }
-                }
-            } else {
-                // beyondViewportPageCount = 1: 在渲染本月的同时静默预渲染左右两侧日历与数据，彻底杜绝滑动瞬间卡顿
-                HorizontalPager(
-                    state = pagerState,
-                    beyondViewportPageCount = 1,
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top
-                ) { page ->
-                    val pageOffset = page - 500
-                    val monthData = getMonthData(pageOffset)
+                } else {
+                    // beyondViewportPageCount = 0: 仅在需要时按需组合当前月，杜绝进入视口时的多月同时初始化开销
+                    HorizontalPager(
+                        state = pagerState,
+                        beyondViewportPageCount = 0,
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) { page ->
+                        val pageOffset = page - 500
+                        val monthData = getMonthData(pageOffset)
 
-                    EditorialMonthGrid(
-                        monthData = monthData,
-                        selectedDateMillis = selectedDateMillis,
-                        onSelectDate = onSelectDate,
-                        inkPrimary = inkPrimary,
-                        inkMuted = inkMuted,
-                        clayAccent = clayAccent,
-                        forestGreen = forestGreen,
-                        isLight = isLight,
-                        todayBgColor = todayBgColor
-                    )
+                        EditorialMonthGrid(
+                            monthData = monthData,
+                            selectedDateMillis = selectedDateMillis,
+                            onSelectDate = onSelectDate,
+                            inkPrimary = inkPrimary,
+                            inkMuted = inkMuted,
+                            clayAccent = clayAccent,
+                            forestGreen = forestGreen,
+                            isLight = isLight,
+                            todayBgColor = todayBgColor
+                        )
+                    }
                 }
             }
         }
@@ -1691,10 +1780,42 @@ private fun EditorialMonthGrid(
     val firstDayOfWeek = monthData.firstDayOfWeek
     val maxDaysInMonth = monthData.maxDaysInMonth
     val dayAggregates = monthData.dayAggregates
+    val tz = remember { TimeZone.getDefault() }
+    val selectedDayIndex = remember(selectedDateMillis) {
+        selectedDateMillis?.let { (it + tz.getOffset(it)) / 86400000L }
+    }
+    var totalHeightPx by remember { mutableFloatStateOf(0f) }
+    var totalWidthPx by remember { mutableFloatStateOf(0f) }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    val totalSlots = firstDayOfWeek + maxDaysInMonth
+    val numWeeks = (totalSlots + 6) / 7
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onSizeChanged {
+                totalWidthPx = it.width.toFloat()
+                totalHeightPx = it.height.toFloat()
+            }
+            .pointerInput(monthData, numWeeks) {
+                detectTapGestures { offset ->
+                    if (totalWidthPx > 0 && totalHeightPx > 0 && numWeeks > 0) {
+                        val col = (offset.x / (totalWidthPx / 7f)).toInt().coerceIn(0, 6)
+                        val row = (offset.y / (totalHeightPx / numWeeks.toFloat())).toInt().coerceIn(0, numWeeks - 1)
+                        val slotIndex = row * 7 + col
+                        val day = slotIndex - firstDayOfWeek + 1
+                        if (day in 1..maxDaysInMonth) {
+                            val dayTime = dayAggregates[day]?.timeInMillis
+                            if (dayTime != null) {
+                                onSelectDate(dayTime)
+                            }
+                        }
+                    }
+                }
+            }
+    ) {
         var dayCounter = 1
-        for (week in 0..5) {
+        for (week in 0 until numWeeks) {
             if (dayCounter > maxDaysInMonth) break
             Row(modifier = Modifier.fillMaxWidth()) {
                 for (d in 0..6) {
@@ -1705,7 +1826,8 @@ private fun EditorialMonthGrid(
                         val dayData = dayAggregates[currentDay]
                         val dayTime = dayData?.timeInMillis ?: 0L
                         val isToday = dayData?.isToday ?: false
-                        val isSelected = selectedDateMillis != null && isSameDay(dayTime, selectedDateMillis)
+                        val thisDayIndex = (dayTime + tz.getOffset(dayTime)) / 86400000L
+                        val isSelected = selectedDayIndex != null && thisDayIndex == selectedDayIndex
 
                         val hasRecord = dayData?.hasRecords ?: false
                         val dayIncome = dayData?.incomeSum ?: 0.0
@@ -1715,13 +1837,19 @@ private fun EditorialMonthGrid(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(
-                                    if (isSelected) clayAccent.copy(alpha = 0.15f)
-                                    else if (isToday) todayBgColor
-                                    else Color.Transparent
-                                )
-                                .clickable { onSelectDate(dayTime) }
+                                .drawBehind {
+                                    if (isSelected) {
+                                        drawRoundRect(
+                                            color = clayAccent.copy(alpha = 0.15f),
+                                            cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                                        )
+                                    } else if (isToday) {
+                                        drawRoundRect(
+                                            color = todayBgColor,
+                                            cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                                        )
+                                    }
+                                }
                                 .padding(vertical = 6.dp)
                         ) {
                             Text(
