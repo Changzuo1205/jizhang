@@ -175,7 +175,7 @@ data class BackgroundConfig(
         get() = if (isLight) Color(0xFFFFFFFF) else Color(0xFF111827)
 
     val dividerColor: Color
-        get() = if (isLight) Color(0xFFE2E8F0) else Color.White.copy(alpha = 0.14f)
+        get() = if (isLight) Color(0xFFDCD5C0) else Color.White.copy(alpha = 0.08f)
 }
 
 val LocalAppColorScheme = compositionLocalOf { ColorSchemeOption.INTERNATIONAL }

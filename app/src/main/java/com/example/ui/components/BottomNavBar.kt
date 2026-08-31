@@ -72,7 +72,7 @@ fun BottomNavBar(
     // 暖纸白背景 #F5F1E6
     val backgroundColor = if (isLight) Color(0xFFF5F1E6) else Color(0xFF1E281E)
     // 顶部只有一条 0.5.dp 的分隔线，无阴影
-    val dividerColor = Color(0xFFDCD5C0)
+    val dividerColor = bgConfig.dividerColor
     val navBarHeight = 60.dp
     
     Box(

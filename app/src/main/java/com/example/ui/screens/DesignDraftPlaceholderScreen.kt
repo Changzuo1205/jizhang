@@ -25,7 +25,7 @@ fun DesignDraftPlaceholderScreen() {
     
     // 暖纸白背景 #F5F1E6
     val backgroundColor = if (isLight) Color(0xFFF5F1E6) else Color(0xFF1E281E)
-    val contentColor = Color(0xFF8A8270) // 中性灰褐色
+    val contentColor = bgConfig.textTertiary
     
     Column(
         modifier = Modifier

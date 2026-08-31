@@ -92,6 +92,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.EditorialPageHeader
 import com.example.data.local.AccountEntity
 import com.example.data.local.ExpenseEntity
 import com.example.model.AmountFormatter
@@ -118,7 +119,7 @@ private val SoftSage = Color(0xFF7FA893)    // 浅墨绿过渡
 private val SoftTerracotta = Color(0xFFD9A088) // 浅陶红过渡
 private val TaupeNeutral = Color(0xFFC9C0A8) // 中性灰褐
 private val WarmPaperBg = Color(0xFFF9F8F5) // 暖纸白
-private val DividerColor = Color(0xFFE4DFD3) // 极细分割线
+
 private val TextMain = Color(0xFF1C1917)
 private val TextMuted = Color(0xFFA8A29E)
 
@@ -167,7 +168,7 @@ fun FinancialReportScreen(
 
     val canvasBg = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
     val cardBg = if (isLight) Color(0xFFFFFFFF) else Color(0xFF1E281E)
-    val dividerColor = if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637)
+    val dividerColor = LocalAppBackgroundConfig.current.dividerColor
     val textMain = if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7)
     val textSecondary = if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA)
     val textMuted = if (isLight) Color(0xFF8A8780) else Color(0xFF889689)
@@ -453,7 +454,7 @@ fun FinancialReportScreen(
                 )
 
                 // 固定边界横线
-                HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
             }
 
             // ==================== 2. 下方平滑滚动内容区域 ====================
@@ -585,7 +586,7 @@ fun FinancialReportScreen(
                         ) {
                             Column {
                                 SpendingHabitsSection(weekdayItems = weekdaySpending)
-                                HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                                HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
                             }
                         }
                     }
@@ -603,7 +604,7 @@ fun FinancialReportScreen(
                                     compareItems = monthlyCompareList,
                                     expenseChangeRatio = expenseChangeRatio
                                 )
-                                HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                                HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
                             }
                         }
                     }
@@ -797,33 +798,11 @@ fun ReportEditorialHeader(
     textMuted: Color,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    EditorialPageHeader(
+        title = "Analysis",
+        subtitle = "FINANCIAL REPORT",
         modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 22.dp, end = 22.dp, top = 10.dp, bottom = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Text(
-                text = "Analysis",
-                fontFamily = FontFamily.Serif,
-                fontStyle = FontStyle.Italic,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Normal,
-                color = textMain,
-                letterSpacing = (-0.5).sp
-            )
-            Spacer(modifier = Modifier.height(1.dp))
-            Text(
-                text = "FINANCIAL REPORT",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
-                color = textMuted,
-                letterSpacing = 0.5.sp
-            )
-        }
-
         // 右上角只保留搜索按钮 (原筛选按钮位置)
         IconButton(onClick = onSearchClick) {
             Icon(
@@ -998,7 +977,7 @@ fun AssetTrendSection(
  * 筛选结果摘要卡片 (SUMMARY)
  */
 @Composable
-fun ReportSummarySection(
+fun ReportSummarySection(dividerColor: Color = LocalAppBackgroundConfig.current.dividerColor, 
     filteredExpensesCount: Int,
     totalExpense: Double,
     totalIncome: Double,
@@ -1042,7 +1021,7 @@ fun ReportSummarySection(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.White.copy(alpha = 0.6f))
-                .border(0.6.dp, DividerColor, RoundedCornerShape(8.dp))
+                .border(0.6.dp, dividerColor, RoundedCornerShape(8.dp))
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -1390,7 +1369,7 @@ fun IncomeBreakdownSection(
  * 模块 4：消费习惯 (星期分布柱状图)
  */
 @Composable
-fun SpendingHabitsSection(
+fun SpendingHabitsSection(dividerColor: Color = LocalAppBackgroundConfig.current.dividerColor, 
     weekdayItems: List<WeekdaySpendingItem>,
     modifier: Modifier = Modifier
 ) {
@@ -1414,7 +1393,7 @@ fun SpendingHabitsSection(
             forestGreen = ForestGreen,
             clayAccent = ClayAccent,
             mutedTextColor = TextMuted,
-            gridLineColor = DividerColor
+            gridLineColor = dividerColor
         )
     }
 }
@@ -1423,7 +1402,7 @@ fun SpendingHabitsSection(
  * 模块 5：收支对比 (近 6 个月双柱图：收入陶红、支出墨绿)
  */
 @Composable
-fun MonthlyComparisonSection(
+fun MonthlyComparisonSection(dividerColor: Color = LocalAppBackgroundConfig.current.dividerColor, 
     compareItems: List<MonthlyCompareItem>,
     expenseChangeRatio: Double,
     modifier: Modifier = Modifier
@@ -1476,7 +1455,7 @@ fun MonthlyComparisonSection(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ReportFilterBottomSheetContent(
+fun ReportFilterBottomSheetContent(dividerColor: Color = LocalAppBackgroundConfig.current.dividerColor, 
     accounts: List<AccountEntity>,
     allCategories: List<String>,
     selectedAccounts: Set<Long>,
@@ -1567,7 +1546,7 @@ fun ReportFilterBottomSheetContent(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
-        HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
 
         // 可滑动的筛选选项区域（包含账户、分类、金额、时间四个条件）
         Column(
@@ -1615,7 +1594,7 @@ fun ReportFilterBottomSheetContent(
                         .background(if (isAllAccounts) ForestGreen.copy(alpha = 0.12f) else WarmPaperBg)
                         .border(
                             width = if (isAllAccounts) 1.dp else 0.5.dp,
-                            color = if (isAllAccounts) ForestGreen else DividerColor,
+                            color = if (isAllAccounts) ForestGreen else dividerColor,
                             shape = RoundedCornerShape(6.dp)
                         )
                         .clickable {
@@ -1641,7 +1620,7 @@ fun ReportFilterBottomSheetContent(
                             .background(if (isSelected) ForestGreen.copy(alpha = 0.12f) else WarmPaperBg)
                             .border(
                                 width = if (isSelected) 1.dp else 0.5.dp,
-                                color = if (isSelected) ForestGreen else DividerColor,
+                                color = if (isSelected) ForestGreen else dividerColor,
                                 shape = RoundedCornerShape(6.dp)
                             )
                             .clickable { onToggleAccount(acc.id) }
@@ -1707,7 +1686,7 @@ fun ReportFilterBottomSheetContent(
                         .background(if (isAllCats) ClayAccent.copy(alpha = 0.12f) else WarmPaperBg)
                         .border(
                             width = if (isAllCats) 1.dp else 0.5.dp,
-                            color = if (isAllCats) ClayAccent else DividerColor,
+                            color = if (isAllCats) ClayAccent else dividerColor,
                             shape = RoundedCornerShape(6.dp)
                         )
                         .clickable {
@@ -1733,7 +1712,7 @@ fun ReportFilterBottomSheetContent(
                             .background(if (isSelected) ClayAccent.copy(alpha = 0.12f) else WarmPaperBg)
                             .border(
                                 width = if (isSelected) 1.dp else 0.5.dp,
-                                color = if (isSelected) ClayAccent else DividerColor,
+                                color = if (isSelected) ClayAccent else dividerColor,
                                 shape = RoundedCornerShape(6.dp)
                             )
                             .clickable { onToggleCategory(cat) }
@@ -1783,7 +1762,7 @@ fun ReportFilterBottomSheetContent(
                         .weight(1f)
                         .clip(RoundedCornerShape(6.dp))
                         .background(Color.White.copy(alpha = 0.65f))
-                        .border(0.8.dp, if (minAmount.isNotEmpty()) ForestGreen else DividerColor, RoundedCornerShape(6.dp))
+                        .border(0.8.dp, if (minAmount.isNotEmpty()) ForestGreen else dividerColor, RoundedCornerShape(6.dp))
                         .padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1835,7 +1814,7 @@ fun ReportFilterBottomSheetContent(
                         .weight(1f)
                         .clip(RoundedCornerShape(6.dp))
                         .background(Color.White.copy(alpha = 0.65f))
-                        .border(0.8.dp, if (maxAmount.isNotEmpty()) ForestGreen else DividerColor, RoundedCornerShape(6.dp))
+                        .border(0.8.dp, if (maxAmount.isNotEmpty()) ForestGreen else dividerColor, RoundedCornerShape(6.dp))
                         .padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1917,7 +1896,7 @@ fun ReportFilterBottomSheetContent(
                             .background(if (isSelected) ForestGreen.copy(alpha = 0.12f) else WarmPaperBg)
                             .border(
                                 width = if (isSelected) 1.dp else 0.5.dp,
-                                color = if (isSelected) ForestGreen else DividerColor,
+                                color = if (isSelected) ForestGreen else dividerColor,
                                 shape = RoundedCornerShape(6.dp)
                             )
                             .clickable { onSelectTimeRange(range) }
@@ -1996,7 +1975,7 @@ fun ReportFilterBottomSheetContent(
                                 .weight(1f)
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(WarmPaperBg)
-                                .border(0.6.dp, DividerColor, RoundedCornerShape(6.dp))
+                                .border(0.6.dp, dividerColor, RoundedCornerShape(6.dp))
                                 .clickable {
                                     DatePickerDialog(
                                         context,
@@ -2052,7 +2031,7 @@ fun ReportFilterBottomSheetContent(
                                 .weight(1f)
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(WarmPaperBg)
-                                .border(0.6.dp, DividerColor, RoundedCornerShape(6.dp))
+                                .border(0.6.dp, dividerColor, RoundedCornerShape(6.dp))
                                 .clickable {
                                     DatePickerDialog(
                                         context,
@@ -2115,7 +2094,7 @@ fun ReportFilterBottomSheetContent(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(WarmPaperBg)
-                                    .border(0.5.dp, DividerColor, RoundedCornerShape(4.dp))
+                                    .border(0.5.dp, dividerColor, RoundedCornerShape(4.dp))
                                     .clickable {
                                         val nowCal = Calendar.getInstance()
                                         val endMs = nowCal.apply {
@@ -2163,7 +2142,7 @@ fun ReportFilterBottomSheetContent(
                         .weight(1f)
                         .height(48.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .border(0.8.dp, DividerColor, RoundedCornerShape(8.dp))
+                        .border(0.8.dp, dividerColor, RoundedCornerShape(8.dp))
                         .clickable { onReset() },
                     contentAlignment = Alignment.Center
                 ) {

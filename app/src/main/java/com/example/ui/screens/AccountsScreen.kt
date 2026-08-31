@@ -202,7 +202,7 @@ fun AccountsScreen(
     val themeAnimSpec = tween<Color>(durationMillis = 400, easing = FastOutSlowInEasing)
     val canvasBg by animateColorAsState(if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24), animationSpec = themeAnimSpec, label = "canvasBg")
     val cardBg by animateColorAsState(if (isLight) Color(0xFFFFFFFF) else Color(0xFF1E281E), animationSpec = themeAnimSpec, label = "cardBg")
-    val dividerColor by animateColorAsState(if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637), animationSpec = themeAnimSpec, label = "dividerColor")
+    val dividerColor by animateColorAsState(bgConfig.dividerColor, animationSpec = themeAnimSpec, label = "dividerColor")
     val inkPrimary by animateColorAsState(if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7), animationSpec = themeAnimSpec, label = "inkPrimary")
     val inkSecondary by animateColorAsState(if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA), animationSpec = themeAnimSpec, label = "inkSecondary")
     val inkMuted by animateColorAsState(if (isLight) Color(0xFF8A8780) else Color(0xFF889689), animationSpec = themeAnimSpec, label = "inkMuted")

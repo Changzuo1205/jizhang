@@ -81,6 +81,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.EditorialPageHeader
 import kotlin.math.roundToInt
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -158,7 +159,7 @@ fun EditorialPreviewScreen(
     // 配色令牌（平滑主题过渡）
     val themeAnimSpec = tween<Color>(durationMillis = 400, easing = FastOutSlowInEasing)
     val canvasBg by animateColorAsState(if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24), animationSpec = themeAnimSpec, label = "canvasBg")
-    val dividerColor by animateColorAsState(if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637), animationSpec = themeAnimSpec, label = "dividerColor")
+    val dividerColor by animateColorAsState(globalBgConfig.dividerColor, animationSpec = themeAnimSpec, label = "dividerColor")
     val inkPrimary by animateColorAsState(if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7), animationSpec = themeAnimSpec, label = "inkPrimary")
     val inkSecondary by animateColorAsState(if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA), animationSpec = themeAnimSpec, label = "inkSecondary")
     val inkMuted by animateColorAsState(if (isLight) Color(0xFF8A8780) else Color(0xFF889689), animationSpec = themeAnimSpec, label = "inkMuted")
@@ -480,37 +481,16 @@ fun EditorialPreviewScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // 1. 顶部 Header (应用进场动效)
-            Row(
+            EditorialPageHeader(
+                title = "Ledger",
+                subtitle = todayDateStr,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .graphicsLayer {
                         alpha = headerAnimAlpha.value
                         translationY = headerAnimSlide.value.dp.toPx()
                     }
-                    .padding(horizontal = 22.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 22.dp, vertical = 12.dp)
             ) {
-                Column {
-                    Text(
-                        text = "Ledger",
-                        fontFamily = FontFamily.Serif,
-                        fontStyle = FontStyle.Italic,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = inkPrimary,
-                        letterSpacing = (-0.5).sp
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = todayDateStr,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        color = inkMuted,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))

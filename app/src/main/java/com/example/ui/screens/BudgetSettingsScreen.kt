@@ -84,7 +84,7 @@ fun BudgetSettingsScreen(
 
     // 配色令牌（与 EditorialPreviewScreen 严格统一）
     val canvasBg = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
-    val dividerColor = if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637)
+    val dividerColor = globalBgConfig.dividerColor
     val cardBg = if (isLight) Color(0xFFF2EFE8) else Color(0xFF1B231B)
     val inkPrimary = if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7)
     val inkSecondary = if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA)
