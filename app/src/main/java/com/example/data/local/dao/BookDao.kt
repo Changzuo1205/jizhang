@@ -47,4 +47,10 @@ interface BookDao {
     /** 归档（软语义，不物理删除以保护交易外键） */
     @Query("UPDATE book SET is_archived = 1, updated_at = :now WHERE id = :bookId")
     suspend fun archive(bookId: Long, now: Long)
+
+    @Query("SELECT * FROM book WHERE is_archived = 0 ORDER BY is_default DESC, sort_order ASC, created_at ASC")
+    suspend fun getActiveOnce(): List<BookEntity>
+
+    @Query("DELETE FROM book WHERE id = :bookId")
+    suspend fun deleteById(bookId: Long)
 }

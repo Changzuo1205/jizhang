@@ -31,6 +31,12 @@ interface CategoryDao {
     @Query("SELECT * FROM category WHERE name = :name AND parent_id = :parentId LIMIT 1")
     suspend fun findChildByName(name: String, parentId: Long): CategoryEntity?
 
+    @Query("SELECT * FROM category WHERE name = :name AND type = :type AND is_archived = 0 ORDER BY parent_id DESC LIMIT 1")
+    suspend fun findFirstByNameAndType(name: String, type: String): CategoryEntity?
+
+    @Query("SELECT * FROM category WHERE is_archived = 0 ORDER BY sort_order ASC, id ASC")
+    suspend fun getAllActive(): List<CategoryEntity>
+
     /** 查找默认分类（当找不到匹配分类时的回退选项） */
     @Query("SELECT * FROM category WHERE name = :name AND parent_id IS NULL AND type = :type AND is_archived = 0 LIMIT 1")
     suspend fun findDefaultCategory(name: String, type: String): CategoryEntity?
@@ -62,4 +68,7 @@ interface CategoryDao {
 
     @Query("UPDATE category SET is_archived = 1 WHERE id = :id")
     suspend fun archive(id: Long)
+
+    @Query("DELETE FROM category WHERE book_id = :bookId")
+    suspend fun deleteByBookId(bookId: Long)
 }

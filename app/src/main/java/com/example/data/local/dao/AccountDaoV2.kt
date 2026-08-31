@@ -44,4 +44,13 @@ interface AccountDaoV2 {
 
     @Query("UPDATE account SET is_archived = 1, updated_at = :now WHERE id = :id")
     suspend fun archive(id: Long, now: Long)
+
+    @Query("SELECT * FROM account WHERE book_id = :bookId AND is_archived = 0 ORDER BY sort_order ASC, id ASC")
+    suspend fun getByBookId(bookId: Long): List<AccountEntityV2>
+
+    @Query("DELETE FROM account WHERE book_id = :bookId")
+    suspend fun deleteByBookId(bookId: Long)
+
+    @Query("UPDATE account SET initial_balance = 0, updated_at = :now WHERE book_id = :bookId")
+    suspend fun resetBalancesByBookId(bookId: Long, now: Long)
 }

@@ -1,495 +1,809 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.data.local.entity.BookEntity
-import com.example.ui.components.GlassBackgroundWithGlow
-import com.example.ui.components.GlassCard
-import com.example.ui.components.GlassChip
-import com.example.ui.components.GlowCyan
-import com.example.ui.components.GlowEmerald
+import com.example.ui.components.EditorialPageHeader
 import com.example.ui.theme.LocalAppBackgroundConfig
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// 手账本专属封面配色主题
+private data class BookCoverTheme(
+    val name: String,
+    val primaryColor: Color,
+    val spineColor: Color,
+    val accentColor: Color,
+    val tagBg: Color
+)
+
+private val BookCoverThemes = listOf(
+    BookCoverTheme("墨绿手账", Color(0xFF2D6A4F), Color(0xFF1B4332), Color(0xFF52B788), Color(0xFFE8F5E9)),
+    BookCoverTheme("琥珀陶土", Color(0xFFC05621), Color(0xFF7B2CBF), Color(0xFFDD6B20), Color(0xFFFEEBC8)),
+    BookCoverTheme("深海蔚蓝", Color(0xFF1E3A8A), Color(0xFF1E1B4B), Color(0xFF3B82F6), Color(0xFFE0F2FE)),
+    BookCoverTheme("复古暮紫", Color(0xFF6B21A8), Color(0xFF3B0764), Color(0xFFA855F7), Color(0xFFF3E8FF)),
+    BookCoverTheme("暖炭木黑", Color(0xFF262626), Color(0xFF171717), Color(0xFFA3A3A3), Color(0xFFF5F5F5))
+)
+
 /**
- * 账本管理页（Phase 2 子页）。
+ * 账本管理页（全新手账风升级版）。
  *
- * 复用 [BudgetSettingsScreen] 的页面骨架：返回头 + 玻璃容器 + 统一边距。
- * 支持新建（弹窗输入名称）、设为默认、重命名与归档；默认账本由 Repository 层
- * 保护不可归档，UI 端仅隐藏入口。
+ * 特性：
+ * 1. 拟物手账本封面设计（书脊、防滑针线缝边、金属封角质感）
+ * 2. 多账本数据完全隔离：切换账本时同步修改默认/激活账本，更新全应用收支流水
+ * 3. 支持快捷新建、重命名、选择主题风格与归档
  */
 @Composable
 fun BooksScreen(
     books: List<BookEntity>,
+    currentBookId: Long? = null,
     onCreateBook: (name: String) -> Unit = {},
     onRenameBook: (bookId: Long, name: String) -> Unit = { _, _ -> },
     onSetDefaultBook: (bookId: Long) -> Unit = {},
     onArchiveBook: (bookId: Long) -> Unit = {},
+    onClearBookData: (bookId: Long) -> Unit = {},
+    onDeleteBook: (bookId: Long) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 拦截系统返回手势回到上级
     BackHandler(enabled = true) { onBack() }
 
+    val context = LocalContext.current
     val bgConfig = LocalAppBackgroundConfig.current
+    val backgroundColor = if (bgConfig.isLight) Color(0xFFFAFAF7) else Color(0xFF121418)
+    val textPrimary = bgConfig.textPrimary
+    val textMuted = bgConfig.textSecondary
+    val dividerColor = bgConfig.dividerColor
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var renamingBook by remember { mutableStateOf<BookEntity?>(null) }
-    val sdf = remember { SimpleDateFormat("yyyy-MM-dd", Locale.CHINA) }
+    var archiveConfirmBook by remember { mutableStateOf<BookEntity?>(null) }
+    var clearDataConfirmBook by remember { mutableStateOf<BookEntity?>(null) }
+    var deleteBookConfirmBook by remember { mutableStateOf<BookEntity?>(null) }
 
-    GlassBackgroundWithGlow(modifier = modifier) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+    val activeBook = remember(books, currentBookId) {
+        if (currentBookId != null) {
+            books.find { it.id == currentBookId } ?: books.find { it.isDefault } ?: books.firstOrNull()
+        } else {
+            books.find { it.isDefault } ?: books.firstOrNull()
+        }
+    }
+
+    val sdf = remember { SimpleDateFormat("yyyy.MM.dd", Locale.CHINA) }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .statusBarsPadding()
+    ) {
+        // 返回标头
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            IconButton(
+                onClick = onBack,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(if (bgConfig.isLight) Color(0xFFEFECE6) else Color(0xFF22262E))
+                    .testTag("books_back_button")
             ) {
-                Spacer(modifier = Modifier.statusBarsPadding())
-                Spacer(modifier = Modifier.height(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回",
+                    tint = textPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = "LEDGER MANAGEMENT",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    color = Color(0xFF2D6A4F),
+                    letterSpacing = 1.2.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "账本管理",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary
+                )
+            }
+        }
 
-                // 返回头（与预算设置页同构）
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = onBack,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(if (bgConfig.isLight) Color.White.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.1f))
-                                .testTag("books_back_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "返回",
-                                tint = bgConfig.textPrimary
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "账本管理",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = bgConfig.textPrimary
-                            )
-                            Text(
-                                text = "多场景账本 · 设默认 / 归档互不影响",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = bgConfig.textSecondary
-                            )
-                        }
-                    }
+        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
 
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(if (bgConfig.isLight) Color(0xFF059669).copy(alpha = 0.12f) else Color(0xFF059669).copy(alpha = 0.3f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MenuBook,
-                            contentDescription = null,
-                            tint = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // 新建账本入口卡片
-                GlassCard(
-                    shape = RoundedCornerShape(20.dp),
-                    onClick = { showCreateDialog = true },
-                    modifier = Modifier.fillMaxWidth().testTag("create_book_card")
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp)
+        ) {
+            // Header Banner: 当前使用中的手账本信息
+            item {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = if (bgConfig.isLight) Color(0xFFF3EFE6) else Color(0xFF1E222A),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF2D6A4F)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Book,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF4F1E8),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "当前激活手账本",
+                                    fontSize = 11.sp,
+                                    color = textMuted,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                                Text(
+                                    text = activeBook?.name ?: "默认账本",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFF2D6A4F).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "共 ${books.size} 个账本",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF2D6A4F),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 新建入口 Banner
+            item {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.Transparent,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (bgConfig.isLight) Color(0xFF2D6A4F).copy(alpha = 0.4f) else Color(0xFF52B788).copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .clickable { showCreateDialog = true }
+                        .testTag("create_book_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(44.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF6366F1).copy(alpha = if (bgConfig.isLight) 0.12f else 0.25f))
-                                .border(1.dp, Color(0xFF6366F1).copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+                                .background(Color(0xFF2D6A4F).copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Add,
+                                imageVector = Icons.Default.MenuBook,
                                 contentDescription = null,
-                                tint = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan,
-                                modifier = Modifier.size(22.dp)
+                                tint = Color(0xFF2D6A4F),
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "新建账本",
-                                style = MaterialTheme.typography.titleSmall,
+                                text = "新建独立手账本",
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = bgConfig.textPrimary
+                                color = textPrimary
                             )
                             Text(
-                                text = "如：日常账本、家庭账本、旅行账本…",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = bgConfig.textSecondary,
-                                maxLines = 1
+                                text = "为旅行、家庭、项目建立独立算账明细",
+                                fontSize = 12.sp,
+                                color = textMuted
                             )
                         }
-                        Text(
-                            text = "＋ 新建",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan
+                        Icon(
+                            imageVector = Icons.Default.AddCircleOutline,
+                            contentDescription = "新建",
+                            tint = Color(0xFF2D6A4F),
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
+            // 账本列表 Heading
+            item {
                 Text(
-                    text = "现有账本 (${books.size})",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = bgConfig.textSecondary,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                    text = "ALL HANDBOOK LEDGERS / 账本画廊",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    color = textMuted,
+                    letterSpacing = 1.2.sp,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
+            }
 
-                books.forEach { book ->
-                    BookRowCard(
-                        book = book,
-                        createdDateText = sdf.format(Date(book.createdAt)),
-                        onSetDefault = { onSetDefaultBook(book.id) },
-                        onRename = { renamingBook = book },
-                        onArchive = { onArchiveBook(book.id) },
-                        modifier = Modifier.padding(bottom = 10.dp)
-                    )
+            // 账本卡片
+            items(books, key = { it.id }) { book ->
+                val isActive = activeBook?.id == book.id
+                val isDefault = book.isDefault
+                val theme = remember(book.id) {
+                    BookCoverThemes[(book.id % BookCoverThemes.size).toInt()]
+                }
+                val createdDateStr = remember(book.createdAt) {
+                    if (book.createdAt > 0) sdf.format(Date(book.createdAt)) else "系统内置"
                 }
 
-                if (books.isEmpty()) {
-                    GlassCard(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "暂无账本，点击上方「新建账本」开始创建",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = bgConfig.textSecondary,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(90.dp)) // 底部导航占位
+                JournalBookCard(
+                    book = book,
+                    isActive = isActive,
+                    isDefault = isDefault,
+                    canDelete = books.size > 1,
+                    theme = theme,
+                    createdDateStr = createdDateStr,
+                    onSelect = {
+                        if (!isActive) {
+                            onSetDefaultBook(book.id)
+                            Toast.makeText(context, "已切换至【${book.name}】，明细随之更新", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onRename = { renamingBook = book },
+                    onClearData = { clearDataConfirmBook = book },
+                    onDelete = { deleteBookConfirmBook = book },
+                    onArchive = { archiveConfirmBook = book }
+                )
             }
         }
     }
 
     // 新建账本对话框
     if (showCreateDialog) {
-        BookNameEditDialog(
-            title = "新建账本",
-            initialName = "",
-            confirmText = "创建",
+        CreateBookDialog(
             onDismiss = { showCreateDialog = false },
-            onConfirm = { name ->
+            onCreate = { name ->
                 onCreateBook(name)
                 showCreateDialog = false
+                Toast.makeText(context, "已创建并自动切换至【$name】", Toast.LENGTH_SHORT).show()
             }
         )
     }
 
     // 重命名对话框
     if (renamingBook != null) {
-        BookNameEditDialog(
-            title = "重命名账本",
+        RenameBookDialog(
             initialName = renamingBook!!.name,
-            confirmText = "保存",
             onDismiss = { renamingBook = null },
-            onConfirm = { name ->
-                onRenameBook(renamingBook!!.id, name)
+            onConfirm = { newName ->
+                onRenameBook(renamingBook!!.id, newName)
                 renamingBook = null
+                Toast.makeText(context, "账本重命名成功", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    // 清空数据确认对话框
+    if (clearDataConfirmBook != null) {
+        val target = clearDataConfirmBook!!
+        AlertDialog(
+            onDismissRequest = { clearDataConfirmBook = null },
+            title = { Text("清空账本数据？", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("确定要清空【${target.name}】的所有数据吗？\n\n清空后该账本内的所有记账流水与转账明细将被彻底清除，账户余额将归零。此操作不可撤销。")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearBookData(target.id)
+                        clearDataConfirmBook = null
+                        Toast.makeText(context, "【${target.name}】数据已清空", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认清空数据", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { clearDataConfirmBook = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    // 删除账本确认对话框
+    if (deleteBookConfirmBook != null) {
+        val target = deleteBookConfirmBook!!
+        AlertDialog(
+            onDismissRequest = { deleteBookConfirmBook = null },
+            title = { Text("删除账本及数据？", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("确定要删除【${target.name}】吗？\n\n删除后该账本及其包含的所有账户、明细数据将被彻底移除，此操作不可撤销。")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteBook(target.id)
+                        deleteBookConfirmBook = null
+                        Toast.makeText(context, "【${target.name}】已成功删除", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认删除账本", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteBookConfirmBook = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    // 归档确认对话框
+    if (archiveConfirmBook != null) {
+        AlertDialog(
+            onDismissRequest = { archiveConfirmBook = null },
+            title = { Text("确认归档账本？", fontWeight = FontWeight.Bold) },
+            text = { Text("归档后【${archiveConfirmBook!!.name}】将移出常用账本画廊，但历史数据安全保留。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onArchiveBook(archiveConfirmBook!!.id)
+                        archiveConfirmBook = null
+                        Toast.makeText(context, "账本已成功归档", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text("确认归档", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { archiveConfirmBook = null }) {
+                    Text("取消")
+                }
             }
         )
     }
 }
 
-/** 单个账本条目玻璃卡：名称 + 默认徽标 + 设默认/重命名/归档操作 */
+/**
+ * 手账风精装书卡片组件 (Journal Cover Card)
+ */
 @Composable
-private fun BookRowCard(
+private fun JournalBookCard(
     book: BookEntity,
-    createdDateText: String,
-    onSetDefault: () -> Unit,
+    isActive: Boolean,
+    isDefault: Boolean,
+    canDelete: Boolean,
+    theme: BookCoverTheme,
+    createdDateStr: String,
+    onSelect: () -> Unit,
     onRename: () -> Unit,
-    onArchive: () -> Unit,
-    modifier: Modifier = Modifier
+    onClearData: () -> Unit,
+    onDelete: () -> Unit,
+    onArchive: () -> Unit
 ) {
     val bgConfig = LocalAppBackgroundConfig.current
 
-    GlassCard(
+    Surface(
         shape = RoundedCornerShape(20.dp),
-        backgroundColor = if (book.isDefault) {
-            if (bgConfig.isLight) Color(0xFFEEF2FF).copy(alpha = 0.95f) else Color(0xFF312E81).copy(alpha = 0.45f)
-        } else null,
-        borderColor = if (book.isDefault) Brush.linearGradient(
-            listOf(
-                Color(0xFF6366F1).copy(alpha = 0.55f),
-                Color.White.copy(alpha = 0.12f)
-            )
-        ) else null,
-        modifier = modifier.fillMaxWidth()
+        color = if (bgConfig.isLight) Color.White else Color(0xFF1E222B),
+        shadowElevation = if (isActive) 8.dp else 2.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isActive) 2.dp else 0.8.dp,
+            color = if (isActive) theme.primaryColor else if (bgConfig.isLight) Color(0xFFE5E2D9) else Color.White.copy(alpha = 0.08f)
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF6366F1).copy(alpha = if (bgConfig.isLight) 0.12f else 0.25f))
-                        .border(1.dp, Color(0xFF6366F1).copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MenuBook,
-                        contentDescription = null,
-                        tint = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = book.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = bgConfig.textPrimary,
-                            maxLines = 1
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+        ) {
+            // 拟物书脊 (Spine) Accent
+            Box(
+                modifier = Modifier
+                    .width(16.dp)
+                    .fillMaxHeight()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(theme.spineColor, theme.primaryColor)
                         )
-                        if (book.isDefault) {
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                // 书脊线纹理
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    repeat(4) {
+                        Box(
+                            modifier = Modifier
+                                .width(6.dp)
+                                .height(2.dp)
+                                .background(Color.White.copy(alpha = 0.4f))
+                        )
+                    }
+                }
+            }
+
+            // 封面主要区域
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(16.dp)
+            ) {
+                // Top Tag & Title Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = theme.tagBg
+                        ) {
+                            Text(
+                                text = "LEDGER NO.${book.id}",
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = theme.primaryColor,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+
+                        if (isDefault) {
                             Spacer(modifier = Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFF6366F1).copy(alpha = if (bgConfig.isLight) 0.15f else 0.35f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFFEF3C7)
                             ) {
                                 Text(
-                                    text = "默认",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    text = "主账本",
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan
+                                    color = Color(0xFFD97706),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "${book.currency} · 建于 $createdDateText",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = bgConfig.textTertiary
-                    )
-                }
-                IconButton(onClick = onRename, modifier = Modifier.size(30.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "重命名",
-                        tint = bgConfig.textTertiary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
 
-            // 操作行：设为默认 / 归档（默认账本禁止归档）
-            if (!book.isDefault) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GlassChip(selected = true, onClick = onSetDefault, selectedGlowColor = Color(0xFF6366F1)) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    // 编辑/操作菜单
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        IconButton(onClick = onRename, modifier = Modifier.size(28.dp)) {
                             Icon(
-                                imageVector = Icons.Default.PushPin,
-                                contentDescription = null,
-                                tint = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "设为默认",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (bgConfig.isLight) Color(0xFF4F46E5) else GlowCyan
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "重命名",
+                                tint = bgConfig.textSecondary,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
-                    }
-                    GlassChip(selected = false, onClick = onArchive) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        IconButton(onClick = onClearData, modifier = Modifier.size(28.dp)) {
                             Icon(
-                                imageVector = Icons.Default.Archive,
-                                contentDescription = null,
-                                tint = bgConfig.textTertiary,
-                                modifier = Modifier.size(13.dp)
+                                imageVector = Icons.Outlined.DeleteSweep,
+                                contentDescription = "清空账本数据",
+                                tint = Color(0xFFD97706),
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "归档",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = bgConfig.textSecondary
-                            )
+                        }
+                        if (canDelete) {
+                            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                                Icon(
+                                    imageVector = Icons.Outlined.DeleteOutline,
+                                    contentDescription = "删除账本",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        if (!isDefault) {
+                            IconButton(onClick = onArchive, modifier = Modifier.size(28.dp)) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Archive,
+                                    contentDescription = "归档",
+                                    tint = bgConfig.textSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
-            } else {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = if (bgConfig.isLight) Color(0xFF059669) else GlowEmerald,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = "当前默认账本 · 记账与导入均挂靠于此",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = bgConfig.textSecondary
-                    )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // 手账本标题
+                Text(
+                    text = book.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Bold,
+                    color = bgConfig.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "币种: ${book.currency} · 建立于 $createdDateStr",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
+                    color = bgConfig.textSecondary
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 底部切换 / 激活状态 Action
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isActive) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "正在使用中",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = theme.primaryColor
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = onSelect,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (bgConfig.isLight) Color(0xFFF1F5F9) else Color(0xFF2D3748),
+                                contentColor = bgConfig.textPrimary
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SwapHoriz,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "切换至此账本", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-/** 账本名称输入对话框（新建/重命名共用） */
+/**
+ * 新建手账本对话框
+ */
 @Composable
-private fun BookNameEditDialog(
-    title: String,
-    initialName: String,
-    confirmText: String,
+private fun CreateBookDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onCreate: (name: String) -> Unit
 ) {
+    var bookName by remember { mutableStateOf("") }
     val bgConfig = LocalAppBackgroundConfig.current
-    var nameInput by remember { mutableStateOf(initialName) }
 
     Dialog(onDismissRequest = onDismiss) {
-        GlassCard(
-            shape = RoundedCornerShape(22.dp),
-            backgroundColor = bgConfig.dialogBackground,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = if (bgConfig.isLight) Color.White else Color(0xFF1E222B),
+            shadowElevation = 16.dp,
+            modifier = Modifier.padding(16.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
                 Text(
-                    text = title,
+                    text = "新建手账本",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Bold,
+                    color = bgConfig.textPrimary
+                )
+                Text(
+                    text = "建立后，系统将为此账本开启独立的收支流水隔离",
+                    fontSize = 12.sp,
+                    color = bgConfig.textSecondary,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+
+                OutlinedTextField(
+                    value = bookName,
+                    onValueChange = { bookName = it },
+                    label = { Text("手账本名称") },
+                    placeholder = { Text("如：家庭开销、日本旅行账...") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF2D6A4F),
+                        unfocusedBorderColor = bgConfig.inputFieldBorder
+                    ),
+                    modifier = Modifier.fillMaxWidth().testTag("book_name_input")
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("取消", color = bgConfig.textSecondary)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            if (bookName.isNotBlank()) {
+                                onCreate(bookName.trim())
+                            }
+                        },
+                        enabled = bookName.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D6A4F)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("确认创建", color = Color(0xFFF4F1E8), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 重命名对话框
+ */
+@Composable
+private fun RenameBookDialog(
+    initialName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (newName: String) -> Unit
+) {
+    var bookName by remember { mutableStateOf(initialName) }
+    val bgConfig = LocalAppBackgroundConfig.current
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = if (bgConfig.isLight) Color.White else Color(0xFF1E222B),
+            shadowElevation = 16.dp,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = "修改账本名称",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = bgConfig.textPrimary
                 )
-                Spacer(modifier = Modifier.height(14.dp))
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 OutlinedTextField(
-                    value = nameInput,
-                    onValueChange = { nameInput = it },
-                    label = { Text("账本名称", color = bgConfig.textSecondary) },
-                    placeholder = { Text("如：家庭账本、旅行账本", color = bgConfig.textTertiary) },
+                    value = bookName,
+                    onValueChange = { bookName = it },
+                    label = { Text("账本名称") },
                     singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = bgConfig.textPrimary,
-                        unfocusedTextColor = bgConfig.textPrimary,
-                        focusedContainerColor = bgConfig.inputFieldBg,
-                        unfocusedContainerColor = bgConfig.inputFieldBg,
-                        focusedBorderColor = Color(0xFF6366F1),
-                        unfocusedBorderColor = bgConfig.inputFieldBorder,
-                        cursorColor = Color(0xFF6366F1)
+                        focusedBorderColor = Color(0xFF2D6A4F),
+                        unfocusedBorderColor = bgConfig.inputFieldBorder
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("book_name_input")
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(18.dp))
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = onDismiss,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = bgConfig.textSecondary
-                        ),
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text("取消")
+                    TextButton(onClick = onDismiss) {
+                        Text("取消", color = bgConfig.textSecondary)
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { if (nameInput.trim().isNotBlank()) onConfirm(nameInput.trim()) },
-                        enabled = nameInput.trim().isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                        onClick = {
+                            if (bookName.isNotBlank()) {
+                                onConfirm(bookName.trim())
+                            }
+                        },
+                        enabled = bookName.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D6A4F)),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(confirmText, color = Color.White)
+                        Text("保存修改", color = Color(0xFFF4F1E8), fontWeight = FontWeight.Bold)
                     }
                 }
             }

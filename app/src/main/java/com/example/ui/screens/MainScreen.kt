@@ -181,7 +181,7 @@ fun MainScreen(
     ) {
         val animatedSurfaceColor by animateColorAsState(
             targetValue = if (backgroundConfig.isLight) Color(0xFFFAFAF7) else Color(0xFF242E24),
-            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+            animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
             label = "SurfaceBackgroundAnim"
         )
 
@@ -351,13 +351,26 @@ private fun MainScreenContent(
     onReportSelectedIncomePieCategoryChange: (String?) -> Unit,
     reportListState: androidx.compose.foundation.lazy.LazyListState
 ) {
-    var selectedCalendarDay by remember { mutableStateOf<Int?>(null) }
-
     var homeSelectedDateMillis by remember { mutableStateOf<Long?>(null) }
     var homeIsCalendarExpanded by remember { mutableStateOf(false) }
     val homePagerState = rememberPagerState(initialPage = 500, pageCount = { 1000 })
     var homeForceDarkPreview by remember { mutableStateOf<Boolean?>(null) }
     var homeEntranceAnimationPlayed by remember { mutableStateOf(false) }
+
+    val getAddExpenseTimestamp: () -> Long? = {
+        if (homeSelectedDateMillis != null) {
+            val now = Calendar.getInstance()
+            Calendar.getInstance().apply {
+                timeInMillis = homeSelectedDateMillis!!
+                set(Calendar.HOUR_OF_DAY, now.get(Calendar.HOUR_OF_DAY))
+                set(Calendar.MINUTE, now.get(Calendar.MINUTE))
+                set(Calendar.SECOND, now.get(Calendar.SECOND))
+                set(Calendar.MILLISECOND, now.get(Calendar.MILLISECOND))
+            }.timeInMillis
+        } else {
+            null
+        }
+    }
 
     // Outer transition between Main Tabs and Sub-Screens (Add Expense / Bill Calendar / Budget Settings)
     AnimatedContent(
@@ -442,12 +455,16 @@ private fun MainScreenContent(
                 )
             }
             ActiveSubScreen.BOOKS -> {
+                val currentBook by viewModel.currentBook.collectAsStateWithLifecycle()
                 BooksScreen(
                     books = books,
+                    currentBookId = currentBook?.id,
                     onCreateBook = { name -> viewModel.saveBook(name) },
                     onRenameBook = { id, name -> viewModel.updateBook(id, name) },
                     onSetDefaultBook = { viewModel.setDefaultBook(it) },
                     onArchiveBook = { viewModel.archiveBook(it) },
+                    onClearBookData = { viewModel.clearBookData(it) },
+                    onDeleteBook = { viewModel.deleteBook(it) },
                     onBack = { onActiveSubScreenChange(ActiveSubScreen.NONE) }
                 )
             }
@@ -485,7 +502,7 @@ private fun MainScreenContent(
                             budgetConfig = budgetConfig,
                             budgetProgress = budgetProgress,
                             onOpenBudgetSettings = { onActiveSubScreenChange(ActiveSubScreen.BUDGET_SETTINGS) },
-                            onOpenAddExpense = { onOpenAddExpenseWithItem(null, null) },
+                            onOpenAddExpense = { onOpenAddExpenseWithItem(getAddExpenseTimestamp(), null) },
                             onEditExpense = { exp -> onOpenAddExpenseWithItem(exp.dateTimestamp, exp) },
                             onDeleteExpense = { viewModel.deleteExpense(it) },
                             selectedDateMillis = homeSelectedDateMillis,
@@ -579,14 +596,7 @@ private fun MainScreenContent(
                 currentTab = currentTab,
                 onTabSelected = onCurrentTabChange,
                 onOpenAddExpense = {
-                    val addTimestamp = if (selectedCalendarDay != null) {
-                        val cal = Calendar.getInstance()
-                        cal.set(Calendar.DAY_OF_MONTH, selectedCalendarDay!!)
-                        cal.timeInMillis
-                    } else {
-                        null
-                    }
-                    onOpenAddExpenseWithItem(addTimestamp, null)
+                    onOpenAddExpenseWithItem(getAddExpenseTimestamp(), null)
                 }
             )
         }

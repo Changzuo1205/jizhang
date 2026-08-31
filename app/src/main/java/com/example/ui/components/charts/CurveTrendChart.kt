@@ -58,7 +58,8 @@ fun CurveTrendChart(
     primaryColor: Color = Color(0xFF2D6A4F), // 墨绿
     canvasBgColor: Color = Color(0xFFF9F8F5), // 纸白背景
     textColorMuted: Color = Color(0xFFA8A29E),
-    autoScrollToLatest: Boolean = true
+    autoScrollToLatest: Boolean = true,
+    externalAnimProgress: Float? = null
 ) {
     if (points.isEmpty()) return
 
@@ -72,11 +73,13 @@ fun CurveTrendChart(
         if (autoScrollToLatest && points.isNotEmpty()) {
             scrollState.scrollTo(scrollState.maxValue)
         }
-        animProgress.snapTo(0f)
-        animProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 1425, easing = FastOutSlowInEasing)
-        )
+        if (externalAnimProgress == null) {
+            animProgress.snapTo(0f)
+            animProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 1425, easing = FastOutSlowInEasing)
+            )
+        }
     }
 
     val pointSpacingPx = with(density) { pointSpacing.toPx() }
@@ -149,7 +152,7 @@ fun CurveTrendChart(
                 // scrollState.value 对应当前视口左侧在总 Canvas 上的像素偏移
                 val visibleLeftX = scrollState.value.toFloat()
                 val visibleRightX = (visibleLeftX + viewportWidthPx).coerceAtMost(w)
-                val currentProgress = animProgress.value
+                val currentProgress = externalAnimProgress ?: animProgress.value
 
                 // 未显示部分（视口左侧 x < visibleLeftX）不受动画影响直接完整绘制；
                 // 当前视口部分随 progress 进度从 visibleLeftX 向 visibleRightX 展开

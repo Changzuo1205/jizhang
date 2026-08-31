@@ -43,8 +43,8 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
     // ---------- 交易写入（遗留 DTO 形态入口） ----------
 
     /**
-     * 以旧版字段签名落一笔交易。分类 id 通过名称解析：
-     * 存在二级则取二级 id，否则取一级 id；完全未命中则置空（SET_NULL 可空设计）。
+     * 以旧版字段签名落一笔交易。分类 id 通过智能解析与动态创建：
+     * 存在二级则取二级 id，否则取一级 id；支持复合分类名与模糊别名匹配。
      */
     suspend fun insertLegacyExpense(
         type: String,
@@ -54,17 +54,19 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         note: String,
         accountId: Long,
         timestamp: Long,
-        transferToAccountId: Long? = null
+        transferToAccountId: Long? = null,
+        bookId: Long? = null
     ): Long {
         val txType = runCatching { TransactionType.valueOf(type) }.getOrDefault(TransactionType.EXPENSE)
+        val targetBook = bookId ?: defaultBookId()
         val categoryId = if (txType == TransactionType.TRANSFER) {
             null
         } else {
-            resolveCategoryId(txType, category, subCategory)
+            resolveOrCreateCategoryId(txType, category, subCategory, targetBook)
         }
         val entity = TransactionEntity(
             userId = USER_ID_LOCAL,
-            bookId = defaultBookId(),
+            bookId = targetBook,
             accountId = accountId,
             transferToAccountId = if (txType == TransactionType.TRANSFER) transferToAccountId?.takeIf { it != accountId } else null,
             type = txType,
@@ -80,12 +82,13 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
      * 更新旧版编辑对（old/new 均为过渡 DTO），保留行 uuid 与创建信息。
      * 转账类型：分类字段保持为空，以 [ExpenseSnapshot.transferToAccountId] 维护对端账户。
      */
-    suspend fun updateLegacyExpense(old: ExpenseSnapshot, new: ExpenseSnapshot) {
+    suspend fun updateLegacyExpense(old: ExpenseSnapshot, new: ExpenseSnapshot, bookId: Long? = null) {
         val existing = transactionDao.getById(old.id) ?: return
         val txType = runCatching { TransactionType.valueOf(new.type) }.getOrDefault(existing.type)
         val isTransfer = txType == TransactionType.TRANSFER
+        val targetBook = bookId ?: existing.bookId
         val categoryId =
-            if (isTransfer) null else resolveCategoryId(txType, new.category, new.subCategory)
+            if (isTransfer) null else resolveOrCreateCategoryId(txType, new.category, new.subCategory, targetBook)
         val targetAccountId =
             if (isTransfer && new.transferToAccountId != 0L) new.transferToAccountId
             else if (isTransfer) existing.transferToAccountId
@@ -119,11 +122,12 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         toAccountId: Long,
         amountYuan: Double,
         note: String?,
-        timestamp: Long = System.currentTimeMillis()
+        timestamp: Long = System.currentTimeMillis(),
+        bookId: Long? = null
     ): Long {
         val entity = TransactionEntity(
             userId = USER_ID_LOCAL,
-            bookId = defaultBookId(),
+            bookId = bookId ?: defaultBookId(),
             accountId = fromAccountId,
             transferToAccountId = toAccountId,
             type = TransactionType.TRANSFER,
@@ -143,14 +147,16 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
         legacyType: String,
         initialBalanceYuan: Double,
         colorHex: String,
-        note: String
+        note: String,
+        bookId: Long? = null
     ): Long {
+        val targetBook = bookId ?: defaultBookId()
         val existingCount = accountDao.count()
         return accountDao.insert(
             AccountEntityV2(
                 uuid = java.util.UUID.randomUUID().toString().replace("-", ""),
                 userId = USER_ID_LOCAL,
-                bookId = defaultBookId(),
+                bookId = targetBook,
                 name = name,
                 type = legacyTypeToV2(name, legacyType),
                 initialBalance = AmountFormatter.yuanToCents(initialBalanceYuan),
@@ -265,11 +271,11 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
     /** 观察未归档账本（默认账本置顶） */
     fun observeBooks(): Flow<List<BookEntity>> = bookDao.observeActive()
 
-    /** 新建账本（默认挂单机用户；sortOrder 追加在队尾） */
+    /** 新建账本（默认挂单机用户；并自动预设基础账户） */
     suspend fun insertBook(name: String, currency: String = "CNY"): Long = db.withTransaction {
         val cleanName = name.trim()
         require(cleanName.isNotEmpty()) { "账本名称不能为空" }
-        bookDao.insert(
+        val newBookId = bookDao.insert(
             BookEntity(
                 uuid = java.util.UUID.randomUUID().toString().replace("-", ""),
                 userId = USER_ID_LOCAL,
@@ -278,6 +284,78 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
                 sortOrder = bookDao.count()
             )
         )
+        // 为新账本预设标准资产账户（仅微信钱包与支付宝两个网络账户）
+        val defaultAccounts = listOf(
+            Triple("微信钱包", "wechat", "#07C160"),
+            Triple("支付宝", "alipay", "#1677FF")
+        )
+        defaultAccounts.forEachIndexed { index, (accName, accType, color) ->
+            accountDao.insert(
+                AccountEntityV2(
+                    uuid = java.util.UUID.randomUUID().toString().replace("-", ""),
+                    userId = USER_ID_LOCAL,
+                    bookId = newBookId,
+                    name = accName,
+                    type = accType,
+                    initialBalance = 0,
+                    color = color,
+                    sortOrder = index
+                )
+            )
+        }
+        newBookId
+    }
+
+    /** 确保指定账本至少拥有基础可用账户 */
+    suspend fun ensureBookAccounts(bookId: Long) = db.withTransaction {
+        val existing = accountDao.getByBookId(bookId)
+        if (existing.isEmpty()) {
+            val defaultAccounts = listOf(
+                Triple("微信钱包", "wechat", "#07C160"),
+                Triple("支付宝", "alipay", "#1677FF")
+            )
+            defaultAccounts.forEachIndexed { index, (accName, accType, color) ->
+                accountDao.insert(
+                    AccountEntityV2(
+                        uuid = java.util.UUID.randomUUID().toString().replace("-", ""),
+                        userId = USER_ID_LOCAL,
+                        bookId = bookId,
+                        name = accName,
+                        type = accType,
+                        initialBalance = 0,
+                        color = color,
+                        sortOrder = index
+                    )
+                )
+            }
+        }
+    }
+
+    /** 清空指定账本的所有交易流水，并将该账本下所有账户余额归零 */
+    suspend fun clearBookData(bookId: Long) = db.withTransaction {
+        transactionDao.deleteByBookId(bookId)
+        accountDao.resetBalancesByBookId(bookId, System.currentTimeMillis())
+    }
+
+    /** 彻底删除指定账本及其所有明细数据与独立账户 */
+    suspend fun deleteBook(bookId: Long): Boolean = db.withTransaction {
+        val allBooks = bookDao.getActiveOnce()
+        if (allBooks.size <= 1) {
+            // 最后一个账本不允许删除，避免应用失去主体账本
+            return@withTransaction false
+        }
+        val isDefault = bookDao.getDefault()?.id == bookId
+        transactionDao.deleteByBookId(bookId)
+        accountDao.deleteByBookId(bookId)
+        categoryDao.deleteByBookId(bookId)
+        bookDao.deleteById(bookId)
+        if (isDefault) {
+            val remaining = bookDao.getActiveOnce().firstOrNull()
+            if (remaining != null) {
+                bookDao.setDefault(remaining.id, System.currentTimeMillis())
+            }
+        }
+        true
     }
 
     /** 更新账本元信息；传 null 表示保持对应字段不变 */
@@ -384,16 +462,257 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
             transactionDao.transferInTotalFor(accountId) -
             transactionDao.transferOutTotalFor(accountId)
 
+    /**
+     * 智能分类解析与动态落库：
+     * 1. 自动拆分复合分类名（如 "餐饮/午餐", "餐饮 - 晚餐", "交通:地铁"）
+     * 2. 数据库精确命中（一级分类/二级分类）
+     * 3. 常见记账分类同义词与关键词语义字典智能归类
+     * 4. 自定义/新分类自动在 category 表中创建，杜绝变成“未分类”
+     */
+    suspend fun resolveOrCreateCategoryId(
+        type: TransactionType,
+        rawCategory: String,
+        rawSubCategory: String,
+        bookId: Long? = null
+    ): Long? {
+        if (type == TransactionType.TRANSFER) return null
+        val dbType = type.name.lowercase()
+        val targetBook = bookId ?: defaultBookId()
+
+        var catName = rawCategory.trim()
+        var subName = rawSubCategory.trim()
+
+        // 1. 拆分复合分类名
+        val delimiters = listOf(" / ", "/", " - ", "-", " : ", ":", "：", " > ", ">", "_")
+        for (d in delimiters) {
+            if (catName.contains(d)) {
+                val parts = catName.split(d, limit = 2)
+                if (parts.size == 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
+                    catName = parts[0].trim()
+                    if (subName.isBlank() || subName == "默认" || subName == "其他") {
+                        subName = parts[1].trim()
+                    }
+                    break
+                }
+            }
+        }
+
+        if (catName.isBlank() && subName.isNotBlank()) {
+            catName = subName
+            subName = ""
+        }
+
+        if (catName.isBlank()) {
+            return categoryDao.findFallbackCategory(dbType)?.id
+                ?: categoryDao.findFirstByNameAndType("其他", dbType)?.id
+        }
+
+        // 2. 优先查一级分类匹配
+        val parent = categoryDao.findParentByName(catName, dbType)
+        if (parent != null) {
+            if (subName.isNotBlank() && subName != "默认" && subName != catName) {
+                val child = categoryDao.findChildByName(subName, parent.id)
+                if (child != null) return child.id
+                // 动态新建二级分类
+                val uuidSeed = "$dbType-${parent.name}-$subName"
+                return categoryDao.insert(
+                    CategoryEntity(
+                        uuid = java.util.UUID.nameUUIDFromBytes(uuidSeed.toByteArray()).toString().replace("-", ""),
+                        userId = USER_ID_LOCAL,
+                        bookId = targetBook,
+                        name = subName,
+                        parentId = parent.id,
+                        type = dbType,
+                        sortOrder = categoryDao.count()
+                    )
+                )
+            }
+            return parent.id
+        }
+
+        // 3. 查是否已有同名二级/通用分类（若为二级分类，直接关联返回）
+        val existingMatch = categoryDao.findFirstByNameAndType(catName, dbType)
+        if (existingMatch != null) {
+            return existingMatch.id
+        }
+
+        // 3.1 查 subName 是否已有直接匹配项
+        if (subName.isNotBlank() && subName != "默认" && subName != catName) {
+            val subMatch = categoryDao.findFirstByNameAndType(subName, dbType)
+            if (subMatch != null) {
+                return subMatch.id
+            }
+        }
+
+        // 4. 语义同义词与关键词词典映射
+        val aliasMatch = mapCategoryKeywords(catName, subName, type)
+        if (aliasMatch != null) {
+            val (mappedParent, mappedChild) = aliasMatch
+            val targetParent = categoryDao.findParentByName(mappedParent, dbType)
+                ?: categoryDao.getById(
+                    categoryDao.insert(
+                        CategoryEntity(
+                            uuid = java.util.UUID.nameUUIDFromBytes("$dbType-$mappedParent".toByteArray()).toString().replace("-", ""),
+                            userId = USER_ID_LOCAL,
+                            bookId = targetBook,
+                            name = mappedParent,
+                            parentId = null,
+                            type = dbType,
+                            sortOrder = categoryDao.count()
+                        )
+                    )
+                )
+            if (targetParent != null) {
+                if (mappedChild.isNotBlank() && mappedChild != mappedParent) {
+                    val child = categoryDao.findChildByName(mappedChild, targetParent.id)
+                    if (child != null) return child.id
+                    val childUuidSeed = "$dbType-${targetParent.name}-$mappedChild"
+                    return categoryDao.insert(
+                        CategoryEntity(
+                            uuid = java.util.UUID.nameUUIDFromBytes(childUuidSeed.toByteArray()).toString().replace("-", ""),
+                            userId = USER_ID_LOCAL,
+                            bookId = targetBook,
+                            name = mappedChild,
+                            parentId = targetParent.id,
+                            type = dbType,
+                            sortOrder = categoryDao.count()
+                        )
+                    )
+                }
+                return targetParent.id
+            }
+        }
+
+        // 5. 自定义分类动态落库，保证绝对被系统识别
+        val newParentId = categoryDao.insert(
+            CategoryEntity(
+                uuid = java.util.UUID.nameUUIDFromBytes("$dbType-$catName".toByteArray()).toString().replace("-", ""),
+                userId = USER_ID_LOCAL,
+                bookId = targetBook,
+                name = catName,
+                parentId = null,
+                type = dbType,
+                sortOrder = categoryDao.count()
+            )
+        )
+        if (subName.isNotBlank() && subName != "默认" && subName != catName) {
+            return categoryDao.insert(
+                CategoryEntity(
+                    uuid = java.util.UUID.nameUUIDFromBytes("$dbType-$catName-$subName".toByteArray()).toString().replace("-", ""),
+                    userId = USER_ID_LOCAL,
+                    bookId = targetBook,
+                    name = subName,
+                    parentId = newParentId,
+                    type = dbType,
+                    sortOrder = categoryDao.count()
+                )
+            )
+        }
+        return newParentId
+    }
+
+    private fun mapCategoryKeywords(cat: String, sub: String, type: TransactionType): Pair<String, String>? {
+        val s = "$cat $sub".trim()
+        if (type == TransactionType.INCOME) {
+            return when {
+                s.contains("工资") || s.contains("薪") || s.contains("年终奖") || s.contains("底薪") || s.contains("劳务") -> Pair("工资薪水", "工资薪水")
+                s.contains("兼职") || s.contains("外快") || s.contains("副业") || s.contains("众包") || s.contains("稿费") || s.contains("提成") -> Pair("兼职外快", "兼职外快")
+                s.contains("利息") || s.contains("收益") || s.contains("余额宝") -> Pair("利息", "利息")
+                s.contains("分红") || s.contains("股票") || s.contains("基金") || s.contains("理财") -> Pair("分红股票", "分红股票")
+                s.contains("红包") || s.contains("转账收款") -> Pair("红包", "红包")
+                s.contains("礼金") || s.contains("随礼") || s.contains("压岁") -> Pair("礼金", "礼金")
+                s.contains("退款") || s.contains("返款") || s.contains("退货") || s.contains("押金") -> Pair("退款返款", "退款返款")
+                s.contains("报销") || s.contains("差旅") -> Pair("报销款", "报销款")
+                s.contains("福利") || s.contains("补贴") || s.contains("餐补") || s.contains("房补") -> Pair("福利补贴", "福利补贴")
+                s.contains("生活费") -> Pair("生活费", "生活费")
+                s.contains("公积金") -> Pair("公积金", "公积金")
+                s.contains("营业") || s.contains("经营") || s.contains("店铺") || s.contains("商户") -> Pair("营业收入", "营业收入")
+                s.contains("销售") || s.contains("闲鱼") || s.contains("转转") || s.contains("二手") || s.contains("货款") -> Pair("销售款", "销售款")
+                s.contains("赔付") || s.contains("理赔") || s.contains("保险金") -> Pair("赔付款", "赔付款")
+                s.contains("漏记") || s.contains("调整") || s.contains("平账") -> Pair("漏记款", "漏记款")
+                else -> null
+            }
+        }
+
+        // 支出类语义识别
+        return when {
+            // 餐饮类
+            s.contains("早餐") || s.contains("早饭") || s.contains("早点") || s.contains("包子") || s.contains("油条") || s.contains("豆浆") -> Pair("餐饮", "早餐")
+            s.contains("午餐") || s.contains("中餐") || s.contains("午饭") || s.contains("中饭") || s.contains("快餐") || s.contains("外卖") || s.contains("饿了么") || s.contains("美团外卖") || s.contains("堂食") -> Pair("餐饮", "午餐")
+            s.contains("晚餐") || s.contains("晚饭") || s.contains("夜宵") || s.contains("宵夜") || s.contains("烧烤") || s.contains("火锅") || s.contains("大排档") || s.contains("自助") -> Pair("餐饮", "晚餐")
+            s.contains("零食") || s.contains("水果") || s.contains("饮料") || s.contains("奶茶") || s.contains("咖啡") || s.contains("星巴克") || s.contains("瑞幸") || s.contains("甜品") || s.contains("面包") || s.contains("蛋糕") -> Pair("餐饮", "零食")
+            s.contains("买菜") || s.contains("生鲜") || s.contains("蔬菜") || s.contains("粮油") || s.contains("调料") || s.contains("原料") || s.contains("肉类") || s.contains("海鲜") -> Pair("餐饮", "买菜原料")
+            s.contains("餐饮") || s.contains("吃饭") || s.contains("美食") || s.contains("饭局") -> Pair("餐饮", "餐饮其他")
+
+            // 交通类
+            s.contains("打车") || s.contains("滴滴") || s.contains("网约车") || s.contains("出租") || s.contains("高德") || s.contains("曹操") || s.contains("T3") -> Pair("交通", "打车")
+            s.contains("公交") || s.contains("巴士") -> Pair("交通", "公交")
+            s.contains("地铁") || s.contains("轻轨") -> Pair("交通", "地铁")
+            s.contains("加油") || s.contains("油费") || s.contains("充电") || s.contains("加气") -> Pair("交通", "加油")
+            s.contains("停车") || s.contains("泊车") -> Pair("交通", "停车费")
+            s.contains("火车") || s.contains("高铁") || s.contains("动车") || s.contains("12306") || s.contains("大巴") -> Pair("交通", "火车")
+            s.contains("飞机") || s.contains("机票") || s.contains("航班") || s.contains("机场") -> Pair("交通", "飞机")
+            s.contains("单车") || s.contains("自行车") || s.contains("哈啰") || s.contains("美团单车") -> Pair("交通", "自行车")
+            s.contains("高速") || s.contains("过路") || s.contains("过桥") || s.contains("ETC") -> Pair("交通", "过路过桥")
+            s.contains("保养") || s.contains("修车") || s.contains("洗车") || s.contains("车险") || s.contains("年检") || s.contains("驾照") -> Pair("交通", "保养维修")
+            s.contains("交通") || s.contains("出行") || s.contains("路费") -> Pair("交通", "交通其他")
+
+            // 购物类
+            s.contains("衣服") || s.contains("鞋") || s.contains("包") || s.contains("服饰") || s.contains("服装") || s.contains("裤") || s.contains("内衣") || s.contains("外套") || s.contains("裙") -> Pair("购物", "服饰鞋包")
+            s.contains("日用") || s.contains("百货") || s.contains("家居") || s.contains("生活用品") || s.contains("纸巾") || s.contains("洗洁") || s.contains("洗衣") || s.contains("超市") || s.contains("便利店") -> Pair("购物", "家居百货")
+            s.contains("美妆") || s.contains("护肤") || s.contains("化妆") || s.contains("面膜") || s.contains("口红") || s.contains("防晒") || s.contains("香水") -> Pair("购物", "化妆护肤")
+            s.contains("数码") || s.contains("电子") || s.contains("手机") || s.contains("电脑") || s.contains("平板") || s.contains("耳机") || s.contains("充电宝") || s.contains("数据线") || s.contains("相机") -> Pair("购物", "电子数码")
+            s.contains("烟酒") || s.contains("香烟") || s.contains("白酒") || s.contains("啤酒") || s.contains("红酒") || s.contains("抽烟") -> Pair("购物", "烟酒")
+            s.contains("母婴") || s.contains("宝宝") || s.contains("儿童") || s.contains("奶粉") || s.contains("尿不湿") || s.contains("玩具") || s.contains("童装") -> Pair("购物", "宝宝用品")
+            s.contains("书") || s.contains("杂志") || s.contains("报刊") || s.contains("教材") || s.contains("绘本") -> Pair("购物", "报刊书籍")
+            s.contains("首饰") || s.contains("珠宝") || s.contains("手表") || s.contains("项链") || s.contains("戒指") || s.contains("黄金") -> Pair("购物", "珠宝首饰")
+            s.contains("家电") || s.contains("电器") || s.contains("冰箱") || s.contains("洗衣机") || s.contains("空调") || s.contains("电视") -> Pair("购物", "电器")
+            s.contains("购物") || s.contains("网购") || s.contains("淘宝") || s.contains("京东") || s.contains("拼多多") || s.contains("天猫") || s.contains("唯品会") || s.contains("抖音") -> Pair("购物", "购物其他")
+
+            // 娱乐类
+            s.contains("电影") || s.contains("影院") || s.contains("影票") || s.contains("观影") -> Pair("娱乐", "电影")
+            s.contains("游戏") || s.contains("网游") || s.contains("Steam") || s.contains("充值") || s.contains("电玩") || s.contains("PS5") || s.contains("Switch") || s.contains("皮肤") -> Pair("娱乐", "网游电玩")
+            s.contains("旅游") || s.contains("度假") || s.contains("门票") || s.contains("景点") || s.contains("酒店") || s.contains("民宿") || s.contains("旅行") -> Pair("娱乐", "旅游度假")
+            s.contains("健身") || s.contains("运动") || s.contains("游泳") || s.contains("羽毛球") || s.contains("篮球") || s.contains("瑜伽") || s.contains("私教") || s.contains("健身房") -> Pair("娱乐", "运动健身")
+            s.contains("宠物") || s.contains("猫粮") || s.contains("狗粮") || s.contains("猫砂") || s.contains("猫咪") || s.contains("狗狗") || s.contains("宠物医院") -> Pair("娱乐", "花鸟宠物")
+            s.contains("KTV") || s.contains("酒吧") || s.contains("密室") || s.contains("剧本杀") || s.contains("洗浴") || s.contains("足疗") || s.contains("按摩") || s.contains("聚会") -> Pair("娱乐", "聚会玩乐")
+            s.contains("娱乐") || s.contains("休闲") || s.contains("玩乐") -> Pair("娱乐", "娱乐其他")
+
+            // 医教类
+            s.contains("看病") || s.contains("医院") || s.contains("挂号") || s.contains("门诊") || s.contains("就医") || s.contains("体检") -> Pair("医教", "挂号门诊")
+            s.contains("药") || s.contains("买药") || s.contains("药房") || s.contains("药店") || s.contains("西药") || s.contains("中药") -> Pair("医教", "医疗药品")
+            s.contains("学费") || s.contains("培训") || s.contains("辅导") || s.contains("课程") || s.contains("考试") || s.contains("教育") -> Pair("医教", "学杂教材")
+            s.contains("医疗") || s.contains("医教") || s.contains("健康") -> Pair("医教", "医教其他")
+
+            // 居家类
+            s.contains("话费") || s.contains("手机费") || s.contains("电话费") || s.contains("流量") -> Pair("居家", "手机电话")
+            s.contains("水电") || s.contains("电费") || s.contains("水费") || s.contains("燃气") || s.contains("煤气") || s.contains("暖气") -> Pair("居家", "水电燃气")
+            s.contains("房租") || s.contains("租房") || s.contains("房贷") || s.contains("月供") || s.contains("住宿") || s.contains("物业") -> Pair("居家", "住宿房租")
+            s.contains("宽带") || s.contains("网费") || s.contains("WiFi") || s.contains("光纤") -> Pair("居家", "电脑宽带")
+            s.contains("快递") || s.contains("顺丰") || s.contains("邮寄") || s.contains("跑腿") || s.contains("寄件") -> Pair("居家", "快递邮政")
+            s.contains("美发") || s.contains("理发") || s.contains("剪发") || s.contains("美容") || s.contains("美甲") || s.contains("染发") || s.contains("做脸") -> Pair("居家", "美发美容")
+            s.contains("家政") || s.contains("保洁") || s.contains("开锁") || s.contains("疏通") || s.contains("钟点工") -> Pair("居家", "家政服务")
+            s.contains("生活费") || s.contains("居家") || s.contains("日常") -> Pair("居家", "生活费")
+
+            // 人情类
+            s.contains("红包") || s.contains("份子钱") || s.contains("礼金") || s.contains("随礼") || s.contains("压岁钱") -> Pair("人情", "礼金红包")
+            s.contains("请客") || s.contains("送礼") || s.contains("孝敬") || s.contains("礼物") -> Pair("人情", "请客")
+            s.contains("人情") || s.contains("往来") -> Pair("人情", "人情其他")
+
+            // 投资 / 资金
+            s.contains("基金") || s.contains("股票") || s.contains("证券") || s.contains("理财") || s.contains("投资") -> Pair("投资", "基金")
+            s.contains("还款") || s.contains("还贷") || s.contains("信用卡还款") || s.contains("借款") || s.contains("应收") -> Pair("资金流转", "应收款")
+
+            else -> null
+        }
+    }
+
     private suspend fun resolveCategoryId(
         type: TransactionType,
         categoryName: String,
         subCategory: String
     ): Long? {
-        if (categoryName.isBlank()) return null
-        val dbType = type.name.lowercase()
-        val parent = categoryDao.findParentByName(categoryName.trim(), dbType) ?: return null
-        if (subCategory.isBlank()) return parent.id
-        return categoryDao.findChildByName(subCategory.trim(), parent.id)?.id ?: parent.id
+        return resolveOrCreateCategoryId(type, categoryName, subCategory)
     }
 
     /**
@@ -404,9 +723,10 @@ class ToolboxRepositoryV2(private val db: DailyToolboxDatabase) {
     }
 
     /** 根据导入的账户目标余额与明细流水反推并校准各账户 initialBalance，确保资产变化趋势及实时余额绝对精确 */
-    suspend fun calibrateImportedAccounts(accountTargetBalances: Map<String, Double>) = db.withTransaction {
-        val allActiveTxs = transactionDao.getActiveOnce()
-        val accounts = accountDao.getActive()
+    suspend fun calibrateImportedAccounts(accountTargetBalances: Map<String, Double>, bookId: Long? = null) = db.withTransaction {
+        val targetBook = bookId ?: defaultBookId()
+        val allActiveTxs = transactionDao.getByBookIdOnce(targetBook).ifEmpty { transactionDao.getActiveOnce() }
+        val accounts = accountDao.getByBookId(targetBook).ifEmpty { accountDao.getActive() }
         for (acc in accounts) {
             val targetYuan = accountTargetBalances[acc.name] ?: continue
             var inc = 0L; var exp = 0L; var out = 0L; var inn = 0L

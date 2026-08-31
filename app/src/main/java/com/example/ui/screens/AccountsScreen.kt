@@ -277,80 +277,79 @@ fun AccountsScreen(
         label = "animated_debts"
     )
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(canvasBg)
             .statusBarsPadding()
     ) {
+        // 1. 顶部 Header (固定在顶部)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Account",
+                    fontFamily = FontFamily.Serif,
+                    fontStyle = FontStyle.Italic,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = inkPrimary,
+                    letterSpacing = (-0.5).sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "NET ASSET LEDGER",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    color = inkMuted,
+                    letterSpacing = 0.5.sp
+                )
+            }
+
+            // 新增账户：删除背景色，保持极简纯粹字体与图标
+            Row(
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = ripple(bounded = false, radius = 24.dp)
+                    ) {
+                        accountToEdit = null
+                        showAddDialog = true
+                    }
+                    .padding(horizontal = 4.dp, vertical = 6.dp)
+                    .testTag("add_account_button"),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "新增账户",
+                    tint = inkPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "新增账户",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = inkPrimary
+                )
+            }
+        }
+
+        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
+
+        // 可滚动的净资产区域、卡包与账户列表
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. 顶部 Header (参照首页顶部 Ledger 字体与排版)
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 22.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Account",
-                            fontFamily = FontFamily.Serif,
-                            fontStyle = FontStyle.Italic,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = inkPrimary,
-                            letterSpacing = (-0.5).sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "NET ASSET LEDGER",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            color = inkMuted,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-
-                    // 新增账户：删除背景色，保持极简纯粹字体与图标
-                    Row(
-                        modifier = Modifier
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = false, radius = 24.dp)
-                            ) {
-                                accountToEdit = null
-                                showAddDialog = true
-                            }
-                            .padding(horizontal = 4.dp, vertical = 6.dp)
-                            .testTag("add_account_button"),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "新增账户",
-                            tint = inkPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "新增账户",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = inkPrimary
-                        )
-                    }
-                }
-
-                HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
-            }
-
             // 2. Swiss Master Hero Net Asset Section
             item {
                 Column(
@@ -654,14 +653,20 @@ fun SwissPolishedCylinderPocketCard(
         label = "expand_icon_rotation"
     )
 
+    val pocketBorderColor = if (isLight) {
+        if (isExpanded) Color(0xFF2D6A4F).copy(alpha = 0.35f) else dividerColor.copy(alpha = 0.7f)
+    } else {
+        if (isExpanded) Color(0xFF52B788).copy(alpha = 0.15f) else Color.White.copy(alpha = 0.015f)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(cardBg)
             .border(
-                width = if (isExpanded) 1.dp else 0.6.dp,
-                color = if (isExpanded) inkPrimary.copy(alpha = 0.4f) else dividerColor.copy(alpha = 0.7f),
+                width = if (isExpanded) 0.8.dp else 0.5.dp,
+                color = pocketBorderColor,
                 shape = RoundedCornerShape(16.dp)
             )
             .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.85f))
@@ -683,7 +688,13 @@ fun SwissPolishedCylinderPocketCard(
                     modifier = Modifier
                         .size(26.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isExpanded) inkPrimary else if (isLight) Color(0xFFF0ECE1) else Color(0xFF1B231B)),
+                        .background(
+                            if (isExpanded) {
+                                if (isLight) inkPrimary else Color(0xFF52B788).copy(alpha = 0.2f)
+                            } else {
+                                if (isLight) Color(0xFFF0ECE1) else Color(0xFF182018)
+                            }
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -691,7 +702,11 @@ fun SwissPolishedCylinderPocketCard(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isExpanded) cardBg else inkPrimary
+                        color = if (isExpanded) {
+                            if (isLight) cardBg else Color(0xFF52B788)
+                        } else {
+                            if (isLight) inkPrimary else Color(0xFF889689)
+                        }
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
@@ -749,7 +764,7 @@ fun SwissPolishedCylinderPocketCard(
 
         // 展开后的滚筒内容体（纯净聚焦卡片本身，无多余边框与底部辅助栏）
         if (isExpanded) {
-            HorizontalDivider(color = dividerColor.copy(alpha = 0.5f), thickness = 0.5.dp)
+            HorizontalDivider(color = if (isLight) dividerColor.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.018f), thickness = 0.5.dp)
 
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 if (accounts.isEmpty()) {
@@ -769,13 +784,15 @@ fun SwissPolishedCylinderPocketCard(
                 } else if (safeCount == 1) {
                     // 仅单张账户：直接展示精致卡片
                     val singleAcc = accounts[0]
+                    val innerCardBg = if (isLight) Color(0xFFFAF8F5) else Color(0xFF182018)
+                    val innerCardBorder = if (isLight) dividerColor.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.025f)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(70.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(cardBg)
-                            .border(0.7.dp, dividerColor, RoundedCornerShape(10.dp))
+                            .background(innerCardBg)
+                            .border(0.5.dp, innerCardBorder, RoundedCornerShape(10.dp))
                             .clickable { onEditAccount(singleAcc) }
                             .padding(horizontal = 14.dp, vertical = 9.dp)
                     ) {
@@ -948,10 +965,10 @@ fun SwissPolishedCylinderPocketCard(
                                         }
                                     }
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(cardBg)
+                                    .background(if (isLight) Color(0xFFFAF8F5) else Color(0xFF182018))
                                     .border(
-                                        width = 0.7.dp,
-                                        color = dividerColor,
+                                        width = 0.5.dp,
+                                        color = if (isLight) dividerColor.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.025f),
                                         shape = RoundedCornerShape(10.dp)
                                     )
                                     .clickable {
@@ -1117,7 +1134,7 @@ fun SwissAddEditAccountDialog(
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = cardBg,
-            border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor),
+            border = androidx.compose.foundation.BorderStroke(0.6.dp, if (isLight) dividerColor else Color.White.copy(alpha = 0.035f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(

@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.app.DatePickerDialog
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.Animatable
@@ -62,8 +63,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.example.ui.theme.LocalAppBackgroundConfig
@@ -166,14 +167,15 @@ fun FinancialReportScreen(
     val bgConfig = LocalAppBackgroundConfig.current
     val isLight = bgConfig.isLight
 
-    val canvasBg = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
-    val cardBg = if (isLight) Color(0xFFFFFFFF) else Color(0xFF1E281E)
-    val dividerColor = LocalAppBackgroundConfig.current.dividerColor
-    val textMain = if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7)
-    val textSecondary = if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA)
-    val textMuted = if (isLight) Color(0xFF8A8780) else Color(0xFF889689)
-    val forestGreen = if (isLight) Color(0xFF2D6A4F) else Color(0xFF52B788)
-    val clayAccent = if (isLight) Color(0xFFC4623D) else Color(0xFFE07A5F)
+    val themeAnimSpec = remember { tween<Color>(durationMillis = 400, easing = FastOutSlowInEasing) }
+    val canvasBg by animateColorAsState(if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24), animationSpec = themeAnimSpec, label = "reportCanvasBg")
+    val cardBg by animateColorAsState(if (isLight) Color(0xFFFFFFFF) else Color(0xFF1E281E), animationSpec = themeAnimSpec, label = "reportCardBg")
+    val dividerColor by animateColorAsState(bgConfig.dividerColor, animationSpec = themeAnimSpec, label = "reportDividerColor")
+    val textMain by animateColorAsState(if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7), animationSpec = themeAnimSpec, label = "reportTextMain")
+    val textSecondary by animateColorAsState(if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA), animationSpec = themeAnimSpec, label = "reportTextSecondary")
+    val textMuted by animateColorAsState(if (isLight) Color(0xFF8A8780) else Color(0xFF889689), animationSpec = themeAnimSpec, label = "reportTextMuted")
+    val forestGreen by animateColorAsState(if (isLight) Color(0xFF2D6A4F) else Color(0xFF52B788), animationSpec = themeAnimSpec, label = "reportForestGreen")
+    val clayAccent by animateColorAsState(if (isLight) Color(0xFFC4623D) else Color(0xFFE07A5F), animationSpec = themeAnimSpec, label = "reportClayAccent")
 
     val minAmountVal = minAmountInput.toDoubleOrNull()
     val maxAmountVal = maxAmountInput.toDoubleOrNull()
@@ -200,12 +202,14 @@ fun FinancialReportScreen(
             val categoryMatch = selectedCategoryNames.isEmpty() || exp.displayCategory in selectedCategoryNames
             val minMatch = minAmountVal == null || exp.amount >= minAmountVal
             val maxMatch = maxAmountVal == null || exp.amount <= maxAmountVal
-            val searchMatch = searchQuery.isBlank() ||
-                    exp.displayCategory.contains(searchQuery, ignoreCase = true) ||
-                    exp.displaySubCategory.contains(searchQuery, ignoreCase = true) ||
-                    exp.note.contains(searchQuery, ignoreCase = true) ||
-                    exp.accountName.contains(searchQuery, ignoreCase = true) ||
-                    (isTransfer && exp.transferToAccountName.contains(searchQuery, ignoreCase = true))
+            val searchMatch = searchQuery.trim().isBlank() ||
+                    exp.category.contains(searchQuery.trim(), ignoreCase = true) ||
+                    exp.displayCategory.contains(searchQuery.trim(), ignoreCase = true) ||
+                    exp.subCategory.contains(searchQuery.trim(), ignoreCase = true) ||
+                    exp.displaySubCategory.contains(searchQuery.trim(), ignoreCase = true) ||
+                    exp.note.contains(searchQuery.trim(), ignoreCase = true) ||
+                    exp.accountName.contains(searchQuery.trim(), ignoreCase = true) ||
+                    (isTransfer && exp.transferToAccountName.contains(searchQuery.trim(), ignoreCase = true))
             timeMatch && accountMatch && categoryMatch && minMatch && maxMatch && searchMatch
         }
     }
@@ -394,43 +398,75 @@ fun FinancialReportScreen(
                     textMuted = textMuted
                 )
 
-                // 搜索输入框（展开态）
-                if (showSearchRow) {
+                // 搜索输入框（展开/收起过渡动画态）
+                AnimatedVisibility(
+                    visible = showSearchRow,
+                    enter = expandVertically(
+                        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(durationMillis = 200)),
+                    exit = shrinkVertically(
+                        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(durationMillis = 150))
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
+                        TextField(
                             value = searchQuery,
                             onValueChange = onSearchQueryChange,
                             placeholder = {
                                 Text(
-                                    "搜索分类、备注或账户...",
-                                    fontSize = 12.sp,
-                                    fontFamily = FontFamily.Monospace,
+                                    "搜索交易记录...",
+                                    fontSize = 13.sp,
                                     color = textMuted
                                 )
                             },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "搜索",
+                                    tint = textMuted,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                IconButton(
+                                    onClick = {
+                                        if (searchQuery.isNotEmpty()) {
+                                            onSearchQueryChange("")
+                                        } else {
+                                            onShowSearchRowChange(false)
+                                        }
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = if (searchQuery.isNotEmpty()) "清空" else "关闭搜索",
+                                        tint = textMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            },
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = forestGreen,
-                                unfocusedBorderColor = dividerColor,
+                            textStyle = TextStyle(
+                                fontSize = 13.5.sp,
+                                color = textMain
+                            ),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = forestGreen,
+                                unfocusedIndicatorColor = dividerColor,
                                 focusedTextColor = textMain,
                                 unfocusedTextColor = textMain
                             ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(onClick = {
-                            onSearchQueryChange("")
-                            onShowSearchRowChange(false)
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = "关闭搜索", tint = textMuted)
-                        }
                     }
                 }
 
@@ -879,13 +915,37 @@ fun AssetTrendSection(
     canvasBg: Color = WarmPaperBg,
     modifier: Modifier = Modifier
 ) {
-    val animatedAmount = remember { Animatable(0f) }
-    LaunchedEffect(totalNetAssets) {
-        animatedAmount.snapTo(0f)
-        animatedAmount.animateTo(
-            targetValue = totalNetAssets.toFloat(),
+    val animProgress = remember { Animatable(0f) }
+    LaunchedEffect(trendPoints, totalNetAssets) {
+        animProgress.snapTo(0f)
+        animProgress.animateTo(
+            targetValue = 1f,
             animationSpec = tween(durationMillis = 1425, easing = FastOutSlowInEasing)
         )
+    }
+
+    val currentAnimatedValue = remember(animProgress.value, trendPoints, totalNetAssets) {
+        if (trendPoints.isEmpty()) {
+            totalNetAssets
+        } else if (trendPoints.size == 1) {
+            trendPoints[0].assetValue
+        } else {
+            val p = animProgress.value.coerceIn(0f, 1f)
+            val maxIndex = trendPoints.size - 1
+            val position = p * maxIndex
+            val index = position.toInt().coerceIn(0, maxIndex - 1)
+            val fraction = position - index
+
+            val v0 = if (index > 0) trendPoints[index - 1].assetValue else trendPoints[index].assetValue
+            val v1 = trendPoints[index].assetValue
+            val v2 = trendPoints[index + 1].assetValue
+            val v3 = if (index + 2 <= maxIndex) trendPoints[index + 2].assetValue else trendPoints[index + 1].assetValue
+
+            val t = fraction
+            val t2 = t * t
+            val t3 = t2 * t
+            0.5 * ((2 * v1) + (-v0 + v2) * t + (2 * v0 - 5 * v1 + 4 * v2 - v3) * t2 + (-v0 + 3 * v1 - 3 * v2 + v3) * t3)
+        }
     }
 
     Column(
@@ -921,7 +981,7 @@ fun AssetTrendSection(
                     modifier = Modifier.padding(bottom = 3.dp, end = 4.dp)
                 )
                 Text(
-                    text = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(animatedAmount.value.toDouble())),
+                    text = AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(currentAnimatedValue)),
                     fontSize = 26.sp,
                     fontFamily = FontFamily.Serif,
                     fontStyle = FontStyle.Italic,
@@ -968,7 +1028,8 @@ fun AssetTrendSection(
             points = trendPoints,
             primaryColor = ForestGreen,
             canvasBgColor = canvasBg,
-            textColorMuted = textMuted
+            textColorMuted = textMuted,
+            externalAnimProgress = animProgress.value
         )
     }
 }
@@ -1099,6 +1160,7 @@ private fun JournalTransactionRow(
     onItemClick: () -> Unit,
     onDeleteExpense: () -> Unit
 ) {
+    val isLight = LocalAppBackgroundConfig.current.isLight
     val isExpense = expense.type == "EXPENSE"
     val isIncome = expense.type == "INCOME"
     val isTransfer = expense.type == "TRANSFER"
@@ -1279,7 +1341,7 @@ private fun JournalTransactionRow(
                 }
             }
         }
-        HorizontalDivider(thickness = 0.5.dp, color = dividerColor.copy(alpha = 0.6f))
+        HorizontalDivider(thickness = 0.5.dp, color = if (isLight) dividerColor.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.018f))
     }
 }
 
@@ -2193,7 +2255,6 @@ private fun calculateAssetTrendHistory(
     expenses: List<ExpenseEntity>,
     currentNetAssets: Double
 ): List<MonthAssetPoint> {
-    val sdf = SimpleDateFormat("yy.MM", Locale.getDefault())
     val cal = Calendar.getInstance()
 
     // 1. 当前月份（最新月份点）
@@ -2205,35 +2266,50 @@ private fun calculateAssetTrendHistory(
     val startCal = Calendar.getInstance().apply {
         timeInMillis = minTimestamp
         set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
     }
 
     // 确保至少有 6 个月时间跨度
-    val tempCal = startCal.clone() as Calendar
+    val tempCal = Calendar.getInstance().apply {
+        timeInMillis = startCal.timeInMillis
+    }
     val totalMonthSpan = (currentYear - tempCal.get(Calendar.YEAR)) * 12 + (currentMonth - tempCal.get(Calendar.MONTH))
     if (totalMonthSpan < 5) {
         tempCal.timeInMillis = System.currentTimeMillis()
         tempCal.add(Calendar.MONTH, -5)
         tempCal.set(Calendar.DAY_OF_MONTH, 1)
+        tempCal.set(Calendar.HOUR_OF_DAY, 0)
+        tempCal.set(Calendar.MINUTE, 0)
+        tempCal.set(Calendar.SECOND, 0)
+        tempCal.set(Calendar.MILLISECOND, 0)
     }
 
     // 3. 构建月份序列 [StartMonth ... CurrentMonth]
-    val monthList = mutableListOf<Calendar>()
-    val iterCal = tempCal.clone() as Calendar
+    val monthList = mutableListOf<String>()
+    val monthKeys = mutableListOf<Int>() // y * 100 + m
+    val iterCal = Calendar.getInstance().apply { timeInMillis = tempCal.timeInMillis }
     while (true) {
         val y = iterCal.get(Calendar.YEAR)
         val m = iterCal.get(Calendar.MONTH)
-        monthList.add(iterCal.clone() as Calendar)
+        val yy = (y % 100).toString().padStart(2, '0')
+        val mm = (m + 1).toString().padStart(2, '0')
+        monthList.add("$yy.$mm")
+        monthKeys.add(y * 100 + m)
         if (y == currentYear && m == currentMonth) {
             break
         }
         iterCal.add(Calendar.MONTH, 1)
     }
 
-    // 4. 按月份汇总每月净收支现金流 NetFlow = Income - Expense
-    val monthlyNetFlowMap = mutableMapOf<String, Double>()
-    expenses.forEach { exp ->
-        val expCal = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-        val key = sdf.format(expCal.time)
+    // 4. 按月份汇总每月净收支现金流 NetFlow = Income - Expense (复用单 Calendar)
+    val monthlyNetFlowMap = mutableMapOf<Int, Double>()
+    val workerCal = Calendar.getInstance()
+    for (exp in expenses) {
+        workerCal.timeInMillis = exp.dateTimestamp
+        val key = workerCal.get(Calendar.YEAR) * 100 + workerCal.get(Calendar.MONTH)
         val currentFlow = monthlyNetFlowMap[key] ?: 0.0
         val change = when (exp.type) {
             "INCOME" -> exp.amount
@@ -2248,18 +2324,18 @@ private fun calculateAssetTrendHistory(
     var runningAsset = currentNetAssets
 
     for (i in monthList.indices.reversed()) {
-        val c = monthList[i]
-        val key = sdf.format(c.time)
+        val label = monthList[i]
+        val ymKey = monthKeys[i]
 
         if (i == monthList.lastIndex) {
             // 当月期末资产严格等于当前总净资产
-            resultPoints.add(0, MonthAssetPoint(key, currentNetAssets))
+            resultPoints.add(0, MonthAssetPoint(label, currentNetAssets))
         } else {
             // 上一月期末资产 = 本月期末资产 - 本月净流入 (即 runningAsset - netFlow(nextMonth))
-            val nextMonthKey = sdf.format(monthList[i + 1].time)
+            val nextMonthKey = monthKeys[i + 1]
             val nextMonthNetFlow = monthlyNetFlowMap[nextMonthKey] ?: 0.0
             runningAsset -= nextMonthNetFlow
-            resultPoints.add(0, MonthAssetPoint(key, runningAsset))
+            resultPoints.add(0, MonthAssetPoint(label, runningAsset))
         }
     }
 
@@ -2275,9 +2351,6 @@ private fun calculateCategorySlices(
     type: String,
     isExpense: Boolean
 ): List<DonutSliceData> {
-    val items = expenses.filter { it.type == type }
-    val total = items.sumOf { it.amount }
-
     // 主色调序列（对换）：支出用墨绿调，收入用陶红调，渐进展开
     val palette = if (isExpense) {
         listOf(
@@ -2303,14 +2376,21 @@ private fun calculateCategorySlices(
         )
     }
 
-    if (total <= 0.0 || items.isEmpty()) {
+    var total = 0.0
+    val catSums = mutableMapOf<String, Double>()
+    for (exp in expenses) {
+        if (exp.type == type) {
+            total += exp.amount
+            val cat = exp.displayCategory.ifBlank { "其他" }
+            catSums[cat] = (catSums[cat] ?: 0.0) + exp.amount
+        }
+    }
+
+    if (total <= 0.0 || catSums.isEmpty()) {
         return emptyList()
     }
 
-    val grouped = items.groupBy { it.displayCategory.ifBlank { "其他" } }
-        .mapValues { (_, list) -> list.sumOf { it.amount } }
-        .filter { it.value > 0.0 }
-        .toList()
+    val grouped = catSums.filter { it.value > 0.0 }.toList()
 
     val otherEntries = grouped.filter { it.first == "其他" || it.first == "其它" }
     val regularEntries = grouped.filter { it.first != "other" && it.first != "其他" && it.first != "其它" }.sortedByDescending { it.second }
@@ -2349,24 +2429,24 @@ private fun calculateCategorySlices(
 private fun calculateWeekdaySpending(expenses: List<ExpenseEntity>): List<WeekdaySpendingItem> {
     val days = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
     val dayAmounts = DoubleArray(7)
-
-    val expenseOnly = expenses.filter { it.type == "EXPENSE" }
     val cal = Calendar.getInstance()
 
-    expenseOnly.forEach { exp ->
-        cal.timeInMillis = exp.dateTimestamp
-        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) // 1=周日, 2=周一...
-        val mappedIndex = when (dayOfWeek) {
-            Calendar.MONDAY -> 0
-            Calendar.TUESDAY -> 1
-            Calendar.WEDNESDAY -> 2
-            Calendar.THURSDAY -> 3
-            Calendar.FRIDAY -> 4
-            Calendar.SATURDAY -> 5
-            Calendar.SUNDAY -> 6
-            else -> 0
+    for (exp in expenses) {
+        if (exp.type == "EXPENSE") {
+            cal.timeInMillis = exp.dateTimestamp
+            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) // 1=周日, 2=周一...
+            val mappedIndex = when (dayOfWeek) {
+                Calendar.MONDAY -> 0
+                Calendar.TUESDAY -> 1
+                Calendar.WEDNESDAY -> 2
+                Calendar.THURSDAY -> 3
+                Calendar.FRIDAY -> 4
+                Calendar.SATURDAY -> 5
+                Calendar.SUNDAY -> 6
+                else -> 0
+            }
+            dayAmounts[mappedIndex] += exp.amount
         }
-        dayAmounts[mappedIndex] += exp.amount
     }
 
     return days.mapIndexed { index, name ->
@@ -2384,35 +2464,53 @@ private fun calculateWeekdaySpending(expenses: List<ExpenseEntity>): List<Weekda
 private fun calculateMonthlyComparison(
     expenses: List<ExpenseEntity>
 ): Pair<List<MonthlyCompareItem>, Double> {
-    val sdf = SimpleDateFormat("yy.MM", Locale.getDefault())
-    val cal = Calendar.getInstance()
+    class MonthBucket(
+        val label: String,
+        val start: Long,
+        val end: Long,
+        var income: Double = 0.0,
+        var expense: Double = 0.0,
+        val isCurrent: Boolean
+    )
 
-    val months = mutableListOf<MonthlyCompareItem>()
-    val currentMonthSdf = sdf.format(Date())
-
-    for (i in 5 downTo 0) {
+    val buckets = Array(6) { idx ->
+        val i = 5 - idx
         val monthCal = Calendar.getInstance().apply {
             add(Calendar.MONTH, -i)
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
-        val label = sdf.format(monthCal.time)
-        val isCurrent = label == currentMonthSdf
+        val y = monthCal.get(Calendar.YEAR)
+        val m = monthCal.get(Calendar.MONTH)
+        val yy = (y % 100).toString().padStart(2, '0')
+        val mm = (m + 1).toString().padStart(2, '0')
+        val label = "$yy.$mm"
+        val start = monthCal.timeInMillis
+        monthCal.add(Calendar.MONTH, 1)
+        val end = monthCal.timeInMillis
+        MonthBucket(label, start, end, isCurrent = (i == 0))
+    }
 
-        val monthExpenses = expenses.filter {
-            val expCal = Calendar.getInstance().apply { timeInMillis = it.dateTimestamp }
-            expCal.get(Calendar.YEAR) == monthCal.get(Calendar.YEAR) &&
-                    expCal.get(Calendar.MONTH) == monthCal.get(Calendar.MONTH)
+    for (exp in expenses) {
+        val ts = exp.dateTimestamp
+        for (b in buckets) {
+            if (ts in b.start until b.end) {
+                if (exp.type == "INCOME") b.income += exp.amount
+                else if (exp.type == "EXPENSE") b.expense += exp.amount
+                break
+            }
         }
+    }
 
-        val inc = monthExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
-        val exp = monthExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-
-        months.add(
-            MonthlyCompareItem(
-                monthLabel = label,
-                income = inc,
-                expense = exp,
-                isCurrentMonth = isCurrent
-            )
+    val months = buckets.map {
+        MonthlyCompareItem(
+            monthLabel = it.label,
+            income = it.income,
+            expense = it.expense,
+            isCurrentMonth = it.isCurrent
         )
     }
 

@@ -104,39 +104,51 @@ fun BillCalendarScreen(
 
     // Calculate month data and daily totals
     val (monthDaysData, monthTotalExpense, monthTotalIncome) = remember(allExpenses, selectedYear, selectedMonth) {
-        val cal = Calendar.getInstance()
-        cal.set(Calendar.YEAR, selectedYear)
-        cal.set(Calendar.MONTH, selectedMonth - 1)
-        cal.set(Calendar.DAY_OF_MONTH, 1)
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.YEAR, selectedYear)
+            set(Calendar.MONTH, selectedMonth - 1)
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
 
+        val startOfMonth = cal.timeInMillis
         val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
         val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
         val startOffset = (firstDayOfWeek + 5) % 7 // Monday based (0=Mon...6=Sun)
 
-        val dailyMap = mutableMapOf<Int, Pair<Double, Double>>()
+        cal.set(Calendar.DAY_OF_MONTH, daysInMonth)
+        cal.set(Calendar.HOUR_OF_DAY, 23)
+        cal.set(Calendar.MINUTE, 59)
+        cal.set(Calendar.SECOND, 59)
+        cal.set(Calendar.MILLISECOND, 999)
+        val endOfMonth = cal.timeInMillis
+
+        val dailyIncome = DoubleArray(daysInMonth + 1)
+        val dailyExpense = DoubleArray(daysInMonth + 1)
         var mExpense = 0.0
         var mIncome = 0.0
 
-        allExpenses.forEach { exp ->
-            val expCal = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-            if (expCal.get(Calendar.YEAR) == selectedYear && (expCal.get(Calendar.MONTH) + 1) == selectedMonth) {
-                val d = expCal.get(Calendar.DAY_OF_MONTH)
-                val current = dailyMap[d] ?: Pair(0.0, 0.0)
-                if (exp.type == "INCOME") {
-                    dailyMap[d] = Pair(current.first + exp.amount, current.second)
-                    mIncome += exp.amount
-                } else {
-                    dailyMap[d] = Pair(current.first, current.second + exp.amount)
-                    mExpense += exp.amount
+        val workerCal = Calendar.getInstance()
+        for (exp in allExpenses) {
+            if (exp.dateTimestamp in startOfMonth..endOfMonth) {
+                workerCal.timeInMillis = exp.dateTimestamp
+                val d = workerCal.get(Calendar.DAY_OF_MONTH)
+                if (d in 1..daysInMonth) {
+                    if (exp.type == "INCOME") {
+                        dailyIncome[d] += exp.amount
+                        mIncome += exp.amount
+                    } else {
+                        dailyExpense[d] += exp.amount
+                        mExpense += exp.amount
+                    }
                 }
             }
         }
 
-        val list = mutableListOf<DaySummary?>()
+        val list = ArrayList<DaySummary?>(startOffset + daysInMonth)
         for (i in 0 until startOffset) {
             list.add(null)
         }
@@ -147,13 +159,16 @@ fun BillCalendarScreen(
 
         for (d in 1..daysInMonth) {
             cal.set(Calendar.DAY_OF_MONTH, d)
-            val sums = dailyMap[d] ?: Pair(0.0, 0.0)
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
             list.add(
                 DaySummary(
                     dayNumber = d,
                     dateTimestamp = cal.timeInMillis,
-                    income = sums.first,
-                    expense = sums.second,
+                    income = dailyIncome[d],
+                    expense = dailyExpense[d],
                     isToday = isCurrentYearMonth && (d == todayDay),
                     isCurrentMonth = true
                 )
@@ -165,16 +180,30 @@ fun BillCalendarScreen(
 
     // Filter transactions for the selected day
     val selectedDayExpenses = remember(allExpenses, selectedYear, selectedMonth, selectedDayNumber) {
-        allExpenses.filter { exp ->
-            val expCal = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-            expCal.get(Calendar.YEAR) == selectedYear &&
-            (expCal.get(Calendar.MONTH) + 1) == selectedMonth &&
-            expCal.get(Calendar.DAY_OF_MONTH) == selectedDayNumber
-        }.sortedByDescending { it.dateTimestamp }
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.YEAR, selectedYear)
+            set(Calendar.MONTH, selectedMonth - 1)
+            set(Calendar.DAY_OF_MONTH, selectedDayNumber)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startOfDay = cal.timeInMillis
+        val endOfDay = startOfDay + 86400000L
+        allExpenses.filter { it.dateTimestamp in startOfDay until endOfDay }
+            .sortedByDescending { it.dateTimestamp }
     }
 
-    val selectedDayExpenseTotal = selectedDayExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-    val selectedDayIncomeTotal = selectedDayExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
+    val (selectedDayExpenseTotal, selectedDayIncomeTotal) = remember(selectedDayExpenses) {
+        var expTot = 0.0
+        var incTot = 0.0
+        for (item in selectedDayExpenses) {
+            if (item.type == "EXPENSE") expTot += item.amount
+            else if (item.type == "INCOME") incTot += item.amount
+        }
+        Pair(expTot, incTot)
+    }
 
     GlassBackgroundWithGlow(modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize()) {

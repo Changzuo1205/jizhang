@@ -69,10 +69,17 @@ fun BottomNavBar(
     val bgConfig = LocalAppBackgroundConfig.current
     val isLight = bgConfig.isLight
     
-    // 暖纸白背景 #F5F1E6
-    val backgroundColor = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
-    // 顶部只有一条 0.5.dp 的分隔线，无阴影
-    val dividerColor = bgConfig.dividerColor
+    val themeAnimSpec = remember { tween<Color>(durationMillis = 500, easing = FastOutSlowInEasing) }
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24),
+        animationSpec = themeAnimSpec,
+        label = "navBarBgColor"
+    )
+    val dividerColor by animateColorAsState(
+        targetValue = bgConfig.dividerColor,
+        animationSpec = themeAnimSpec,
+        label = "navBarDividerColor"
+    )
     val navBarHeight = 60.dp
     
     Box(
@@ -99,6 +106,8 @@ fun BottomNavBar(
                     icon = Icons.Outlined.AccountBalance,
                     title = AppTab.ACCOUNTS.title,
                     selected = currentTab == AppTab.ACCOUNTS,
+                    isLight = isLight,
+                    themeAnimSpec = themeAnimSpec,
                     onClick = { onTabSelected(AppTab.ACCOUNTS) },
                     modifier = Modifier.weight(1f)
                 )
@@ -107,6 +116,8 @@ fun BottomNavBar(
                     icon = Icons.Outlined.Edit,
                     title = AppTab.DESIGN.title,
                     selected = currentTab == AppTab.DESIGN,
+                    isLight = isLight,
+                    themeAnimSpec = themeAnimSpec,
                     onClick = { onTabSelected(AppTab.DESIGN) },
                     modifier = Modifier.weight(1f)
                 )
@@ -122,6 +133,8 @@ fun BottomNavBar(
                     icon = Icons.Outlined.PieChart,
                     title = AppTab.REPORTS.title,
                     selected = currentTab == AppTab.REPORTS,
+                    isLight = isLight,
+                    themeAnimSpec = themeAnimSpec,
                     onClick = { onTabSelected(AppTab.REPORTS) },
                     modifier = Modifier.weight(1f)
                 )
@@ -130,12 +143,14 @@ fun BottomNavBar(
                     icon = Icons.Outlined.Person,
                     title = AppTab.MINE.title,
                     selected = currentTab == AppTab.MINE,
+                    isLight = isLight,
+                    themeAnimSpec = themeAnimSpec,
                     onClick = { onTabSelected(AppTab.MINE) },
                     modifier = Modifier.weight(1f)
                 )
             }
         }
-}
+    }
 }
 
 @Composable
@@ -165,12 +180,10 @@ fun HomeOrQuickAddButton(
 private fun QuickAddButtonContent(onQuickAdd: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxHeight()
-            
             .pressScale(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
@@ -180,7 +193,8 @@ private fun QuickAddButtonContent(onQuickAdd: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(46.dp)
+                .offset(y = (-5).dp)
+                .size(42.dp)
                 .drawBehind {
                     drawCircle(
                         color = Color(0xFFC4623D),
@@ -195,7 +209,7 @@ private fun QuickAddButtonContent(onQuickAdd: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(32.dp)
                     .background(Color(0xFFC4623D), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -203,44 +217,47 @@ private fun QuickAddButtonContent(onQuickAdd: () -> Unit) {
                     imageVector = Icons.Default.Add,
                     contentDescription = "记一笔",
                     tint = Color(0xFFF5F1E6),
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = "记一笔",
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFFC4623D)
-        )
     }
 }
 
 @Composable
-private fun HomeButtonContent(onNavigateHome: () -> Unit) {
+private fun HomeButtonContent(
+    onNavigateHome: () -> Unit,
+    isLight: Boolean = true,
+    themeAnimSpec: androidx.compose.animation.core.AnimationSpec<Color> = tween(500, easing = FastOutSlowInEasing)
+) {
     NavItem(
         icon = Icons.Outlined.Home,
         title = "首页",
-        selected = true,
+        selected = false,
+        isLight = isLight,
+        themeAnimSpec = themeAnimSpec,
         onClick = onNavigateHome,
         modifier = Modifier.fillMaxHeight()
     )
 }
+
 @Composable
 private fun NavItem(
     icon: ImageVector,
     title: String,
     selected: Boolean,
+    isLight: Boolean = true,
+    themeAnimSpec: androidx.compose.animation.core.AnimationSpec<Color> = tween(500, easing = FastOutSlowInEasing),
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val activeColor = Color(0xFF2D6A4F)
-    val inactiveColor = Color(0xFF8A8270)
+    val activeColor = if (isLight) Color(0xFF2D6A4F) else Color(0xFF52B788)
+    val inactiveColor = if (isLight) Color(0xFF8A8270) else Color(0xFF889689)
     val interactionSource = remember { MutableInteractionSource() }
     
     val iconColor by animateColorAsState(
         targetValue = if (selected) activeColor else inactiveColor,
+        animationSpec = themeAnimSpec,
         label = "NavIconColor"
     )
     

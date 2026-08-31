@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -44,25 +45,38 @@ fun AccountPickerSheet(
         else accounts.filter { it.name.contains(searchQuery, ignoreCase = true) || it.cardSuffix.contains(searchQuery) }
     }
 
-    // Grouping accounts - use recently used accounts
-    val frequentAccounts = remember(filteredAccounts, recentAccountIds) {
-        if (recentAccountIds.isNotEmpty()) {
-            recentAccountIds.mapNotNull { id -> filteredAccounts.find { it.id == id } }.take(2)
+    // 常用账户分组：优先取近期高频使用的账户，展示最多 4 个
+    val frequentAccounts = remember(filteredAccounts, recentAccountIds, searchQuery) {
+        if (searchQuery.isNotBlank()) {
+            emptyList()
         } else {
-            filteredAccounts.take(2)
+            val orderedByRecent = recentAccountIds.mapNotNull { id -> filteredAccounts.find { it.id == id } }
+            if (orderedByRecent.isNotEmpty()) {
+                orderedByRecent.distinctBy { it.id }.take(4)
+            } else {
+                filteredAccounts.take(4)
+            }
         }
     }
 
-    val cashAccounts = remember(filteredAccounts) {
-        filteredAccounts.filter { it.type == "CASH" }
+    val onlineWalletAccounts = remember(filteredAccounts) {
+        filteredAccounts.filter { isOnlineWalletAccount(it.type, it.name) }
     }
 
     val bankAccounts = remember(filteredAccounts) {
-        filteredAccounts.filter { it.type == "BANK_CARD" || it.type == "BANK" || it.type == "CREDIT_CARD" }
+        filteredAccounts.filter { isBankCardAccount(it.type, it.name) && !isOnlineWalletAccount(it.type, it.name) }
+    }
+
+    val cashAccounts = remember(filteredAccounts) {
+        filteredAccounts.filter { isCashAccount(it.type, it.name) && !isOnlineWalletAccount(it.type, it.name) && !isBankCardAccount(it.type, it.name) }
     }
 
     val otherAccounts = remember(filteredAccounts) {
-        filteredAccounts.filter { it.type != "CASH" && it.type != "BANK_CARD" && it.type != "BANK" && it.type != "CREDIT_CARD" }
+        filteredAccounts.filter {
+            !isOnlineWalletAccount(it.type, it.name) &&
+            !isBankCardAccount(it.type, it.name) &&
+            !isCashAccount(it.type, it.name)
+        }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -137,72 +151,81 @@ fun AccountPickerSheet(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 380.dp),
+                        .heightIn(max = 420.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Section 1: 常用
+                    // Section 1: 常用账户网格 (至多 4 个高频账户)
                     if (searchQuery.isBlank() && frequentAccounts.isNotEmpty()) {
                         item {
                             Text(
-                                text = "常用",
+                                text = "常用账户",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = bgConfig.textTertiary,
                                 modifier = Modifier.padding(bottom = 6.dp)
                             )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                frequentAccounts.forEach { acc ->
-                                    val isSelected = acc.id == selectedAccountId
-                                    val iconColor = getAccountIconColor(acc.type)
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(
-                                                if (isSelected) accentColor.copy(alpha = 0.15f)
-                                                else if (bgConfig.isLight) Color(0xFFF8FAFC) else Color(0xFF282C37)
-                                            )
-                                            .border(
-                                                width = if (isSelected) 1.5.dp else 0.5.dp,
-                                                color = if (isSelected) accentColor else (if (bgConfig.isLight) Color(0xFFE2E8F0) else Color.White.copy(alpha = 0.08f)),
-                                                shape = RoundedCornerShape(16.dp)
-                                            )
-                                            .clickable { onSelectAccount(acc) }
-                                            .padding(12.dp)
+                            val chunked = frequentAccounts.chunked(2)
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                chunked.forEach { rowItems ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        rowItems.forEach { acc ->
+                                            val isSelected = acc.id == selectedAccountId
+                                            val iconColor = getAccountIconColor(acc.type, acc.name)
                                             Box(
                                                 modifier = Modifier
-                                                    .size(34.dp)
-                                                    .background(iconColor.copy(alpha = 0.2f), CircleShape),
-                                                contentAlignment = Alignment.Center
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .background(
+                                                        if (isSelected) accentColor.copy(alpha = 0.15f)
+                                                        else if (bgConfig.isLight) Color(0xFFF8FAFC) else Color(0xFF282C37)
+                                                    )
+                                                    .border(
+                                                        width = if (isSelected) 1.5.dp else 0.5.dp,
+                                                        color = if (isSelected) accentColor else (if (bgConfig.isLight) Color(0xFFE2E8F0) else Color.White.copy(alpha = 0.08f)),
+                                                        shape = RoundedCornerShape(16.dp)
+                                                    )
+                                                    .clickable { onSelectAccount(acc) }
+                                                    .padding(10.dp)
                                             ) {
-                                                Icon(
-                                                    imageVector = getAccountIcon(acc.type),
-                                                    contentDescription = null,
-                                                    tint = iconColor,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(32.dp)
+                                                            .background(iconColor.copy(alpha = 0.18f), CircleShape),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = getAccountIcon(acc.type, acc.name),
+                                                            contentDescription = null,
+                                                            tint = iconColor,
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Column {
+                                                        Text(
+                                                            text = acc.name,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = bgConfig.textPrimary,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        Text(
+                                                            text = "¥${String.format(Locale.CHINA, "%.2f", acc.balance)}",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = if (isSelected) accentColor else bgConfig.textSecondary,
+                                                            maxLines = 1
+                                                        )
+                                                    }
+                                                }
                                             }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
-                                                Text(
-                                                    text = acc.name,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = bgConfig.textPrimary,
-                                                    maxLines = 1
-                                                )
-                                                Text(
-                                                    text = "¥${String.format(Locale.CHINA, "%.2f", acc.balance)}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = bgConfig.textSecondary,
-                                                    maxLines = 1
-                                                )
-                                            }
+                                        }
+                                        if (rowItems.size == 1) {
+                                            Spacer(modifier = Modifier.weight(1f))
                                         }
                                     }
                                 }
@@ -210,7 +233,37 @@ fun AccountPickerSheet(
                         }
                     }
 
-                    // Section 2: 现金
+                    // Section 2: 网络钱包 (微信 / 支付宝)
+                    if (onlineWalletAccounts.isNotEmpty()) {
+                        item {
+                            AccountSectionHeader("网络钱包")
+                        }
+                        items(onlineWalletAccounts, key = { it.id }) { acc ->
+                            AccountRowItem(
+                                account = acc,
+                                isSelected = acc.id == selectedAccountId,
+                                accentColor = accentColor,
+                                onClick = { onSelectAccount(acc) }
+                            )
+                        }
+                    }
+
+                    // Section 3: 储蓄卡 / 信用卡
+                    if (bankAccounts.isNotEmpty()) {
+                        item {
+                            AccountSectionHeader("银行卡 / 信用卡")
+                        }
+                        items(bankAccounts, key = { it.id }) { acc ->
+                            AccountRowItem(
+                                account = acc,
+                                isSelected = acc.id == selectedAccountId,
+                                accentColor = accentColor,
+                                onClick = { onSelectAccount(acc) }
+                            )
+                        }
+                    }
+
+                    // Section 4: 现金
                     if (cashAccounts.isNotEmpty()) {
                         item {
                             AccountSectionHeader("现金")
@@ -225,22 +278,7 @@ fun AccountPickerSheet(
                         }
                     }
 
-                    // Section 3: 储蓄卡/借记卡/银行卡
-                    if (bankAccounts.isNotEmpty()) {
-                        item {
-                            AccountSectionHeader("储蓄卡 / 借记卡")
-                        }
-                        items(bankAccounts, key = { it.id }) { acc ->
-                            AccountRowItem(
-                                account = acc,
-                                isSelected = acc.id == selectedAccountId,
-                                accentColor = accentColor,
-                                onClick = { onSelectAccount(acc) }
-                            )
-                        }
-                    }
-
-                    // Section 4: 网络钱包 / 其他
+                    // Section 5: 其他账户
                     if (otherAccounts.isNotEmpty()) {
                         item {
                             AccountSectionHeader("其他账户")
@@ -302,6 +340,25 @@ fun AccountPickerSheet(
     }
 }
 
+private fun isCashAccount(type: String, name: String): Boolean {
+    val t = type.uppercase()
+    return t == "CASH" || t == "现金" || name.contains("现金")
+}
+
+private fun isBankCardAccount(type: String, name: String): Boolean {
+    val t = type.uppercase()
+    return t == "BANK_CARD" || t == "BANK" || t == "DEBIT_CARD" || t == "CREDIT_CARD" ||
+            t == "储蓄卡" || t == "借记卡" || t == "信用卡" || t == "银行卡" ||
+            name.contains("卡") || name.contains("银行") || name.contains("花呗")
+}
+
+private fun isOnlineWalletAccount(type: String, name: String): Boolean {
+    val t = type.uppercase()
+    return t == "WECHAT" || t == "ALIPAY" || t == "QQ" || t == "ONLINE" || t == "DIGITAL_WALLET" ||
+            t == "微信" || t == "微信钱包" || t == "支付宝" || t == "网络账户" ||
+            name.contains("微信") || name.contains("支付宝") || name.contains("云闪付")
+}
+
 @Composable
 private fun AccountSectionHeader(title: String) {
     val bgConfig = LocalAppBackgroundConfig.current
@@ -322,7 +379,7 @@ private fun AccountRowItem(
     onClick: () -> Unit
 ) {
     val bgConfig = LocalAppBackgroundConfig.current
-    val iconColor = getAccountIconColor(account.type)
+    val iconColor = getAccountIconColor(account.type, account.name)
 
     Row(
         modifier = Modifier
@@ -345,7 +402,7 @@ private fun AccountRowItem(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = getAccountIcon(account.type),
+                    imageVector = getAccountIcon(account.type, account.name),
                     contentDescription = null,
                     tint = iconColor,
                     modifier = Modifier.size(20.dp)
@@ -378,26 +435,30 @@ private fun AccountRowItem(
     }
 }
 
-fun getAccountIcon(type: String): ImageVector {
-    return when (type) {
-        "WECHAT" -> Icons.Default.Payment
-        "ALIPAY" -> Icons.Default.CreditCard
-        "BANK", "BANK_CARD" -> Icons.Default.AccountBalance
-        "CREDIT_CARD" -> Icons.Default.CreditCard
-        "CASH" -> Icons.Default.AttachMoney
-        "INVESTMENT" -> Icons.Default.TrendingUp
+fun getAccountIcon(type: String, name: String = ""): ImageVector {
+    val t = type.uppercase()
+    val n = name
+    return when {
+        t == "WECHAT" || t == "微信" || t == "微信钱包" || n.contains("微信") -> Icons.Default.Payment
+        t == "ALIPAY" || t == "支付宝" || n.contains("支付宝") -> Icons.Default.CreditCard
+        t == "BANK" || t == "BANK_CARD" || t == "DEBIT_CARD" || t == "储蓄卡" || t == "借记卡" || t == "银行卡" || n.contains("银行") -> Icons.Default.AccountBalance
+        t == "CREDIT_CARD" || t == "信用卡" || n.contains("花呗") -> Icons.Default.CreditCard
+        t == "CASH" || t == "现金" || n.contains("现金") -> Icons.Default.AttachMoney
+        t == "INVESTMENT" || t == "投资" || t == "理财" || n.contains("基金") || n.contains("股票") -> Icons.Default.TrendingUp
         else -> Icons.Default.AccountBalanceWallet
     }
 }
 
-fun getAccountIconColor(type: String): Color {
-    return when (type) {
-        "WECHAT" -> Color(0xFF07C160)
-        "ALIPAY" -> Color(0xFF1677FF)
-        "BANK", "BANK_CARD" -> Color(0xFFEF4444)
-        "CREDIT_CARD" -> Color(0xFFF59E0B)
-        "CASH" -> Color(0xFF10B981)
-        "INVESTMENT" -> Color(0xFF8B5CF6)
+fun getAccountIconColor(type: String, name: String = ""): Color {
+    val t = type.uppercase()
+    val n = name
+    return when {
+        t == "WECHAT" || t == "微信" || t == "微信钱包" || n.contains("微信") -> Color(0xFF07C160)
+        t == "ALIPAY" || t == "支付宝" || n.contains("支付宝") -> Color(0xFF1677FF)
+        t == "BANK" || t == "BANK_CARD" || t == "DEBIT_CARD" || t == "储蓄卡" || t == "借记卡" || t == "银行卡" || n.contains("银行") -> Color(0xFFEF4444)
+        t == "CREDIT_CARD" || t == "信用卡" || n.contains("花呗") -> Color(0xFFF59E0B)
+        t == "CASH" || t == "现金" || n.contains("现金") -> Color(0xFF10B981)
+        t == "INVESTMENT" || t == "投资" || t == "理财" -> Color(0xFF8B5CF6)
         else -> Color(0xFF6366F1)
     }
 }

@@ -47,6 +47,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -157,7 +158,7 @@ fun EditorialPreviewScreen(
     val isLight = forceDarkPreview?.let { !it } ?: globalBgConfig.isLight
 
     // 配色令牌（平滑主题过渡）
-    val themeAnimSpec = tween<Color>(durationMillis = 400, easing = FastOutSlowInEasing)
+    val themeAnimSpec = tween<Color>(durationMillis = 500, easing = FastOutSlowInEasing)
     val canvasBg by animateColorAsState(if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24), animationSpec = themeAnimSpec, label = "canvasBg")
     val dividerColor by animateColorAsState(globalBgConfig.dividerColor, animationSpec = themeAnimSpec, label = "dividerColor")
     val inkPrimary by animateColorAsState(if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7), animationSpec = themeAnimSpec, label = "inkPrimary")
@@ -168,6 +169,7 @@ fun EditorialPreviewScreen(
     val togglePillBg by animateColorAsState(if (isLight) Color(0xFFF0ECE1) else Color(0xFF1B231B), animationSpec = themeAnimSpec, label = "togglePillBg")
     val lightIconTint by animateColorAsState(if (isLight) clayAccent else inkMuted, animationSpec = themeAnimSpec, label = "lightIconTint")
     val darkIconTint by animateColorAsState(if (!isLight) clayAccent else inkMuted, animationSpec = themeAnimSpec, label = "darkIconTint")
+    val todayBgColor by animateColorAsState(if (isLight) Color(0xFFEFECE4) else Color(0xFF263226), animationSpec = themeAnimSpec, label = "todayBgColor")
     val warningAmber = Color(0xFFD97706)
 
     val todayDateStr = remember {
@@ -185,54 +187,69 @@ fun EditorialPreviewScreen(
         val cache = mutableMapOf<Int, MonthCalendarData>() // key: monthOffset
         val nowCal = Calendar.getInstance()
         val currentYear = nowCal.get(Calendar.YEAR)
-        val currentMonth = nowCal.get(Calendar.MONTH)
         val todayDayOfYear = nowCal.get(Calendar.DAY_OF_YEAR)
 
+        // 单个 Calendar 实例用于提取时间，避免频繁对象创建
+        val workerCal = Calendar.getInstance()
+
         // 预聚合所有交易按 yearMonth (year * 100 + month)
-        val expensesByYearMonth = allExpenses.groupBy { exp ->
-            val c = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-            c.get(Calendar.YEAR) * 100 + c.get(Calendar.MONTH)
+        val expensesByYearMonth = mutableMapOf<Int, MutableList<ExpenseEntity>>()
+        for (exp in allExpenses) {
+            workerCal.timeInMillis = exp.dateTimestamp
+            val ymKey = workerCal.get(Calendar.YEAR) * 100 + workerCal.get(Calendar.MONTH)
+            expensesByYearMonth.getOrPut(ymKey) { mutableListOf() }.add(exp)
         }
 
         fun buildMonthData(offset: Int): MonthCalendarData {
             val cal = Calendar.getInstance().apply {
                 set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
                 add(Calendar.MONTH, offset)
             }
             val y = cal.get(Calendar.YEAR)
             val m = cal.get(Calendar.MONTH)
             val dow = cal.get(Calendar.DAY_OF_WEEK)
-            val firstDow = (dow + 5) % 7
+            val firstDow = (dow + 5) % 7 // Monday = 0
             val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
 
             val monthExpenses = expensesByYearMonth[y * 100 + m] ?: emptyList()
             var sumExpense = 0.0
             var sumIncome = 0.0
 
-            val expensesByDay = monthExpenses.groupBy { exp ->
-                val c = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-                c.get(Calendar.DAY_OF_MONTH)
+            val dayExpSums = DoubleArray(maxDays + 1)
+            val dayIncSums = DoubleArray(maxDays + 1)
+            val dayHasRecords = BooleanArray(maxDays + 1)
+
+            for (exp in monthExpenses) {
+                workerCal.timeInMillis = exp.dateTimestamp
+                val d = workerCal.get(Calendar.DAY_OF_MONTH)
+                if (d in 1..maxDays) {
+                    dayHasRecords[d] = true
+                    if (exp.type == "EXPENSE") {
+                        dayExpSums[d] += exp.amount
+                        sumExpense += exp.amount
+                    } else if (exp.type == "INCOME") {
+                        dayIncSums[d] += exp.amount
+                        sumIncome += exp.amount
+                    }
+                }
             }
 
             val dayAggregates = mutableMapOf<Int, DayAggregate>()
             for (day in 1..maxDays) {
-                val dayList = expensesByDay[day] ?: emptyList()
-                val dayExpense = dayList.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-                val dayIncome = dayList.filter { it.type == "INCOME" }.sumOf { it.amount }
-                sumExpense += dayExpense
-                sumIncome += dayIncome
-
-                val dayCal = cal.clone() as Calendar
-                dayCal.set(Calendar.DAY_OF_MONTH, day)
-                val isToday = (y == currentYear && dayCal.get(Calendar.DAY_OF_YEAR) == todayDayOfYear)
+                cal.set(Calendar.DAY_OF_MONTH, day)
+                val isToday = (y == currentYear && cal.get(Calendar.DAY_OF_YEAR) == todayDayOfYear)
 
                 dayAggregates[day] = DayAggregate(
                     dayOfMonth = day,
-                    timeInMillis = dayCal.timeInMillis,
+                    timeInMillis = cal.timeInMillis,
                     isToday = isToday,
-                    incomeSum = dayIncome,
-                    expenseSum = dayExpense,
-                    hasRecords = dayList.isNotEmpty()
+                    incomeSum = dayIncSums[day],
+                    expenseSum = dayExpSums[day],
+                    hasRecords = dayHasRecords[day]
                 )
             }
 
@@ -260,23 +277,44 @@ fun EditorialPreviewScreen(
             monthDataCache.getOrPut(offset) {
                 val cal = Calendar.getInstance().apply {
                     set(Calendar.DAY_OF_MONTH, 1)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
                     add(Calendar.MONTH, offset)
                 }
                 val y = cal.get(Calendar.YEAR)
                 val m = cal.get(Calendar.MONTH)
-                val firstDow = cal.get(Calendar.DAY_OF_WEEK) - 1
+                val dow = cal.get(Calendar.DAY_OF_WEEK)
+                val firstDow = (dow + 5) % 7
                 val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
 
-                val monthExpenses = allExpenses.filter { exp ->
-                    val c = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-                    c.get(Calendar.YEAR) == y && c.get(Calendar.MONTH) == m
-                }
-                val sumExpense = monthExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-                val sumIncome = monthExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
+                val startOfMonth = cal.timeInMillis
+                cal.add(Calendar.MONTH, 1)
+                val endOfMonth = cal.timeInMillis
 
-                val expensesByDay = monthExpenses.groupBy { exp ->
-                    val c = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-                    c.get(Calendar.DAY_OF_MONTH)
+                val monthExpenses = allExpenses.filter { it.dateTimestamp in startOfMonth until endOfMonth }
+                var sumExpense = 0.0
+                var sumIncome = 0.0
+
+                val dayExpSums = DoubleArray(maxDays + 1)
+                val dayIncSums = DoubleArray(maxDays + 1)
+                val dayHasRecords = BooleanArray(maxDays + 1)
+
+                val workerCal = Calendar.getInstance()
+                for (exp in monthExpenses) {
+                    workerCal.timeInMillis = exp.dateTimestamp
+                    val d = workerCal.get(Calendar.DAY_OF_MONTH)
+                    if (d in 1..maxDays) {
+                        dayHasRecords[d] = true
+                        if (exp.type == "EXPENSE") {
+                            dayExpSums[d] += exp.amount
+                            sumExpense += exp.amount
+                        } else if (exp.type == "INCOME") {
+                            dayIncSums[d] += exp.amount
+                            sumIncome += exp.amount
+                        }
+                    }
                 }
 
                 val nowCal = Calendar.getInstance()
@@ -284,22 +322,19 @@ fun EditorialPreviewScreen(
                 val todayDayOfYear = nowCal.get(Calendar.DAY_OF_YEAR)
 
                 val dayAggregates = mutableMapOf<Int, DayAggregate>()
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                cal.add(Calendar.MONTH, -1)
                 for (day in 1..maxDays) {
-                    val dayList = expensesByDay[day] ?: emptyList()
-                    val dayExpense = dayList.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-                    val dayIncome = dayList.filter { it.type == "INCOME" }.sumOf { it.amount }
-
-                    val dayCal = cal.clone() as Calendar
-                    dayCal.set(Calendar.DAY_OF_MONTH, day)
-                    val isToday = (y == currentYear && dayCal.get(Calendar.DAY_OF_YEAR) == todayDayOfYear)
+                    cal.set(Calendar.DAY_OF_MONTH, day)
+                    val isToday = (y == currentYear && cal.get(Calendar.DAY_OF_YEAR) == todayDayOfYear)
 
                     dayAggregates[day] = DayAggregate(
                         dayOfMonth = day,
-                        timeInMillis = dayCal.timeInMillis,
+                        timeInMillis = cal.timeInMillis,
                         isToday = isToday,
-                        incomeSum = dayIncome,
-                        expenseSum = dayExpense,
-                        hasRecords = dayList.isNotEmpty()
+                        incomeSum = dayIncSums[day],
+                        expenseSum = dayExpSums[day],
+                        hasRecords = dayHasRecords[day]
                     )
                 }
 
@@ -357,47 +392,45 @@ fun EditorialPreviewScreen(
     // 1. 展开日历时未选中日期则默认显示当前日历展示月份的全部明细，若选中日期则显示所选日期明细；
     // 2. 收拢日历时若未选日期则默认展示本周记录，若选中日期则展示所选日期明细。
     val displayedExpenses = remember(allExpenses, selectedDateMillis, isCalendarExpanded, currentMonthOffset) {
-        if (isCalendarExpanded) {
-            if (selectedDateMillis != null) {
-                val targetCal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis!! }
-                allExpenses.filter { exp ->
-                    val expCal = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-                    isSameDay(expCal, targetCal)
-                }
-            } else {
-                val targetCal = Calendar.getInstance().apply {
-                    set(Calendar.DAY_OF_MONTH, 1)
-                    add(Calendar.MONTH, currentMonthOffset)
-                }
-                val targetYear = targetCal.get(Calendar.YEAR)
-                val targetMonth = targetCal.get(Calendar.MONTH)
-                allExpenses.filter { exp ->
-                    val expCal = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-                    expCal.get(Calendar.YEAR) == targetYear && expCal.get(Calendar.MONTH) == targetMonth
-                }
+        val selected = selectedDateMillis
+        if (selected != null) {
+            val targetCal = Calendar.getInstance().apply {
+                timeInMillis = selected
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
             }
+            val startOfDay = targetCal.timeInMillis
+            val endOfDay = startOfDay + 86400000L
+            allExpenses.filter { it.dateTimestamp in startOfDay until endOfDay }
+        } else if (isCalendarExpanded) {
+            val targetCal = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                add(Calendar.MONTH, currentMonthOffset)
+            }
+            val startOfMonth = targetCal.timeInMillis
+            targetCal.add(Calendar.MONTH, 1)
+            val endOfMonth = targetCal.timeInMillis
+            allExpenses.filter { it.dateTimestamp in startOfMonth until endOfMonth }
         } else {
-            if (selectedDateMillis != null) {
-                val targetCal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis!! }
-                allExpenses.filter { exp ->
-                    val expCal = Calendar.getInstance().apply { timeInMillis = exp.dateTimestamp }
-                    isSameDay(expCal, targetCal)
-                }
-            } else {
-                val now = Calendar.getInstance()
-                val cal = now.clone() as Calendar
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-                val daysFromMonday = if (dayOfWeek == Calendar.SUNDAY) 6 else dayOfWeek - Calendar.MONDAY
-                cal.add(Calendar.DAY_OF_YEAR, -daysFromMonday)
-                val weekStart = cal.timeInMillis
-                val weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000L
-
-                allExpenses.filter { it.dateTimestamp in weekStart until weekEnd }
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
             }
+            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+            val daysFromMonday = if (dayOfWeek == Calendar.SUNDAY) 6 else dayOfWeek - Calendar.MONDAY
+            cal.add(Calendar.DAY_OF_YEAR, -daysFromMonday)
+            val weekStart = cal.timeInMillis
+            val weekEnd = weekStart + 7 * 86400000L
+
+            allExpenses.filter { it.dateTimestamp in weekStart until weekEnd }
         }
     }
 
@@ -592,7 +625,8 @@ fun EditorialPreviewScreen(
                             inkMuted = inkMuted,
                             clayAccent = clayAccent,
                             forestGreen = forestGreen,
-                            isLight = isLight
+                            isLight = isLight,
+                            todayBgColor = todayBgColor
                         )
                     }
                 }
@@ -637,6 +671,30 @@ fun EditorialPreviewScreen(
                                     fontWeight = FontWeight.Medium,
                                     color = inkPrimary
                                 )
+                            }
+                            if (selectedDateMillis != null) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable { onOpenAddExpense() }
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "记一笔",
+                                        tint = clayAccent,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = "记一笔",
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = clayAccent
+                                    )
+                                }
                             }
                         }
                         HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
@@ -1198,7 +1256,8 @@ private fun JournalDateRuler(
     inkMuted: Color,
     clayAccent: Color,
     forestGreen: Color,
-    isLight: Boolean
+    isLight: Boolean,
+    todayBgColor: Color
 ) {
     val currentMonthOffset by remember(isExpanded) {
         derivedStateOf { if (isExpanded) pagerState.currentPage - 500 else 0 }
@@ -1305,7 +1364,7 @@ private fun JournalDateRuler(
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(
                                     if (isSelected) clayAccent.copy(alpha = 0.15f)
-                                    else if (isToday) (if (isLight) Color(0xFFEFECE4) else Color(0xFF1F291F))
+                                    else if (isToday) todayBgColor
                                     else Color.Transparent
                                 )
                                 .clickable { onSelectDate(dayCal.timeInMillis) }
@@ -1358,7 +1417,8 @@ private fun JournalDateRuler(
                         inkMuted = inkMuted,
                         clayAccent = clayAccent,
                         forestGreen = forestGreen,
-                        isLight = isLight
+                        isLight = isLight,
+                        todayBgColor = todayBgColor
                     )
                 }
             }
@@ -1386,6 +1446,7 @@ private fun JournalTransactionRow(
     onItemClick: () -> Unit,
     onDeleteExpense: () -> Unit
 ) {
+    val isLight = LocalAppBackgroundConfig.current.isLight
     val isExpense = expense.type == "EXPENSE"
     val isIncome = expense.type == "INCOME"
     val amountCents = AmountFormatter.yuanToCents(expense.amount)
@@ -1560,7 +1621,7 @@ private fun JournalTransactionRow(
                 }
             }
         }
-        HorizontalDivider(thickness = 0.5.dp, color = dividerColor.copy(alpha = 0.6f))
+        HorizontalDivider(thickness = 0.5.dp, color = if (isLight) dividerColor.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.018f))
     }
 }
 
@@ -1573,7 +1634,8 @@ private fun EditorialMonthGrid(
     inkMuted: Color,
     clayAccent: Color,
     forestGreen: Color,
-    isLight: Boolean
+    isLight: Boolean,
+    todayBgColor: Color
 ) {
     val firstDayOfWeek = monthData.firstDayOfWeek
     val maxDaysInMonth = monthData.maxDaysInMonth
@@ -1605,7 +1667,7 @@ private fun EditorialMonthGrid(
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(
                                     if (isSelected) clayAccent.copy(alpha = 0.15f)
-                                    else if (isToday) (if (isLight) Color(0xFFEFECE4) else Color(0xFF1F291F))
+                                    else if (isToday) todayBgColor
                                     else Color.Transparent
                                 )
                                 .clickable { onSelectDate(dayTime) }

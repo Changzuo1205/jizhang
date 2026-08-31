@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -156,21 +157,31 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         repository.observeActiveBooks()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val activeBookId = MutableStateFlow<Long?>(null)
+
+    val currentBook: StateFlow<BookEntity?> =
+        combine(books, activeBookId) { bookList, selectedId ->
+            if (selectedId != null) {
+                bookList.find { it.id == selectedId } ?: bookList.find { it.isDefault } ?: bookList.firstOrNull()
+            } else {
+                bookList.find { it.isDefault } ?: bookList.firstOrNull()
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     /**
      * 过渡期映射层：TransactionEntity（分/外键）→ ExpenseEntity DTO（元/显示名）。
-     * 一级分类 = 行分类或其父级；二级分类 = 子级自身；未命中落「其他」。
-     * Phase 3 拆分后 UI 直接消费结构化模型，本适配层退役。
+     * 按当前激活账本进行数据隔离与切换。
      */
     val allExpenses: StateFlow<List<ExpenseEntity>> =
-        combine(transactionRows, categoryRows, accountRows) { txs, cats, accs ->
+        combine(transactionRows, categoryRows, accountRows, currentBook) { txs, cats, accs, curBook ->
+            val activeId = curBook?.id
+            val filteredTxs = if (activeId == null) txs else {
+                txs.filter { it.bookId == activeId }
+            }
             val catById = cats.associateBy { it.id }
             val accById = accs.associateBy { it.id }
             
-            // 添加分类映射日志
-            val missingCategories = mutableListOf<Long>()
-            val fallbackCategories = mutableListOf<String>()
-            
-            txs.map { tx ->
+            filteredTxs.map { tx ->
                 val cat = tx.categoryId?.let { catById[it] }
                 val parent = cat?.parentId?.let { catById[it] }
                 
@@ -178,29 +189,10 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     val rawName = when {
                         parent != null && parent.type == "income" && parent.name != "居家" -> parent.name
                         cat != null && cat.type == "income" && cat.name != "居家" -> cat.name
+                        cat != null && cat.name.isNotBlank() && cat.name != "其他" && cat.name != "默认" -> cat.name
                         else -> {
                             val note = tx.note.orEmpty()
-                            when {
-                                note.contains("利息") -> "利息"
-                                note.contains("兼职") || note in listOf("众包保证金", "大叹号") -> "兼职外快"
-                                note.contains("营业") -> "营业收入"
-                                note.contains("红包") -> "红包"
-                                note.contains("销售") -> "销售款"
-                                note.contains("退款") || note.contains("返款") -> "退款返款"
-                                note.contains("报销") -> "报销款"
-                                note.contains("福利") || note.contains("补贴") -> "福利补贴"
-                                note.contains("余额宝") -> "余额宝"
-                                note.contains("应收") -> "应收款"
-                                note.contains("生活费") -> "生活费"
-                                note.contains("基金") || note.contains("001423") -> "基金"
-                                note.contains("礼金") || note in listOf("娘", "压岁") -> "礼金"
-                                note.contains("分红") || note.contains("股票") -> "分红股票"
-                                note.contains("公积金") -> "公积金"
-                                note.contains("赔付") -> "赔付款"
-                                note.contains("余额调整") || note.contains("漏记") -> "漏记款"
-                                note.contains("工资") || note.contains("薪") -> "工资薪水"
-                                else -> "其他"
-                            }
+                            inferIncomeCategoryName(note)
                         }
                     }
                     val normalized = when (rawName) {
@@ -214,42 +206,27 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     // 转账类型：一级分类与二级分类均规范标识为“转账”，杜绝被显示为未分类
                     Pair("转账", "转账")
                 } else {
-                    // 支出：分类映射逻辑：优先显示父级名称（二级分类），否则显示自身名称（一级分类）
-                    val resolvedCategory = when {
+                    // 支出：分类映射逻辑：父级存在则为 (一级, 二级)，否则自身如果为一级分类则显示 (分类, 二级)，均无则根据备注推断
+                    val (resolvedCategory, resolvedSubCategory) = when {
                         parent != null -> {
-                            // 二级分类：显示父级名称
-                            parent.name
+                            Pair(parent.name, cat?.name.orEmpty())
                         }
                         cat != null -> {
-                            // 一级分类：显示自身名称
-                            cat.name
+                            val cName = cat.name.trim()
+                            if (cName != "其他" && cName != "默认" && cName.isNotBlank()) {
+                                Pair(cName, cName)
+                            } else {
+                                val note = tx.note.orEmpty()
+                                val inferred = inferExpenseCategoryPair(note)
+                                if (inferred.first != "其他") inferred else Pair(cName.ifBlank { "其他" }, "")
+                            }
                         }
                         else -> {
-                            // 未找到分类：记录日志并使用回退分类
-                            tx.categoryId?.let { missingCategories.add(it) }
-                            "未分类"
+                            val note = tx.note.orEmpty()
+                            inferExpenseCategoryPair(note)
                         }
                     }
-                    
-                    // 子分类逻辑：只有存在父级和子级时才显示子级名称
-                    val resolvedSubCategory = when {
-                        parent != null && cat != null -> cat.name
-                        else -> ""
-                    }
-                    
-                    // 如果原始分类ID存在但映射失败，尝试使用回退分类
-                    val finalCat = if (tx.categoryId != null && resolvedCategory == "未分类") {
-                        val fallbackCat = findFallbackCategory(tx.type.name)
-                        if (fallbackCat != null) {
-                            fallbackCategories.add("${tx.type.name}:${fallbackCat.name}")
-                            fallbackCat.name
-                        } else {
-                            resolvedCategory
-                        }
-                    } else {
-                        resolvedCategory
-                    }
-                    Pair(finalCat, resolvedSubCategory)
+                    Pair(resolvedCategory, resolvedSubCategory)
                 }
                 
                 ExpenseEntity(
@@ -267,40 +244,45 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         tx.transferToAccountId?.let { accById[it]?.name }.orEmpty(),
                     uuid = tx.uuid
                 )
-            }.also { result ->
-                // 输出分类映射统计信息（仅在开发环境）
-                if (missingCategories.isNotEmpty()) {
-                    println("分类映射警告：${missingCategories.size} 个交易记录的分类ID未找到映射: $missingCategories")
-                }
-                if (fallbackCategories.isNotEmpty()) {
-                    println("分类回退统计：${fallbackCategories.size} 个交易使用回退分类: $fallbackCategories")
-                }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
      * 账户展示余额＝ initial_balance ± Σ未删除交易（含转账两端对冲），派生值。
+     * 按当前激活账本隔离账户列表与账本内交易流水。
      * 映射回旧版 AccountEntity DTO 形态供现有页面渲染。
+     * O(N+M) 单次遍历汇总账户净额变动，避免反复循环扫描。
      */
     val allAccounts: StateFlow<List<AccountEntity>> =
-        combine(accountRows, transactionRows) { rows, txs ->
-            rows.map { a ->
-                var inc = 0; var exp = 0; var out = 0; var inn = 0
-                for (tx in txs) {
-                    when (tx.type) {
-                        TransactionType.INCOME -> if (tx.accountId == a.id) inc += tx.amount
-                        TransactionType.EXPENSE -> if (tx.accountId == a.id) exp += tx.amount
-                        TransactionType.TRANSFER -> {
-                            if (tx.accountId == a.id) out += tx.amount
-                            if (tx.transferToAccountId == a.id) inn += tx.amount
+        combine(accountRows, transactionRows, currentBook) { rows, txs, curBook ->
+            val activeId = curBook?.id
+            val filteredAccs = if (activeId == null) rows else {
+                rows.filter { it.bookId == activeId }
+            }
+            val filteredTxs = if (activeId == null) txs else {
+                txs.filter { it.bookId == activeId }
+            }
+            val deltas = mutableMapOf<Long, Long>()
+            for (tx in filteredTxs) {
+                when (tx.type) {
+                    TransactionType.INCOME -> deltas[tx.accountId] = (deltas[tx.accountId] ?: 0L) + tx.amount
+                    TransactionType.EXPENSE -> deltas[tx.accountId] = (deltas[tx.accountId] ?: 0L) - tx.amount
+                    TransactionType.TRANSFER -> {
+                        deltas[tx.accountId] = (deltas[tx.accountId] ?: 0L) - tx.amount
+                        val targetId = tx.transferToAccountId
+                        if (targetId != null) {
+                            deltas[targetId] = (deltas[targetId] ?: 0L) + tx.amount
                         }
                     }
                 }
+            }
+            filteredAccs.map { a ->
+                val netDelta = deltas[a.id] ?: 0L
                 AccountEntity(
                     id = a.id,
                     name = a.name,
                     type = ToolboxRepositoryV2.v2TypeToLegacy(a.type),
-                    balance = AmountFormatter.centsToYuan(a.initialBalance + inc - exp - out + inn),
+                    balance = AmountFormatter.centsToYuan((a.initialBalance + netDelta).toInt()),
                     cardSuffix = "",
                     colorHex = a.color ?: "#3B82F6",
                     note = ""
@@ -641,36 +623,35 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Overall Totals（由过渡期 DTO 列表派生；数据量大时可下探 DAO SQL 聚合）
-    val totalExpense: StateFlow<Double> = allExpenses
-        .map { list -> list.filter { it.type == "EXPENSE" }.sumOf { it.amount } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    // Consolidated Aggregation Data Model
+    data class AggregatedLedgerStats(
+        val totalExpense: Double = 0.0,
+        val totalIncome: Double = 0.0,
+        val todayExpense: Double = 0.0,
+        val thisMonthExpense: Double = 0.0,
+        val thisMonthIncome: Double = 0.0,
+        val thisQuarterExpense: Double = 0.0,
+        val thisYearExpense: Double = 0.0,
+        val categoryStats: List<CategoryStat> = emptyList(),
+        val incomeCategoryStats: List<CategoryStat> = emptyList(),
+        val weekTrendPoints: List<TrendPoint> = emptyList(),
+        val monthTrendPoints: List<TrendPoint> = emptyList()
+    )
 
-    val totalIncome: StateFlow<Double> = allExpenses
-        .map { list -> list.filter { it.type == "INCOME" }.sumOf { it.amount } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
-    val todayExpense: StateFlow<Double> = allExpenses.map { list ->
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val calendar = Calendar.getInstance()
-            calendar.set(Calendar.HOUR_OF_DAY, 0)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            calendar.set(Calendar.MILLISECOND, 0)
-            val startOfToday = calendar.timeInMillis
-            list.filter { it.type == "EXPENSE" && it.dateTimestamp >= startOfToday }.sumOf { it.amount }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
-    // Current Month Expense (1st of this month to end of this month)
-    val thisMonthExpense: StateFlow<Double> = allExpenses.map { list ->
+    // 单次 O(N) 遍历预先汇总所有收支统计与图表数据，彻底消除 11 个独立 StateFlow 重复全表扫描与 GC 压力
+    val aggregatedStats: StateFlow<AggregatedLedgerStats> = allExpenses.map { list ->
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             val cal = Calendar.getInstance()
-            cal.set(Calendar.DAY_OF_MONTH, 1)
+
+            // Today
             cal.set(Calendar.HOUR_OF_DAY, 0)
             cal.set(Calendar.MINUTE, 0)
             cal.set(Calendar.SECOND, 0)
             cal.set(Calendar.MILLISECOND, 0)
+            val startOfToday = cal.timeInMillis
+
+            // This Month
+            cal.set(Calendar.DAY_OF_MONTH, 1)
             val startOfMonth = cal.timeInMillis
             cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
             cal.set(Calendar.HOUR_OF_DAY, 23)
@@ -679,35 +660,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
             cal.set(Calendar.MILLISECOND, 999)
             val endOfMonth = cal.timeInMillis
 
-            list.filter { it.type == "EXPENSE" && it.dateTimestamp in startOfMonth..endOfMonth }.sumOf { it.amount }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
-    // Current Month Income
-    val thisMonthIncome: StateFlow<Double> = allExpenses.map { list ->
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val cal = Calendar.getInstance()
-            cal.set(Calendar.DAY_OF_MONTH, 1)
-            cal.set(Calendar.HOUR_OF_DAY, 0)
-            cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0)
-            cal.set(Calendar.MILLISECOND, 0)
-            val startOfMonth = cal.timeInMillis
-            cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
-            cal.set(Calendar.HOUR_OF_DAY, 23)
-            cal.set(Calendar.MINUTE, 59)
-            cal.set(Calendar.SECOND, 59)
-            cal.set(Calendar.MILLISECOND, 999)
-            val endOfMonth = cal.timeInMillis
-
-            list.filter { it.type == "INCOME" && it.dateTimestamp in startOfMonth..endOfMonth }.sumOf { it.amount }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
-    // Current Quarter Expense
-    val thisQuarterExpense: StateFlow<Double> = allExpenses.map { list ->
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val cal = Calendar.getInstance()
+            // This Quarter
             val currentMonth = cal.get(Calendar.MONTH)
             val quarterStartMonth = (currentMonth / 3) * 3
             cal.set(Calendar.MONTH, quarterStartMonth)
@@ -717,7 +670,6 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
             cal.set(Calendar.SECOND, 0)
             cal.set(Calendar.MILLISECOND, 0)
             val startOfQuarter = cal.timeInMillis
-
             cal.set(Calendar.MONTH, quarterStartMonth + 2)
             cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
             cal.set(Calendar.HOUR_OF_DAY, 23)
@@ -726,21 +678,13 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
             cal.set(Calendar.MILLISECOND, 999)
             val endOfQuarter = cal.timeInMillis
 
-            list.filter { it.type == "EXPENSE" && it.dateTimestamp in startOfQuarter..endOfQuarter }.sumOf { it.amount }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
-    // Current Year Expense
-    val thisYearExpense: StateFlow<Double> = allExpenses.map { list ->
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val cal = Calendar.getInstance()
+            // This Year
             cal.set(Calendar.DAY_OF_YEAR, 1)
             cal.set(Calendar.HOUR_OF_DAY, 0)
             cal.set(Calendar.MINUTE, 0)
             cal.set(Calendar.SECOND, 0)
             cal.set(Calendar.MILLISECOND, 0)
             val startOfYear = cal.timeInMillis
-
             cal.set(Calendar.MONTH, Calendar.DECEMBER)
             cal.set(Calendar.DAY_OF_MONTH, 31)
             cal.set(Calendar.HOUR_OF_DAY, 23)
@@ -749,21 +693,180 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
             cal.set(Calendar.MILLISECOND, 999)
             val endOfYear = cal.timeInMillis
 
-            list.filter { it.type == "EXPENSE" && it.dateTimestamp in startOfYear..endOfYear }.sumOf { it.amount }
+            // 7-day trend buckets
+            val sdfDay = SimpleDateFormat("MM-dd", Locale.CHINA)
+            class DayBucket(val label: String, val start: Long, val end: Long, var expSum: Double = 0.0, var incSum: Double = 0.0)
+            val weekBuckets = Array(7) { i ->
+                val offset = 6 - i
+                val bCal = Calendar.getInstance().apply {
+                    add(Calendar.DAY_OF_YEAR, -offset)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val bStart = bCal.timeInMillis
+                val bEnd = bStart + 86400000L
+                val label = if (offset == 0) "今日" else sdfDay.format(Date(bStart))
+                DayBucket(label, bStart, bEnd)
+            }
+
+            // 6-month trend buckets
+            val sdfMonth = SimpleDateFormat("M月", Locale.CHINA)
+            class MonthBucket(val label: String, val start: Long, val end: Long, var expSum: Double = 0.0, var incSum: Double = 0.0)
+            val monthBuckets = Array(6) { i ->
+                val offset = 5 - i
+                val bCal = Calendar.getInstance().apply {
+                    add(Calendar.MONTH, -offset)
+                    set(Calendar.DAY_OF_MONTH, 1)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val bStart = bCal.timeInMillis
+                bCal.add(Calendar.MONTH, 1)
+                val bEnd = bCal.timeInMillis
+                MonthBucket(sdfMonth.format(Date(bStart)), bStart, bEnd)
+            }
+
+            var totExp = 0.0
+            var totInc = 0.0
+            var todayExp = 0.0
+            var thisMonthExp = 0.0
+            var thisMonthInc = 0.0
+            var thisQuarterExp = 0.0
+            var thisYearExp = 0.0
+
+            class CatAccumulator(var total: Double = 0.0, var count: Int = 0)
+            val expCatMap = mutableMapOf<String, CatAccumulator>()
+            val incCatMap = mutableMapOf<String, CatAccumulator>()
+
+            for (exp in list) {
+                val amt = exp.amount
+                val ts = exp.dateTimestamp
+                val isExpense = exp.type == "EXPENSE"
+                val isIncome = exp.type == "INCOME"
+
+                if (isExpense) {
+                    totExp += amt
+                    if (ts >= startOfToday) todayExp += amt
+                    if (ts in startOfMonth..endOfMonth) thisMonthExp += amt
+                    if (ts in startOfQuarter..endOfQuarter) thisQuarterExp += amt
+                    if (ts in startOfYear..endOfYear) thisYearExp += amt
+
+                    val acc = expCatMap.getOrPut(exp.category) { CatAccumulator() }
+                    acc.total += amt
+                    acc.count += 1
+                } else if (isIncome) {
+                    totInc += amt
+                    if (ts in startOfMonth..endOfMonth) thisMonthInc += amt
+
+                    val acc = incCatMap.getOrPut(exp.category) { CatAccumulator() }
+                    acc.total += amt
+                    acc.count += 1
+                }
+
+                // week buckets
+                for (b in weekBuckets) {
+                    if (ts in b.start until b.end) {
+                        if (isExpense) b.expSum += amt
+                        else if (isIncome) b.incSum += amt
+                        break
+                    }
+                }
+
+                // month buckets
+                for (b in monthBuckets) {
+                    if (ts in b.start until b.end) {
+                        if (isExpense) b.expSum += amt
+                        else if (isIncome) b.incSum += amt
+                        break
+                    }
+                }
+            }
+
+            val finalCatStats = if (totExp == 0.0) emptyList() else {
+                expCatMap.map { (cat, acc) ->
+                    CategoryStat(
+                        category = cat,
+                        totalAmount = acc.total,
+                        count = acc.count,
+                        percentage = (acc.total / totExp).toFloat(),
+                        type = "EXPENSE"
+                    )
+                }.sortedByDescending { it.totalAmount }
+            }
+
+            val finalIncStats = if (totInc == 0.0) emptyList() else {
+                incCatMap.map { (cat, acc) ->
+                    CategoryStat(
+                        category = cat,
+                        totalAmount = acc.total,
+                        count = acc.count,
+                        percentage = (acc.total / totInc).toFloat(),
+                        type = "INCOME"
+                    )
+                }.sortedByDescending { it.totalAmount }
+            }
+
+            val finalWeekPoints = weekBuckets.map { TrendPoint(it.label, it.expSum, it.incSum, it.start) }
+            val finalMonthPoints = monthBuckets.map { TrendPoint(it.label, it.expSum, it.incSum, it.start) }
+
+            AggregatedLedgerStats(
+                totalExpense = totExp,
+                totalIncome = totInc,
+                todayExpense = todayExp,
+                thisMonthExpense = thisMonthExp,
+                thisMonthIncome = thisMonthInc,
+                thisQuarterExpense = thisQuarterExp,
+                thisYearExpense = thisYearExp,
+                categoryStats = finalCatStats,
+                incomeCategoryStats = finalIncStats,
+                weekTrendPoints = finalWeekPoints,
+                monthTrendPoints = finalMonthPoints
+            )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AggregatedLedgerStats())
+
+    // Overall Totals（由 aggregatedStats 派生，无需重复计算）
+    val totalExpense: StateFlow<Double> = aggregatedStats
+        .map { it.totalExpense }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalIncome: StateFlow<Double> = aggregatedStats
+        .map { it.totalIncome }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val todayExpense: StateFlow<Double> = aggregatedStats
+        .map { it.todayExpense }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val thisMonthExpense: StateFlow<Double> = aggregatedStats
+        .map { it.thisMonthExpense }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val thisMonthIncome: StateFlow<Double> = aggregatedStats
+        .map { it.thisMonthIncome }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val thisQuarterExpense: StateFlow<Double> = aggregatedStats
+        .map { it.thisQuarterExpense }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val thisYearExpense: StateFlow<Double> = aggregatedStats
+        .map { it.thisYearExpense }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     // Dynamic Budget Progress State
     val budgetProgress: StateFlow<BudgetProgressInfo> = combine(
         _budgetConfig,
-        thisMonthExpense,
-        thisQuarterExpense,
-        thisYearExpense
-    ) { config, mExp, qExp, yExp ->
+        aggregatedStats
+    ) { config, stats ->
         val (limit, spent) = when (config.activePeriod) {
-            BudgetPeriod.MONTH -> Pair(config.monthlyLimit, mExp)
-            BudgetPeriod.QUARTER -> Pair(config.quarterlyLimit, qExp)
-            BudgetPeriod.YEAR -> Pair(config.yearlyLimit, yExp)
+            BudgetPeriod.MONTH -> Pair(config.monthlyLimit, stats.thisMonthExpense)
+            BudgetPeriod.QUARTER -> Pair(config.quarterlyLimit, stats.thisQuarterExpense)
+            BudgetPeriod.YEAR -> Pair(config.yearlyLimit, stats.thisYearExpense)
         }
 
         val remaining = limit - spent
@@ -816,7 +919,6 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         BudgetProgressInfo(BudgetPeriod.MONTH, 5000.0, 0.0, 5000.0, false, 0.0, 0f, 5000.0 / 30, 30)
     )
 
-
     // Account Asset Aggregations（单数据源聚合，直接 map 计算，无需冗余 combine）
     val totalNetAssets: StateFlow<Double> = allAccounts.map { accounts ->
         accounts.sumOf { it.balance }
@@ -831,108 +933,24 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     // Category Expense Breakdown
-    val categoryStats: StateFlow<List<CategoryStat>> = allExpenses.map { list ->
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val expenseList = list.filter { it.type == "EXPENSE" }
-            val sum = expenseList.sumOf { it.amount }
-            if (sum == 0.0) {
-                emptyList()
-            } else {
-                expenseList.groupBy { it.category }
-                    .map { (cat, items) ->
-                        val catSum = items.sumOf { it.amount }
-                        CategoryStat(
-                            category = cat,
-                            totalAmount = catSum,
-                            count = items.size,
-                            percentage = (catSum / sum).toFloat(),
-                            type = "EXPENSE"
-                        )
-                    }
-                    .sortedByDescending { it.totalAmount }
-            }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val categoryStats: StateFlow<List<CategoryStat>> = aggregatedStats
+        .map { it.categoryStats }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Category Income Breakdown
-    val incomeCategoryStats: StateFlow<List<CategoryStat>> = allExpenses.map { list ->
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val incomeList = list.filter { it.type == "INCOME" }
-            val sum = incomeList.sumOf { it.amount }
-            if (sum == 0.0) {
-                emptyList()
-            } else {
-                incomeList.groupBy { it.category }
-                    .map { (cat, items) ->
-                        val catSum = items.sumOf { it.amount }
-                        CategoryStat(
-                            category = cat,
-                            totalAmount = catSum,
-                            count = items.size,
-                            percentage = (catSum / sum).toFloat(),
-                            type = "INCOME"
-                        )
-                    }
-                    .sortedByDescending { it.totalAmount }
-            }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val incomeCategoryStats: StateFlow<List<CategoryStat>> = aggregatedStats
+        .map { it.incomeCategoryStats }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 7-day Trend Points
-    val weekTrendPoints: StateFlow<List<TrendPoint>> = allExpenses.map { list ->
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val sdf = SimpleDateFormat("MM-dd", Locale.CHINA)
-            val points = mutableListOf<TrendPoint>()
-
-            for (i in 6 downTo 0) {
-                val cal = Calendar.getInstance()
-                cal.add(Calendar.DAY_OF_YEAR, -i)
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val start = cal.timeInMillis
-                val end = start + 86400000L
-
-                val dayExpenses = list.filter { it.dateTimestamp in start until end }
-                val expSum = dayExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-                val incSum = dayExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
-
-                val label = if (i == 0) "今日" else sdf.format(Date(start))
-                points.add(TrendPoint(label, expSum, incSum, start))
-            }
-            points
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val weekTrendPoints: StateFlow<List<TrendPoint>> = aggregatedStats
+        .map { it.weekTrendPoints }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 6-Month Trend Points
-    val monthTrendPoints: StateFlow<List<TrendPoint>> = allExpenses.map { list ->
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val labelSdf = SimpleDateFormat("M月", Locale.CHINA)
-            val points = mutableListOf<TrendPoint>()
-
-            for (i in 5 downTo 0) {
-                val cal = Calendar.getInstance()
-                cal.add(Calendar.MONTH, -i)
-                cal.set(Calendar.DAY_OF_MONTH, 1)
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val start = cal.timeInMillis
-
-                cal.add(Calendar.MONTH, 1)
-                val end = cal.timeInMillis
-
-                val monthExpenses = list.filter { it.dateTimestamp in start until end }
-                val expSum = monthExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-                val incSum = monthExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
-
-                points.add(TrendPoint(labelSdf.format(Date(start)), expSum, incSum, start))
-            }
-            points
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val monthTrendPoints: StateFlow<List<TrendPoint>> = aggregatedStats
+        .map { it.monthTrendPoints }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Expense Actions
 
@@ -956,6 +974,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     ) {
         viewModelScope.launch {
             seedReady.await()
+            val targetBookId = currentBook.value?.id ?: repository.defaultBookId()
             val isTransfer = transferToAccountId != null &&
                 (type.equals("TRANSFER", ignoreCase = true) || transferToAccountId != accountId)
             if (isTransfer && transferToAccountId != null && transferToAccountId != accountId) {
@@ -964,7 +983,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     toAccountId = transferToAccountId,
                     amountYuan = amount,
                     note = note.ifBlank { null },
-                    timestamp = timestamp
+                    timestamp = timestamp,
+                    bookId = targetBookId
                 )
             } else {
                 repository.insertLegacyExpense(
@@ -974,7 +994,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                     amountYuan = amount,
                     note = note,
                     accountId = accountId,
-                    timestamp = timestamp
+                    timestamp = timestamp,
+                    bookId = targetBookId
                 )
             }
         }
@@ -991,11 +1012,13 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         viewModelScope.launch {
             seedReady.await()
             if (fromId == toId || amountYuan <= 0.0) return@launch
+            val targetBookId = currentBook.value?.id ?: repository.defaultBookId()
             repository.addTransfer(
                 fromAccountId = fromId,
                 toAccountId = toId,
                 amountYuan = amountYuan,
-                note = note.ifBlank { null }
+                note = note.ifBlank { null },
+                bookId = targetBookId
             )
             onSuccess()
         }
@@ -1069,14 +1092,25 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
 
     // ---------- 账本管理（Phase 2） ----------
 
-    /** 新建账本 */
+    /** 新建账本并自动切换 */
     fun saveBook(name: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             seedReady.await()
             if (name.isNotBlank()) {
-                repository.insertBook(name)
+                val newId = repository.insertBook(name)
+                selectBook(newId)
                 onSuccess()
             }
+        }
+    }
+
+    /** 切换当前选中的账本 */
+    fun selectBook(bookId: Long) {
+        activeBookId.value = bookId
+        viewModelScope.launch {
+            seedReady.await()
+            repository.setDefaultBook(bookId)
+            repository.ensureBookAccounts(bookId)
         }
     }
 
@@ -1088,12 +1122,9 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         }
     }
 
-    /** 设为默认账本（事务内先清旧默认再置位） */
+    /** 设为默认账本（事务内先清旧默认再置位）并同步切换 */
     fun setDefaultBook(bookId: Long) {
-        viewModelScope.launch {
-            seedReady.await()
-            repository.setDefaultBook(bookId)
-        }
+        selectBook(bookId)
     }
 
     /** 归档账本（默认账本会被 Repository 层拒绝，UI 不必预判） */
@@ -1101,6 +1132,31 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         viewModelScope.launch {
             seedReady.await()
             repository.archiveBook(bookId)
+        }
+    }
+
+    /** 清空指定账本的所有数据（流水与账户余额） */
+    fun clearBookData(bookId: Long, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            seedReady.await()
+            repository.clearBookData(bookId)
+            onSuccess()
+        }
+    }
+
+    /** 彻底删除指定账本及其所有明细与账户 */
+    fun deleteBook(bookId: Long, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            seedReady.await()
+            val wasActive = currentBook.value?.id == bookId
+            val ok = repository.deleteBook(bookId)
+            if (ok && wasActive) {
+                val remaining = repository.observeBooks().firstOrNull()?.firstOrNull()
+                if (remaining != null) {
+                    selectBook(remaining.id)
+                }
+            }
+            onSuccess()
         }
     }
 
@@ -1115,7 +1171,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
     ) {
         viewModelScope.launch {
             seedReady.await()
-            repository.addAccount(name, type, initialBalance, colorHex, note)
+            val targetBookId = currentBook.value?.id ?: repository.defaultBookId()
+            repository.addAccount(name, type, initialBalance, colorHex, note, targetBookId)
         }
     }
 
@@ -1285,11 +1342,24 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         var successCount = 0
         var accountCount = 0
         val accountTargetBalances = mutableMapOf<String, Double>()
+        val targetBookId = currentBook.value?.id ?: 1L
 
         runBlocking(Dispatchers.IO) {
             seedReady.await()
             for (line in lines) {
-                if (line.startsWith("#") || line.contains("收支类型") || line.contains("一级分类") || line.startsWith("ID,") || line.startsWith("ID，") || line.contains("账户名称")) {
+                val trimmed = line.trim()
+                val lower = trimmed.lowercase()
+                if (trimmed.startsWith("#") ||
+                    trimmed.contains("收支类型") ||
+                    trimmed.contains("一级分类") ||
+                    trimmed.contains("交易类型") ||
+                    trimmed.contains("子分类") ||
+                    trimmed.contains("二级分类") ||
+                    trimmed.contains("账户名称") ||
+                    lower.startsWith("id,") ||
+                    lower.startsWith("id，") ||
+                    (lower.contains("时间") && (lower.contains("金额") || lower.contains("分类") || lower.contains("类型")))
+                ) {
                     continue
                 }
 
@@ -1308,7 +1378,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         accountTargetBalances[accName] = initBal
                         val existing = currentAccounts.find { it.name.equals(accName, ignoreCase = true) }
                         if (existing == null) {
-                            val newId = repository.addAccount(accName, accType, initBal, colorHex, note)
+                            val newId = repository.addAccount(accName, accType, initBal, colorHex, note, bookId = targetBookId)
                             currentAccounts.add(AccountEntity(id = newId, name = accName, type = accType, balance = initBal, colorHex = colorHex, note = note))
                             accountCount++
                         }
@@ -1419,11 +1489,26 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         }
                     }
 
+                    // 拆分复合分类名（如 "餐饮/午餐" 或 "交通 - 地铁"）
+                    val splitDelimiters = listOf(" / ", "/", " - ", "-", " : ", ":", "：", " > ", ">")
+                    for (del in splitDelimiters) {
+                        if (category.contains(del)) {
+                            val parts = category.split(del, limit = 2)
+                            if (parts.size == 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
+                                category = parts[0].trim()
+                                if (subCategory.isBlank() || subCategory == "默认" || subCategory == "其他") {
+                                    subCategory = parts[1].trim()
+                                }
+                                break
+                            }
+                        }
+                    }
+
                     if (amount <= 0.0) continue
 
                     var matchedAcc = currentAccounts.find { it.name.equals(accountName, ignoreCase = true) }
                     if (matchedAcc == null) {
-                        val newAccId = repository.addAccount(accountName, "储蓄卡", 0.0, "#3B82F6", "导入自动创建")
+                        val newAccId = repository.addAccount(accountName, "储蓄卡", 0.0, "#3B82F6", "导入自动创建", bookId = targetBookId)
                         val newAcc = AccountEntity(id = newAccId, name = accountName, type = "储蓄卡", balance = 0.0, colorHex = "#3B82F6", note = "导入自动创建")
                         currentAccounts.add(newAcc)
                         matchedAcc = newAcc
@@ -1438,7 +1523,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         val targetAccName = tokens.getOrNull(7)?.trim() ?: ""
                         var targetMatched = currentAccounts.find { it.name.equals(targetAccName, ignoreCase = true) }
                         if (targetMatched == null && targetAccName.isNotBlank()) {
-                            val newTargetId = repository.addAccount(targetAccName, "储蓄卡", 0.0, "#8B5CF6", "转账导入自动创建")
+                            val newTargetId = repository.addAccount(targetAccName, "储蓄卡", 0.0, "#8B5CF6", "转账导入自动创建", bookId = targetBookId)
                             val newTargetAcc = AccountEntity(id = newTargetId, name = targetAccName, type = "储蓄卡", balance = 0.0, colorHex = "#8B5CF6", note = "转账导入自动创建")
                             currentAccounts.add(newTargetAcc)
                             targetMatched = newTargetAcc
@@ -1450,7 +1535,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                             if (otherAcc != null) {
                                 targetId = otherAcc.id
                             } else {
-                                val newTargetId = repository.addAccount("目标账户", "储蓄卡", 0.0, "#8B5CF6", "转账导入自动创建")
+                                val newTargetId = repository.addAccount("目标账户", "储蓄卡", 0.0, "#8B5CF6", "转账导入自动创建", bookId = targetBookId)
                                 val newTargetAcc = AccountEntity(id = newTargetId, name = "目标账户", type = "储蓄卡", balance = 0.0, colorHex = "#8B5CF6", note = "转账导入自动创建")
                                 currentAccounts.add(newTargetAcc)
                                 targetId = newTargetId
@@ -1473,7 +1558,8 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
                         note = note,
                         accountId = accId,
                         timestamp = dateTimestamp,
-                        transferToAccountId = transferToAccountId
+                        transferToAccountId = transferToAccountId,
+                        bookId = targetBookId
                     )
                     successCount++
                 } catch (e: Exception) {
@@ -1483,7 +1569,7 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
 
             // Reverse engineer initial balances based on target balances and transaction history for asset trends
             if (accountTargetBalances.isNotEmpty()) {
-                repository.calibrateImportedAccounts(accountTargetBalances)
+                repository.calibrateImportedAccounts(accountTargetBalances, bookId = targetBookId)
             }
         }
 
@@ -1494,16 +1580,75 @@ class ToolboxViewModel(application: Application, container: AppContainer) : Andr
         }
     }
 
-    /**
-     * 查找回退分类：当分类映射失败时使用的备用分类
-     */
-    private suspend fun findFallbackCategory(transactionType: String): CategoryEntity? {
-        return try {
-            // 查找任意未归档分类作为回退
-            repository.findFallbackCategory(transactionType)
-        } catch (e: Exception) {
-            println("查找回退分类失败: ${e.message}")
-            null
+    private fun inferIncomeCategoryName(note: String): String {
+        return when {
+            note.contains("利息") || note.contains("收益") || note.contains("余额宝") -> "利息"
+            note.contains("兼职") || note in listOf("众包保证金", "大叹号") || note.contains("外快") || note.contains("副业") -> "兼职外快"
+            note.contains("营业") || note.contains("经营") || note.contains("店铺") -> "营业收入"
+            note.contains("红包") || note.contains("转账") -> "红包"
+            note.contains("销售") || note.contains("闲鱼") || note.contains("二手") -> "销售款"
+            note.contains("退款") || note.contains("返款") || note.contains("退货") -> "退款返款"
+            note.contains("报销") || note.contains("差旅") -> "报销款"
+            note.contains("福利") || note.contains("补贴") || note.contains("餐补") || note.contains("房补") -> "福利补贴"
+            note.contains("应收") -> "应收款"
+            note.contains("生活费") -> "生活费"
+            note.contains("基金") || note.contains("001423") || note.contains("理财") -> "基金"
+            note.contains("礼金") || note in listOf("娘", "压岁") || note.contains("随礼") -> "礼金"
+            note.contains("分红") || note.contains("股票") -> "分红股票"
+            note.contains("公积金") -> "公积金"
+            note.contains("赔付") || note.contains("理赔") -> "赔付款"
+            note.contains("余额调整") || note.contains("漏记") || note.contains("平账") -> "漏记款"
+            note.contains("工资") || note.contains("薪") || note.contains("年终奖") -> "工资薪水"
+            else -> "其他"
+        }
+    }
+
+    private fun inferExpenseCategoryPair(note: String): Pair<String, String> {
+        return when {
+            note.contains("早") || note.contains("早餐") || note.contains("包子") || note.contains("油条") -> Pair("餐饮", "早餐")
+            note.contains("午") || note.contains("午餐") || note.contains("快餐") || note.contains("美团") || note.contains("饿了么") -> Pair("餐饮", "午餐")
+            note.contains("晚") || note.contains("晚餐") || note.contains("火锅") || note.contains("烧烤") || note.contains("夜宵") -> Pair("餐饮", "晚餐")
+            note.contains("奶茶") || note.contains("咖啡") || note.contains("星巴克") || note.contains("瑞幸") || note.contains("零食") || note.contains("水果") -> Pair("餐饮", "零食")
+            note.contains("买菜") || note.contains("生鲜") || note.contains("蔬菜") -> Pair("餐饮", "买菜原料")
+            note.contains("吃") || note.contains("餐") || note.contains("饭") -> Pair("餐饮", "餐饮其他")
+
+            note.contains("打车") || note.contains("滴滴") || note.contains("出租") || note.contains("高德") -> Pair("交通", "打车")
+            note.contains("公交") || note.contains("巴士") -> Pair("交通", "公交")
+            note.contains("地铁") -> Pair("交通", "地铁")
+            note.contains("加油") || note.contains("油费") || note.contains("充电") -> Pair("交通", "加油")
+            note.contains("停车") -> Pair("交通", "停车费")
+            note.contains("火车") || note.contains("高铁") || note.contains("机票") || note.contains("飞机") -> Pair("交通", "火车")
+            note.contains("单车") || note.contains("哈啰") -> Pair("交通", "自行车")
+            note.contains("交通") || note.contains("出行") || note.contains("路费") -> Pair("交通", "交通其他")
+
+            note.contains("衣服") || note.contains("裤") || note.contains("鞋") || note.contains("包") -> Pair("购物", "服饰鞋包")
+            note.contains("超市") || note.contains("日用") || note.contains("纸巾") || note.contains("便利店") -> Pair("购物", "家居百货")
+            note.contains("护肤") || note.contains("化妆") || note.contains("口红") || note.contains("面膜") -> Pair("购物", "化妆护肤")
+            note.contains("手机") || note.contains("数码") || note.contains("电脑") || note.contains("充电器") -> Pair("购物", "电子数码")
+            note.contains("淘宝") || note.contains("京东") || note.contains("拼多多") || note.contains("网购") -> Pair("购物", "购物其他")
+
+            note.contains("电影") || note.contains("影院") -> Pair("娱乐", "电影")
+            note.contains("游戏") || note.contains("Steam") || note.contains("充值") -> Pair("娱乐", "网游电玩")
+            note.contains("旅游") || note.contains("酒店") || note.contains("民宿") || note.contains("门票") -> Pair("娱乐", "旅游度假")
+            note.contains("运动") || note.contains("健身") || note.contains("游泳") || note.contains("羽毛球") -> Pair("娱乐", "运动健身")
+            note.contains("猫") || note.contains("狗") || note.contains("宠物") -> Pair("娱乐", "花鸟宠物")
+
+            note.contains("看病") || note.contains("医院") || note.contains("门诊") || note.contains("挂号") -> Pair("医教", "挂号门诊")
+            note.contains("药") || note.contains("药店") -> Pair("医教", "医疗药品")
+            note.contains("学费") || note.contains("培训") || note.contains("课程") -> Pair("医教", "学杂教材")
+
+            note.contains("话费") || note.contains("手机费") -> Pair("居家", "手机电话")
+            note.contains("电费") || note.contains("水费") || note.contains("燃气") || note.contains("水电") -> Pair("居家", "水电燃气")
+            note.contains("房租") || note.contains("租房") || note.contains("房贷") -> Pair("居家", "住宿房租")
+            note.contains("宽带") || note.contains("网费") -> Pair("居家", "电脑宽带")
+            note.contains("理发") || note.contains("剪发") || note.contains("美发") -> Pair("居家", "美发美容")
+            note.contains("快递") || note.contains("顺丰") -> Pair("居家", "快递邮政")
+            note.contains("日常") || note.contains("生活") -> Pair("居家", "生活费")
+
+            note.contains("红包") || note.contains("随礼") || note.contains("份子") -> Pair("人情", "礼金红包")
+            note.contains("请客") || note.contains("送礼") -> Pair("人情", "请客")
+
+            else -> Pair("其他", "")
         }
     }
 }

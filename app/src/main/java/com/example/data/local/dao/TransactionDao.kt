@@ -24,6 +24,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE is_deleted = 0")
     suspend fun getActiveOnce(): List<TransactionEntity>
 
+    @Query("SELECT * FROM transactions WHERE is_deleted = 0 AND book_id = :bookId")
+    suspend fun getByBookIdOnce(bookId: Long): List<TransactionEntity>
+
     @Query("SELECT * FROM transactions WHERE type = :type")
     suspend fun getByTypeOnce(type: TransactionType): List<TransactionEntity>
 
@@ -92,4 +95,10 @@ interface TransactionDao {
             "FROM transactions WHERE is_deleted = 0 AND account_id = :accountId AND type IN ('EXPENSE','INCOME')"
     )
     suspend fun lifetimeNetCentsFor(accountId: Long): Int
+
+    @Query("DELETE FROM transactions WHERE book_id = :bookId")
+    suspend fun deleteByBookId(bookId: Long)
+
+    @Query("UPDATE transactions SET is_deleted = 1, updated_at = :now WHERE book_id = :bookId")
+    suspend fun softDeleteByBookId(bookId: Long, now: Long)
 }

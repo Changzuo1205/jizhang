@@ -117,10 +117,8 @@ fun EditorialExpenseAddEditScreen(
     val safeAccounts = remember(accounts) {
         if (accounts.isNotEmpty()) accounts
         else listOf(
-            AccountEntity(id = 1L, name = "微信钱包", type = "WECHAT", balance = 3280.50),
-            AccountEntity(id = 2L, name = "支付宝", type = "ALIPAY", balance = 8450.00),
-            AccountEntity(id = 3L, name = "招商银行卡", type = "BANK", balance = 24600.00),
-            AccountEntity(id = 4L, name = "日常现金", type = "CASH", balance = 500.00)
+            AccountEntity(id = 1L, name = "微信钱包", type = "WECHAT", balance = 0.0),
+            AccountEntity(id = 2L, name = "支付宝", type = "ALIPAY", balance = 0.0)
         )
     }
 
@@ -166,6 +164,16 @@ fun EditorialExpenseAddEditScreen(
     }
     val selectedAccount = safeAccounts.find { it.id == selectedAccountId } ?: safeAccounts.firstOrNull()
     val targetTransferAccount = safeAccounts.find { it.id == transferToAccountId } ?: safeAccounts.getOrNull(1)
+
+    // 计算常用账户序列 (根据历史交易频率)
+    val computedRecentAccountIds = remember(allExpenses, safeAccounts) {
+        val recentFromExpenses = allExpenses
+            .sortedByDescending { it.dateTimestamp }
+            .map { it.accountId }
+            .distinct()
+        val allIds = safeAccounts.map { it.id }
+        (recentFromExpenses + allIds).distinct()
+    }
 
     // 3. 分类与二级细分
     var categoriesRefreshKey by remember { mutableIntStateOf(0) }
@@ -229,7 +237,7 @@ fun EditorialExpenseAddEditScreen(
     var noteInput by remember {
         mutableStateOf(expenseToEdit?.note ?: "")
     }
-    var selectedTimestamp by remember {
+    var selectedTimestamp by remember(initialTimestamp, expenseToEdit) {
         mutableLongStateOf(expenseToEdit?.dateTimestamp ?: initialTimestamp)
     }
 
@@ -664,7 +672,7 @@ fun EditorialExpenseAddEditScreen(
         AccountPickerSheet(
             accounts = safeAccounts,
             selectedAccountId = selectedAccountId,
-            recentAccountIds = emptyList(),
+            recentAccountIds = computedRecentAccountIds,
             onDismiss = { showAccountPickerSheet = false },
             onSelectAccount = { acc ->
                 selectedAccountId = acc.id
@@ -681,7 +689,7 @@ fun EditorialExpenseAddEditScreen(
         AccountPickerSheet(
             accounts = safeAccounts.filter { it.id != selectedAccountId },
             selectedAccountId = transferToAccountId,
-            recentAccountIds = emptyList(),
+            recentAccountIds = computedRecentAccountIds,
             onDismiss = { showTransferTargetPickerSheet = false },
             onSelectAccount = { acc ->
                 transferToAccountId = acc.id
@@ -980,11 +988,17 @@ private fun TactileAmbientAmountSection(
                     AnimatedContent(
                         targetState = if (expression.isEmpty()) "0.00" else expression,
                         transitionSpec = {
-                            if (targetState.length > initialState.length) {
-                                (slideInVertically { height -> height } + fadeIn()).togetherWith(slideOutVertically { height -> -height } + fadeOut())
-                            } else {
-                                (slideInVertically { height -> -height } + fadeIn()).togetherWith(slideOutVertically { height -> height } + fadeOut())
-                            }
+                            val enter = fadeIn(animationSpec = tween(80, easing = FastOutSlowInEasing)) +
+                                    scaleIn(initialScale = 0.95f, animationSpec = tween(80, easing = FastOutSlowInEasing)) +
+                                    slideInVertically(animationSpec = tween(80, easing = FastOutSlowInEasing)) { height ->
+                                        if (targetState.length > initialState.length) height / 6 else -height / 6
+                                    }
+                            val exit = fadeOut(animationSpec = tween(60, easing = FastOutSlowInEasing)) +
+                                    scaleOut(targetScale = 0.98f, animationSpec = tween(60, easing = FastOutSlowInEasing)) +
+                                    slideOutVertically(animationSpec = tween(60, easing = FastOutSlowInEasing)) { height ->
+                                        if (targetState.length > initialState.length) -height / 6 else height / 6
+                                    }
+                            (enter togetherWith exit).using(SizeTransform(clip = false))
                         },
                         label = "amount_animation"
                     ) { targetText ->
