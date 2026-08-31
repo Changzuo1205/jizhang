@@ -70,7 +70,7 @@ fun BottomNavBar(
     val isLight = bgConfig.isLight
     
     // 暖纸白背景 #F5F1E6
-    val backgroundColor = if (isLight) Color(0xFFF5F1E6) else Color(0xFF1E281E)
+    val backgroundColor = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
     // 顶部只有一条 0.5.dp 的分隔线，无阴影
     val dividerColor = bgConfig.dividerColor
     val navBarHeight = 60.dp
@@ -111,7 +111,12 @@ fun BottomNavBar(
                     modifier = Modifier.weight(1f)
                 )
                 
-                Spacer(modifier = Modifier.weight(1f)) // 中间占位，不放实际内容
+                HomeOrQuickAddButton(
+                    isHomeSelected = currentTab == AppTab.HOME,
+                    onNavigateHome = { onTabSelected(AppTab.HOME) },
+                    onQuickAdd = onOpenAddExpense,
+                    modifier = Modifier.weight(1f)
+                )
                 
                 NavItem(
                     icon = Icons.Outlined.PieChart,
@@ -130,31 +135,7 @@ fun BottomNavBar(
                 )
             }
         }
-
-        // 2. 中间的双态按钮作为 Box 的第二个子元素，与主体同级，悬浮定位
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .height(80.dp)
-        ) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                Spacer(modifier = Modifier.weight(2f)) // 跳过前两个
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    HomeOrQuickAddButton(
-                        isHomeSelected = currentTab == AppTab.HOME,
-                        onNavigateHome = { onTabSelected(AppTab.HOME) },
-                        onQuickAdd = onOpenAddExpense
-                    )
-                }
-                Spacer(modifier = Modifier.weight(2f)) // 跳过后两个
-            }
-        }
-    }
+}
 }
 
 @Composable
@@ -170,7 +151,7 @@ fun HomeOrQuickAddButton(
             fadeIn(animationSpec = tween(250)) togetherWith fadeOut(animationSpec = tween(250))
         },
         label = "centerButton",
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxHeight()
     ) { selected ->
         if (selected) {
             QuickAddButtonContent(onQuickAdd = onQuickAdd)
@@ -186,10 +167,10 @@ private fun QuickAddButtonContent(onQuickAdd: () -> Unit) {
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom,
+        verticalArrangement = Arrangement.Center,
         modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 8.dp)
+            .fillMaxHeight()
+            
             .pressScale(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
@@ -238,37 +219,14 @@ private fun QuickAddButtonContent(onQuickAdd: () -> Unit) {
 
 @Composable
 private fun HomeButtonContent(onNavigateHome: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 10.dp)
-            .pressScale(interactionSource)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null, // 去除默认 ripple
-                onClick = onNavigateHome
-            )
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Home,
-            contentDescription = "首页",
-            tint = Color(0xFF8A8270),
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = "首页",
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color(0xFF8A8270)
-        )
-    }
+    NavItem(
+        icon = Icons.Outlined.Home,
+        title = "首页",
+        selected = true,
+        onClick = onNavigateHome,
+        modifier = Modifier.fillMaxHeight()
+    )
 }
-
 @Composable
 private fun NavItem(
     icon: ImageVector,

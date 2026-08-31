@@ -68,15 +68,30 @@ fun MineScreen(
     onSetBlurRadius: (Float) -> Unit,
     onSetFrostAlpha: (Float) -> Unit,
     onSetIsLight: (Boolean) -> Unit,
-    onGenerateCsv: () -> Unit,
+    onGenerateCsv: () -> String,
     onImportCsv: (String) -> Unit,
     onUpdateExpense: (ExpenseEntity, ExpenseEntity) -> Unit,
     onDeleteExpense: (ExpenseEntity) -> Unit,
     onOpenBooks: () -> Unit,
     onOpenCategories: () -> Unit
 ) {
+    val context = LocalContext.current
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                val csv = inputStream?.bufferedReader()?.use { reader -> reader.readText() } ?: ""
+                onImportCsv(csv)
+                Toast.makeText(context, "导入成功", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     val bgConfig = LocalAppBackgroundConfig.current
-    val backgroundColor = if (bgConfig.isLight) Color(0xFFF4F1E8) else bgConfig.solidColor
+    val backgroundColor = if (bgConfig.isLight) Color(0xFFFAFAF7) else bgConfig.solidColor
     val textMain = bgConfig.textPrimary
     val textMuted = if (bgConfig.isLight) Color(0xFF8A8270) else Color(0xFFB0B0B0)
     val forestGreen = Color(0xFF2D6A4F)
@@ -157,7 +172,16 @@ fun MineScreen(
                     textMain = textMain,
                     textMuted = textMuted,
                     dividerColor = dividerColor,
-                    onClick = onGenerateCsv
+                    onClick = {
+                        val csv = onGenerateCsv()
+                        val sendIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, csv)
+                            type = "text/plain"
+                        }
+                        val shareIntent = Intent.createChooser(sendIntent, "导出 CSV")
+                        context.startActivity(shareIntent)
+                    }
                 )
                 ProfilePreferenceRow(
                     icon = Icons.Outlined.Upload,
@@ -167,7 +191,7 @@ fun MineScreen(
                     textMain = textMain,
                     textMuted = textMuted,
                     dividerColor = dividerColor,
-                    onClick = { showImportDialog = true }
+                    onClick = { filePickerLauncher.launch("text/*") }
                 )
                 ProfilePreferenceRow(
                     icon = Icons.Outlined.ColorLens,
@@ -181,35 +205,6 @@ fun MineScreen(
                 )
             }
         }
-    }
-    
-    if (showImportDialog) {
-        AlertDialog(
-            onDismissRequest = { showImportDialog = false },
-            title = { Text("导入 CSV 数据") },
-            text = {
-                OutlinedTextField(
-                    value = csvContent,
-                    onValueChange = { csvContent = it },
-                    label = { Text("粘贴 CSV 内容") },
-                    modifier = Modifier.fillMaxWidth().height(200.dp)
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { 
-                    onImportCsv(csvContent)
-                    showImportDialog = false
-                    csvContent = ""
-                }) {
-                    Text("确认导入")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showImportDialog = false }) {
-                    Text("取消")
-                }
-            }
-        )
     }
     
     if (showThemeDialog) {

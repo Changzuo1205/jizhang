@@ -801,7 +801,7 @@ fun ReportEditorialHeader(
     EditorialPageHeader(
         title = "Analysis",
         subtitle = "FINANCIAL REPORT",
-        modifier = modifier
+        modifier = modifier.padding(horizontal = 22.dp, vertical = 12.dp)
     ) {
         // 右上角只保留搜索按钮 (原筛选按钮位置)
         IconButton(onClick = onSearchClick) {

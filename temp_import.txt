@@ -1,0 +1,10 @@
+                ProfilePreferenceRow(
+                    icon = Icons.Outlined.Upload,
+                    title = "明细导入",
+                    subtitle = "从其他平台导入账单",
+                    iconColor = forestGreen,
+                    textMain = textMain,
+                    textMuted = textMuted,
+                    dividerColor = dividerColor,
+                    onClick = { filePickerLauncher.launch("text/*") }
+                )
