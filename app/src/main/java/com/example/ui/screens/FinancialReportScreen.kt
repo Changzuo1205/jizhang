@@ -373,35 +373,6 @@ fun FinancialReportScreen(
                     textMuted = textMuted
                 )
 
-                // 饼图分类筛选激活提示栏
-                if (selectedExpensePieCategory != null || selectedIncomePieCategory != null) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 22.dp, vertical = 4.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(forestGreen.copy(alpha = 0.1f))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "饼图筛选: ${selectedExpensePieCategory ?: selectedIncomePieCategory}",
-                            fontSize = 12.sp,
-                            color = textMain,
-                            fontWeight = FontWeight.Bold
-                        )
-                        TextButton(
-                            onClick = {
-                                onSelectedExpensePieCategoryChange(null)
-                                onSelectedIncomePieCategoryChange(null)
-                            }
-                        ) {
-                            Text("清除筛选", fontSize = 11.sp, color = forestGreen)
-                        }
-                    }
-                }
-
                 // 搜索输入框（展开态）
                 if (showSearchRow) {
                     Row(
