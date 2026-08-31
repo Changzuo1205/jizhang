@@ -495,9 +495,12 @@ fun FinancialReportScreen(
                                     monthlyChangeDiff = monthlyChangeInfo.first,
                                     monthlyChangePercent = monthlyChangeInfo.second,
                                     trendPoints = trendPoints,
-                                    title = trendTitle
+                                    title = trendTitle,
+                                    textMain = textMain,
+                                    textMuted = textMuted,
+                                    canvasBg = canvasBg
                                 )
-                                HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                                HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
                             }
                         }
                     }
@@ -872,6 +875,9 @@ fun AssetTrendSection(
     monthlyChangePercent: Double,
     trendPoints: List<MonthAssetPoint>,
     title: String = "ASSET TREND / 资产走势",
+    textMain: Color = TextMain,
+    textMuted: Color = TextMuted,
+    canvasBg: Color = WarmPaperBg,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -885,7 +891,7 @@ fun AssetTrendSection(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.SemiBold,
-            color = TextMuted,
+            color = textMuted,
             modifier = Modifier.padding(horizontal = 22.dp)
         )
 
@@ -902,7 +908,7 @@ fun AssetTrendSection(
                 fontSize = 26.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                color = TextMain
+                color = textMain
             )
 
             // 本月变化指标（移至资产下方，正数墨绿+向上，负数陶红+向下）
@@ -941,8 +947,8 @@ fun AssetTrendSection(
         CurveTrendChart(
             points = trendPoints,
             primaryColor = ForestGreen,
-            canvasBgColor = WarmPaperBg,
-            textColorMuted = TextMuted
+            canvasBgColor = canvasBg,
+            textColorMuted = textMuted
         )
     }
 }
@@ -2278,20 +2284,7 @@ private fun calculateCategorySlices(
     }
 
     if (total <= 0.0 || items.isEmpty()) {
-        return if (isExpense) {
-            listOf(
-                DonutSliceData("1", "餐饮美食", 2450.0, 42.5f, palette[0]),
-                DonutSliceData("2", "日常居家", 1380.0, 24.0f, palette[1]),
-                DonutSliceData("3", "交通出行", 980.0, 17.0f, palette[2]),
-                DonutSliceData("4", "文娱休闲", 950.0, 16.5f, palette[3])
-            ).sortedByDescending { it.amount }
-        } else {
-            listOf(
-                DonutSliceData("1", "固定薪资", 12000.0, 75.0f, palette[0]),
-                DonutSliceData("2", "理财收益", 2400.0, 15.0f, palette[1]),
-                DonutSliceData("3", "兼职稿酬", 1600.0, 10.0f, palette[2])
-            ).sortedByDescending { it.amount }
-        }
+        return emptyList()
     }
 
     val grouped = items.groupBy { it.displayCategory.ifBlank { "其他" } }
@@ -2356,13 +2349,10 @@ private fun calculateWeekdaySpending(expenses: List<ExpenseEntity>): List<Weekda
         dayAmounts[mappedIndex] += exp.amount
     }
 
-    val hasData = dayAmounts.any { it > 0 }
-    val sampleAmounts = if (!hasData) doubleArrayOf(120.0, 180.0, 150.0, 210.0, 360.0, 520.0, 480.0) else dayAmounts
-
     return days.mapIndexed { index, name ->
         WeekdaySpendingItem(
             dayName = name,
-            amount = sampleAmounts[index],
+            amount = dayAmounts[index],
             isWeekend = index >= 5 // 周六、周日
         )
     }
@@ -2393,13 +2383,8 @@ private fun calculateMonthlyComparison(
                     expCal.get(Calendar.MONTH) == monthCal.get(Calendar.MONTH)
         }
 
-        var inc = monthExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
-        var exp = monthExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-
-        if (inc == 0.0 && exp == 0.0) {
-            inc = 8000.0 + (5 - i) * 600.0
-            exp = 4200.0 + (if (i % 2 == 0) 800.0 else -300.0)
-        }
+        val inc = monthExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
+        val exp = monthExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
 
         months.add(
             MonthlyCompareItem(
