@@ -310,14 +310,26 @@ fun FinancialReportScreen(
     val pieFilteredExpenses = remember(
         filteredExpenses,
         selectedExpensePieCategory,
-        selectedIncomePieCategory
+        selectedIncomePieCategory,
+        expenseSlices,
+        incomeSlices
     ) {
         when {
             selectedExpensePieCategory != null -> {
-                filteredExpenses.filter { it.type == "EXPENSE" && it.displayCategory == selectedExpensePieCategory }
+                if (selectedExpensePieCategory == "其他") {
+                    val explicitCategories = expenseSlices.map { it.name }.filter { it != "其他" }.toSet()
+                    filteredExpenses.filter { it.type == "EXPENSE" && it.displayCategory.ifBlank { "其他" }.let { cat -> cat == "其他" || cat == "其它" || cat !in explicitCategories } }
+                } else {
+                    filteredExpenses.filter { it.type == "EXPENSE" && it.displayCategory.ifBlank { "其他" } == selectedExpensePieCategory }
+                }
             }
             selectedIncomePieCategory != null -> {
-                filteredExpenses.filter { it.type == "INCOME" && it.displayCategory == selectedIncomePieCategory }
+                if (selectedIncomePieCategory == "其他") {
+                    val explicitCategories = incomeSlices.map { it.name }.filter { it != "其他" }.toSet()
+                    filteredExpenses.filter { it.type == "INCOME" && it.displayCategory.ifBlank { "其他" }.let { cat -> cat == "其他" || cat == "其它" || cat !in explicitCategories } }
+                } else {
+                    filteredExpenses.filter { it.type == "INCOME" && it.displayCategory.ifBlank { "其他" } == selectedIncomePieCategory }
+                }
             }
             else -> filteredExpenses
         }
@@ -330,6 +342,13 @@ fun FinancialReportScreen(
     var displayedLimit by remember(pieFilteredExpenses) { mutableStateOf(10) }
     val pagedExpenses = remember(sortedExpenses, displayedLimit) {
         sortedExpenses.take(displayedLimit)
+    }
+
+    // 自动滚动到顶部：当饼图筛选激活时，让饼图顶部对齐屏幕上方
+    LaunchedEffect(selectedExpensePieCategory, selectedIncomePieCategory) {
+        if (selectedExpensePieCategory != null || selectedIncomePieCategory != null) {
+            listState.animateScrollToItem(0)
+        }
     }
 
     // 距离底部还有空间时即触发无感预加载 (提前 3-4 项触发)
@@ -603,7 +622,7 @@ fun FinancialReportScreen(
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextMuted
+                            color = textMuted
                         )
                     }
                 }
@@ -621,7 +640,7 @@ fun FinancialReportScreen(
                                 text = "暂无符合条件的交易记录",
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 13.sp,
-                                color = TextMuted
+                                color = textMuted
                             )
                         }
                     }
@@ -643,7 +662,7 @@ fun FinancialReportScreen(
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextMuted,
+                                    color = textMuted,
                                     letterSpacing = 0.8.sp
                                 )
                                 val daySum = itemsInDay.filter { it.type == "EXPENSE" }.sumOf { it.amount }
@@ -652,7 +671,7 @@ fun FinancialReportScreen(
                                         text = "支出小计 ¥${AmountFormatter.formatCentsAsYuan(AmountFormatter.yuanToCents(daySum))}",
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 10.5.sp,
-                                        color = TextMuted
+                                        color = textMuted
                                     )
                                 }
                             }
@@ -666,13 +685,13 @@ fun FinancialReportScreen(
                             ) {
                                 JournalTransactionRow(
                                     expense = expense,
-                                    canvasBg = WarmPaperBg,
-                                    dividerColor = DividerColor,
-                                    inkPrimary = TextMain,
-                                    inkSecondary = TextMain,
-                                    inkMuted = TextMuted,
-                                    clayAccent = ClayAccent,
-                                    forestGreen = ForestGreen,
+                                    canvasBg = canvasBg,
+                                    dividerColor = dividerColor,
+                                    inkPrimary = textMain,
+                                    inkSecondary = textSecondary,
+                                    inkMuted = textMuted,
+                                    clayAccent = clayAccent,
+                                    forestGreen = forestGreen,
                                     onItemClick = { onEditExpense?.invoke(expense) },
                                     onDeleteExpense = { onDeleteExpense?.invoke(expense) }
                                 )
@@ -1207,7 +1226,7 @@ private fun JournalTransactionRow(
                                 text = if (isTransfer) "转账" else expense.displaySubCategory.ifEmpty { expense.displayCategory },
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = inkPrimary,
+                                color = inkMuted,
                                 maxLines = 1
                             )
                             Spacer(modifier = Modifier.height(1.dp))
