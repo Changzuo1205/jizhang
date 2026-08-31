@@ -33,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.ui.screens.ReportTimeRange
 import com.example.ui.components.AppTab
 import com.example.ui.components.GlassBottomNavBar
 import com.example.data.local.ExpenseEntity
@@ -113,6 +115,39 @@ fun MainScreen(
     val filterTime by viewModel.filterTime.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isCategoryAnalysisExpanded by viewModel.isCategoryAnalysisExpanded.collectAsStateWithLifecycle()
+
+    // Report Screen State Persistence in Memory
+    var reportTimeRange by remember { mutableStateOf(ReportTimeRange.ALL) }
+    var reportCustomStartDate by remember {
+        mutableStateOf(
+            Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+        )
+    }
+    var reportCustomEndDate by remember {
+        mutableStateOf(
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 23)
+                set(Calendar.MINUTE, 59)
+                set(Calendar.SECOND, 59)
+                set(Calendar.MILLISECOND, 999)
+            }.timeInMillis
+        )
+    }
+    var reportSelectedAccountIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var reportSelectedCategoryNames by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var reportMinAmountInput by remember { mutableStateOf("") }
+    var reportMaxAmountInput by remember { mutableStateOf("") }
+    var reportSearchQuery by remember { mutableStateOf("") }
+    var reportShowSearchRow by remember { mutableStateOf(false) }
+    var reportSelectedExpensePieCategory by remember { mutableStateOf<String?>(null) }
+    var reportSelectedIncomePieCategory by remember { mutableStateOf<String?>(null) }
+    val reportListState = rememberLazyListState()
 
     // Dynamic scaled typography based on fontScale setting
     val baseTypography = MaterialTheme.typography
@@ -211,7 +246,30 @@ fun MainScreen(
                                 colorScheme = colorScheme,
                                 fontScale = fontScale,
                                 backgroundConfig = backgroundConfig,
-                                viewModel = viewModel
+                                viewModel = viewModel,
+                                reportTimeRange = reportTimeRange,
+                                onReportTimeRangeChange = { reportTimeRange = it },
+                                reportCustomStartDate = reportCustomStartDate,
+                                onReportCustomStartDateChange = { reportCustomStartDate = it },
+                                reportCustomEndDate = reportCustomEndDate,
+                                onReportCustomEndDateChange = { reportCustomEndDate = it },
+                                reportSelectedAccountIds = reportSelectedAccountIds,
+                                onReportSelectedAccountIdsChange = { reportSelectedAccountIds = it },
+                                reportSelectedCategoryNames = reportSelectedCategoryNames,
+                                onReportSelectedCategoryNamesChange = { reportSelectedCategoryNames = it },
+                                reportMinAmountInput = reportMinAmountInput,
+                                onReportMinAmountInputChange = { reportMinAmountInput = it },
+                                reportMaxAmountInput = reportMaxAmountInput,
+                                onReportMaxAmountInputChange = { reportMaxAmountInput = it },
+                                reportSearchQuery = reportSearchQuery,
+                                onReportSearchQueryChange = { reportSearchQuery = it },
+                                reportShowSearchRow = reportShowSearchRow,
+                                onReportShowSearchRowChange = { reportShowSearchRow = it },
+                                reportSelectedExpensePieCategory = reportSelectedExpensePieCategory,
+                                onReportSelectedExpensePieCategoryChange = { reportSelectedExpensePieCategory = it },
+                                reportSelectedIncomePieCategory = reportSelectedIncomePieCategory,
+                                onReportSelectedIncomePieCategoryChange = { reportSelectedIncomePieCategory = it },
+                                reportListState = reportListState
                             )
                         } else {
                             // Splash phase: render only splash, skip home composition entirely
@@ -268,7 +326,30 @@ private fun MainScreenContent(
     colorScheme: com.example.ui.theme.ColorSchemeOption,
     fontScale: com.example.ui.theme.FontScaleOption,
     backgroundConfig: com.example.ui.theme.BackgroundConfig,
-    viewModel: ToolboxViewModel
+    viewModel: ToolboxViewModel,
+    reportTimeRange: ReportTimeRange,
+    onReportTimeRangeChange: (ReportTimeRange) -> Unit,
+    reportCustomStartDate: Long,
+    onReportCustomStartDateChange: (Long) -> Unit,
+    reportCustomEndDate: Long,
+    onReportCustomEndDateChange: (Long) -> Unit,
+    reportSelectedAccountIds: Set<Long>,
+    onReportSelectedAccountIdsChange: (Set<Long>) -> Unit,
+    reportSelectedCategoryNames: Set<String>,
+    onReportSelectedCategoryNamesChange: (Set<String>) -> Unit,
+    reportMinAmountInput: String,
+    onReportMinAmountInputChange: (String) -> Unit,
+    reportMaxAmountInput: String,
+    onReportMaxAmountInputChange: (String) -> Unit,
+    reportSearchQuery: String,
+    onReportSearchQueryChange: (String) -> Unit,
+    reportShowSearchRow: Boolean,
+    onReportShowSearchRowChange: (Boolean) -> Unit,
+    reportSelectedExpensePieCategory: String?,
+    onReportSelectedExpensePieCategoryChange: (String?) -> Unit,
+    reportSelectedIncomePieCategory: String?,
+    onReportSelectedIncomePieCategoryChange: (String?) -> Unit,
+    reportListState: androidx.compose.foundation.lazy.LazyListState
 ) {
     var selectedCalendarDay by remember { mutableStateOf<Int?>(null) }
 
@@ -432,7 +513,30 @@ private fun MainScreenContent(
                             expenses = allExpenses,
                             totalNetAssets = totalNetAssets,
                             onEditExpense = { exp -> onOpenAddExpenseWithItem(exp.dateTimestamp, exp) },
-                            onDeleteExpense = { viewModel.deleteExpense(it) }
+                            onDeleteExpense = { viewModel.deleteExpense(it) },
+                            selectedTimeRange = reportTimeRange,
+                            onSelectedTimeRangeChange = onReportTimeRangeChange,
+                            customStartDate = reportCustomStartDate,
+                            onCustomStartDateChange = onReportCustomStartDateChange,
+                            customEndDate = reportCustomEndDate,
+                            onCustomEndDateChange = onReportCustomEndDateChange,
+                            selectedAccountIds = reportSelectedAccountIds,
+                            onSelectedAccountIdsChange = onReportSelectedAccountIdsChange,
+                            selectedCategoryNames = reportSelectedCategoryNames,
+                            onSelectedCategoryNamesChange = onReportSelectedCategoryNamesChange,
+                            minAmountInput = reportMinAmountInput,
+                            onMinAmountInputChange = onReportMinAmountInputChange,
+                            maxAmountInput = reportMaxAmountInput,
+                            onMaxAmountInputChange = onReportMaxAmountInputChange,
+                            searchQuery = reportSearchQuery,
+                            onSearchQueryChange = onReportSearchQueryChange,
+                            showSearchRow = reportShowSearchRow,
+                            onShowSearchRowChange = onReportShowSearchRowChange,
+                            selectedExpensePieCategory = reportSelectedExpensePieCategory,
+                            onSelectedExpensePieCategoryChange = onReportSelectedExpensePieCategoryChange,
+                            selectedIncomePieCategory = reportSelectedIncomePieCategory,
+                            onSelectedIncomePieCategoryChange = onReportSelectedIncomePieCategoryChange,
+                            listState = reportListState
                         )
                         AppTab.MINE -> MineScreen(
                             expenses = allExpenses,

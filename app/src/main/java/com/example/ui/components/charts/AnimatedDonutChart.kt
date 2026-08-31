@@ -75,16 +75,27 @@ fun AnimatedDonutChart(
     gapAngle: Float = 0f, // 取消留白，无缝连接
     primaryInkColor: Color = Color(0xFF1C1917),
     mutedTextColor: Color = Color(0xFFA8A29E),
-    emptyChartColor: Color = Color(0xFFE5E0D8)
+    emptyChartColor: Color = Color(0xFFE5E0D8),
+    selectedCategory: String? = null,
+    onCategorySelected: (String?) -> Unit = {}
 ) {
-    var selectedIndex by remember { mutableIntStateOf(-1) }
+    var internalSelectedIndex by remember { mutableIntStateOf(-1) }
+
+    val selectedIndex = remember(slices, selectedCategory, internalSelectedIndex) {
+        if (selectedCategory != null) {
+            slices.indexOfFirst { it.name == selectedCategory }
+        } else {
+            internalSelectedIndex
+        }
+    }
 
     // 动画驱动器：0f -> 1f (动画加快 1.2 倍至 1625ms)
     val progress = remember { Animatable(0f) }
     LaunchedEffect(slices) {
         progress.snapTo(0f)
         progress.animateTo(1f, animationSpec = tween(durationMillis = 1625, easing = LinearEasing))
-        selectedIndex = -1
+        internalSelectedIndex = -1
+        onCategorySelected(null)
     }
 
     val currentTotal = slices.sumOf { it.amount }
@@ -235,7 +246,10 @@ fun AnimatedDonutChart(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                selectedIndex = if (isSelected) -1 else index
+                                val newIndex = if (isSelected) -1 else index
+                                internalSelectedIndex = newIndex
+                                val clickedName = if (newIndex >= 0 && newIndex < slices.size) slices[newIndex].name else null
+                                onCategorySelected(clickedName)
                             }
                             .padding(vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically

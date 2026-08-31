@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -63,6 +64,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.example.ui.theme.LocalAppBackgroundConfig
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -118,115 +121,7 @@ private val DividerColor = Color(0xFFE4DFD3) // 极细分割线
 private val TextMain = Color(0xFF1C1917)
 private val TextMuted = Color(0xFFA8A29E)
 
-/**
- * 报表时间范围预设
- */
-enum class ReportTimeRange(val label: String) {
-    ALL("全部时间"),
-    THIS_MONTH("本月"),
-    LAST_MONTH("上月"),
-    LAST_7_DAYS("近7天"),
-    LAST_30_DAYS("近30天"),
-    LAST_6_MONTHS("近半年"),
-    THIS_YEAR("本年"),
-    CUSTOM("自定义");
 
-    fun getBounds(customStart: Long? = null, customEnd: Long? = null): Pair<Long, Long>? {
-        val now = System.currentTimeMillis()
-        val cal = Calendar.getInstance()
-        return when (this) {
-            ALL -> null
-            THIS_MONTH -> {
-                cal.timeInMillis = now
-                cal.set(Calendar.DAY_OF_MONTH, 1)
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val start = cal.timeInMillis
-                cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
-                cal.set(Calendar.HOUR_OF_DAY, 23)
-                cal.set(Calendar.MINUTE, 59)
-                cal.set(Calendar.SECOND, 59)
-                cal.set(Calendar.MILLISECOND, 999)
-                val end = cal.timeInMillis
-                Pair(start, end)
-            }
-            LAST_MONTH -> {
-                cal.timeInMillis = now
-                cal.add(Calendar.MONTH, -1)
-                cal.set(Calendar.DAY_OF_MONTH, 1)
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val start = cal.timeInMillis
-                cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
-                cal.set(Calendar.HOUR_OF_DAY, 23)
-                cal.set(Calendar.MINUTE, 59)
-                cal.set(Calendar.SECOND, 59)
-                cal.set(Calendar.MILLISECOND, 999)
-                val end = cal.timeInMillis
-                Pair(start, end)
-            }
-            LAST_7_DAYS -> {
-                cal.timeInMillis = now
-                cal.add(Calendar.DAY_OF_YEAR, -6)
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val start = cal.timeInMillis
-                Pair(start, now)
-            }
-            LAST_30_DAYS -> {
-                cal.timeInMillis = now
-                cal.add(Calendar.DAY_OF_YEAR, -29)
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val start = cal.timeInMillis
-                Pair(start, now)
-            }
-            LAST_6_MONTHS -> {
-                cal.timeInMillis = now
-                cal.add(Calendar.MONTH, -5)
-                cal.set(Calendar.DAY_OF_MONTH, 1)
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val start = cal.timeInMillis
-                Pair(start, now)
-            }
-            THIS_YEAR -> {
-                cal.timeInMillis = now
-                cal.set(Calendar.DAY_OF_YEAR, 1)
-                cal.set(Calendar.HOUR_OF_DAY, 0)
-                cal.set(Calendar.MINUTE, 0)
-                cal.set(Calendar.SECOND, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                val start = cal.timeInMillis
-                cal.set(Calendar.MONTH, 11)
-                cal.set(Calendar.DAY_OF_MONTH, 31)
-                cal.set(Calendar.HOUR_OF_DAY, 23)
-                cal.set(Calendar.MINUTE, 59)
-                cal.set(Calendar.SECOND, 59)
-                cal.set(Calendar.MILLISECOND, 999)
-                val end = cal.timeInMillis
-                Pair(start, end)
-            }
-            CUSTOM -> {
-                if (customStart != null && customEnd != null) {
-                    val s = minOf(customStart, customEnd)
-                    val e = maxOf(customStart, customEnd)
-                    Pair(s, e)
-                } else null
-            }
-        }
-    }
-}
 
 /**
  * 极简手账美学 —— 开放式留白报表主页面 (FinancialReportScreen)
@@ -239,38 +134,44 @@ fun FinancialReportScreen(
     totalNetAssets: Double,
     onEditExpense: ((ExpenseEntity) -> Unit)? = null,
     onDeleteExpense: ((ExpenseEntity) -> Unit)? = null,
+    selectedTimeRange: ReportTimeRange = ReportTimeRange.ALL,
+    onSelectedTimeRangeChange: (ReportTimeRange) -> Unit = {},
+    customStartDate: Long = Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1); set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis,
+    onCustomStartDateChange: (Long) -> Unit = {},
+    customEndDate: Long = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999) }.timeInMillis,
+    onCustomEndDateChange: (Long) -> Unit = {},
+    selectedAccountIds: Set<Long> = emptySet(),
+    onSelectedAccountIdsChange: (Set<Long>) -> Unit = {},
+    selectedCategoryNames: Set<String> = emptySet(),
+    onSelectedCategoryNamesChange: (Set<String>) -> Unit = {},
+    minAmountInput: String = "",
+    onMinAmountInputChange: (String) -> Unit = {},
+    maxAmountInput: String = "",
+    onMaxAmountInputChange: (String) -> Unit = {},
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    showSearchRow: Boolean = false,
+    onShowSearchRowChange: (Boolean) -> Unit = {},
+    selectedExpensePieCategory: String? = null,
+    onSelectedExpensePieCategoryChange: (String?) -> Unit = {},
+    selectedIncomePieCategory: String? = null,
+    onSelectedIncomePieCategoryChange: (String?) -> Unit = {},
+    listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
-    var showSearchRow by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
 
-    // 筛选状态
-    var selectedTimeRange by remember { mutableStateOf(ReportTimeRange.ALL) }
-    var customStartDate by remember {
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        mutableStateOf(cal.timeInMillis)
-    }
-    var customEndDate by remember {
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 23)
-            set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 59)
-            set(Calendar.MILLISECOND, 999)
-        }
-        mutableStateOf(cal.timeInMillis)
-    }
+    val bgConfig = LocalAppBackgroundConfig.current
+    val isLight = bgConfig.isLight
 
-    var selectedAccountIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
-    var selectedCategoryNames by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var minAmountInput by remember { mutableStateOf("") }
-    var maxAmountInput by remember { mutableStateOf("") }
+    val canvasBg = if (isLight) Color(0xFFFAFAF7) else Color(0xFF242E24)
+    val cardBg = if (isLight) Color(0xFFFFFFFF) else Color(0xFF1E281E)
+    val dividerColor = if (isLight) Color(0xFFE4DFD3) else Color(0xFF374637)
+    val textMain = if (isLight) Color(0xFF141414) else Color(0xFFFAFAF7)
+    val textSecondary = if (isLight) Color(0xFF5A5852) else Color(0xFFB5B3AA)
+    val textMuted = if (isLight) Color(0xFF8A8780) else Color(0xFF889689)
+    val forestGreen = if (isLight) Color(0xFF2D6A4F) else Color(0xFF52B788)
+    val clayAccent = if (isLight) Color(0xFFC4623D) else Color(0xFFE07A5F)
 
     val minAmountVal = minAmountInput.toDoubleOrNull()
     val maxAmountVal = maxAmountInput.toDoubleOrNull()
@@ -405,16 +306,31 @@ fun FinancialReportScreen(
         calculateMonthlyComparison(expenses)
     }
 
-    // ----------------- 明细数据分页与预加载逻辑 -----------------
-    val sortedExpenses = remember(filteredExpenses) {
-        filteredExpenses.sortedByDescending { it.dateTimestamp }
+    // 专用饼图分类筛选逻辑 (独立于通用条件筛选)
+    val pieFilteredExpenses = remember(
+        filteredExpenses,
+        selectedExpensePieCategory,
+        selectedIncomePieCategory
+    ) {
+        when {
+            selectedExpensePieCategory != null -> {
+                filteredExpenses.filter { it.type == "EXPENSE" && it.displayCategory == selectedExpensePieCategory }
+            }
+            selectedIncomePieCategory != null -> {
+                filteredExpenses.filter { it.type == "INCOME" && it.displayCategory == selectedIncomePieCategory }
+            }
+            else -> filteredExpenses
+        }
     }
-    var displayedLimit by remember(filteredExpenses) { mutableStateOf(10) }
+
+    // ----------------- 明细数据分页与预加载逻辑 -----------------
+    val sortedExpenses = remember(pieFilteredExpenses) {
+        pieFilteredExpenses.sortedByDescending { it.dateTimestamp }
+    }
+    var displayedLimit by remember(pieFilteredExpenses) { mutableStateOf(10) }
     val pagedExpenses = remember(sortedExpenses, displayedLimit) {
         sortedExpenses.take(displayedLimit)
     }
-
-    val listState = rememberLazyListState()
 
     // 距离底部还有空间时即触发无感预加载 (提前 3-4 项触发)
     val shouldLoadMore by remember {
@@ -438,7 +354,7 @@ fun FinancialReportScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WarmPaperBg)
+            .background(canvasBg)
             .statusBarsPadding()
     ) {
         Column(
@@ -448,13 +364,43 @@ fun FinancialReportScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(WarmPaperBg)
+                    .background(canvasBg)
             ) {
-                // Analysis 标头栏
+                // Analysis 标头栏 (右上角只保留搜索按钮，移至筛选按钮位置)
                 ReportEditorialHeader(
-                    onSearchClick = { showSearchRow = !showSearchRow },
-                    onFilterClick = { showFilterSheet = true }
+                    onSearchClick = { onShowSearchRowChange(!showSearchRow) },
+                    textMain = textMain,
+                    textMuted = textMuted
                 )
+
+                // 饼图分类筛选激活提示栏
+                if (selectedExpensePieCategory != null || selectedIncomePieCategory != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 22.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(forestGreen.copy(alpha = 0.1f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "饼图筛选: ${selectedExpensePieCategory ?: selectedIncomePieCategory}",
+                            fontSize = 12.sp,
+                            color = textMain,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(
+                            onClick = {
+                                onSelectedExpensePieCategoryChange(null)
+                                onSelectedIncomePieCategoryChange(null)
+                            }
+                        ) {
+                            Text("清除筛选", fontSize = 11.sp, color = forestGreen)
+                        }
+                    }
+                }
 
                 // 搜索输入框（展开态）
                 if (showSearchRow) {
@@ -466,21 +412,21 @@ fun FinancialReportScreen(
                     ) {
                         OutlinedTextField(
                             value = searchQuery,
-                            onValueChange = { searchQuery = it },
+                            onValueChange = onSearchQueryChange,
                             placeholder = {
                                 Text(
                                     "搜索分类、备注或账户...",
                                     fontSize = 12.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    color = TextMuted
+                                    color = textMuted
                                 )
                             },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ForestGreen,
-                                unfocusedBorderColor = DividerColor,
-                                focusedTextColor = TextMain,
-                                unfocusedTextColor = TextMain
+                                focusedBorderColor = forestGreen,
+                                unfocusedBorderColor = dividerColor,
+                                focusedTextColor = textMain,
+                                unfocusedTextColor = textMain
                             ),
                             modifier = Modifier
                                 .weight(1f)
@@ -488,10 +434,10 @@ fun FinancialReportScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         IconButton(onClick = {
-                            searchQuery = ""
-                            showSearchRow = false
+                            onSearchQueryChange("")
+                            onShowSearchRowChange(false)
                         }) {
-                            Icon(Icons.Default.Close, contentDescription = "关闭搜索", tint = TextMuted)
+                            Icon(Icons.Default.Close, contentDescription = "关闭搜索", tint = textMuted)
                         }
                     }
                 }
@@ -556,9 +502,16 @@ fun FinancialReportScreen(
                         Column {
                             ExpenseBreakdownSection(
                                 slices = expenseSlices,
-                                totalExpense = currentPeriodExpenseTotal
+                                totalExpense = currentPeriodExpenseTotal,
+                                selectedCategory = selectedExpensePieCategory,
+                                onCategorySelected = { cat ->
+                                    onSelectedExpensePieCategoryChange(cat)
+                                    if (cat != null) onSelectedIncomePieCategoryChange(null)
+                                },
+                                textMain = textMain,
+                                textMuted = textMuted
                             )
-                            HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                            HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
                         }
                     }
                 }
@@ -573,9 +526,16 @@ fun FinancialReportScreen(
                         Column {
                             IncomeBreakdownSection(
                                 slices = incomeSlices,
-                                totalIncome = currentPeriodIncomeTotal
+                                totalIncome = currentPeriodIncomeTotal,
+                                selectedCategory = selectedIncomePieCategory,
+                                onCategorySelected = { cat ->
+                                    onSelectedIncomePieCategoryChange(cat)
+                                    if (cat != null) onSelectedExpensePieCategoryChange(null)
+                                },
+                                textMain = textMain,
+                                textMuted = textMuted
                             )
-                            HorizontalDivider(thickness = 0.5.dp, color = DividerColor)
+                            HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
                         }
                     }
                 }
@@ -757,23 +717,25 @@ fun FinancialReportScreen(
                     minAmount = minAmountInput,
                     maxAmount = maxAmountInput,
                     filteredCount = filteredExpenses.size,
-                    onSelectTimeRange = { selectedTimeRange = it },
-                    onCustomStartDateChange = { customStartDate = it },
-                    onCustomEndDateChange = { customEndDate = it },
-                    onMinAmountChange = { minAmountInput = it },
-                    onMaxAmountChange = { maxAmountInput = it },
+                    onSelectTimeRange = { onSelectedTimeRangeChange(it) },
+                    onCustomStartDateChange = { onCustomStartDateChange(it) },
+                    onCustomEndDateChange = { onCustomEndDateChange(it) },
+                    onMinAmountChange = { onMinAmountInputChange(it) },
+                    onMaxAmountChange = { onMaxAmountInputChange(it) },
                     onToggleAccount = { id ->
-                        selectedAccountIds = if (id in selectedAccountIds) selectedAccountIds - id else selectedAccountIds + id
+                        val newAccounts = if (id in selectedAccountIds) selectedAccountIds - id else selectedAccountIds + id
+                        onSelectedAccountIdsChange(newAccounts)
                     },
                     onToggleCategory = { cat ->
-                        selectedCategoryNames = if (cat in selectedCategoryNames) selectedCategoryNames - cat else selectedCategoryNames + cat
+                        val newCats = if (cat in selectedCategoryNames) selectedCategoryNames - cat else selectedCategoryNames + cat
+                        onSelectedCategoryNamesChange(newCats)
                     },
                     onReset = {
-                        selectedTimeRange = ReportTimeRange.ALL
-                        selectedAccountIds = emptySet()
-                        selectedCategoryNames = emptySet()
-                        minAmountInput = ""
-                        maxAmountInput = ""
+                        onSelectedTimeRangeChange(ReportTimeRange.ALL)
+                        onSelectedAccountIdsChange(emptySet())
+                        onSelectedCategoryNamesChange(emptySet())
+                        onMinAmountInputChange("")
+                        onMaxAmountInputChange("")
                     },
                     onApply = {
                         coroutineScope.launch {
@@ -793,7 +755,8 @@ fun FinancialReportScreen(
 @Composable
 fun ReportEditorialHeader(
     onSearchClick: () -> Unit,
-    onFilterClick: () -> Unit,
+    textMain: Color,
+    textMuted: Color,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -810,7 +773,7 @@ fun ReportEditorialHeader(
                 fontStyle = FontStyle.Italic,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Normal,
-                color = TextMain,
+                color = textMain,
                 letterSpacing = (-0.5).sp
             )
             Spacer(modifier = Modifier.height(1.dp))
@@ -818,29 +781,19 @@ fun ReportEditorialHeader(
                 text = "FINANCIAL REPORT",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = textMuted,
                 letterSpacing = 0.5.sp
             )
         }
 
-        // 右上角两个动作图标：搜索 & 筛选
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onSearchClick) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "搜索明细",
-                    tint = TextMain,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            IconButton(onClick = onFilterClick) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = "条件筛选",
-                    tint = TextMain,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+        // 右上角只保留搜索按钮 (原筛选按钮位置)
+        IconButton(onClick = onSearchClick) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "搜索明细",
+                tint = textMain,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
@@ -1296,6 +1249,10 @@ private fun JournalTransactionRow(
 fun ExpenseBreakdownSection(
     slices: List<DonutSliceData>,
     totalExpense: Double,
+    selectedCategory: String? = null,
+    onCategorySelected: (String?) -> Unit = {},
+    textMain: Color = TextMain,
+    textMuted: Color = TextMuted,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -1308,7 +1265,7 @@ fun ExpenseBreakdownSection(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.SemiBold,
-            color = TextMuted
+            color = textMuted
         )
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -1318,8 +1275,10 @@ fun ExpenseBreakdownSection(
             centerLabel = "总支出",
             totalAmount = totalExpense,
             gapAngle = 0f, // 取消扇区留白
-            primaryInkColor = TextMain,
-            mutedTextColor = TextMuted
+            primaryInkColor = textMain,
+            mutedTextColor = textMuted,
+            selectedCategory = selectedCategory,
+            onCategorySelected = onCategorySelected
         )
     }
 }
@@ -1331,6 +1290,10 @@ fun ExpenseBreakdownSection(
 fun IncomeBreakdownSection(
     slices: List<DonutSliceData>,
     totalIncome: Double,
+    selectedCategory: String? = null,
+    onCategorySelected: (String?) -> Unit = {},
+    textMain: Color = TextMain,
+    textMuted: Color = TextMuted,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -1343,7 +1306,7 @@ fun IncomeBreakdownSection(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.SemiBold,
-            color = TextMuted
+            color = textMuted
         )
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -1353,8 +1316,10 @@ fun IncomeBreakdownSection(
             centerLabel = "总收入",
             totalAmount = totalIncome,
             gapAngle = 0f, // 取消扇区留白
-            primaryInkColor = TextMain,
-            mutedTextColor = TextMuted
+            primaryInkColor = textMain,
+            mutedTextColor = textMuted,
+            selectedCategory = selectedCategory,
+            onCategorySelected = onCategorySelected
         )
     }
 }
@@ -2314,24 +2279,28 @@ private fun calculateCategorySlices(
         }
     }
 
-    val grouped = items.groupBy { it.displayCategory }
+    val grouped = items.groupBy { it.displayCategory.ifBlank { "其他" } }
         .mapValues { (_, list) -> list.sumOf { it.amount } }
         .filter { it.value > 0.0 }
         .toList()
-        .sortedByDescending { it.second }
 
-    // 当分类较多时，合并超出部分为“其他”，并确保最终列表全量严格从大到小降序排列
-    val sortedItems = if (grouped.size > 6) {
-        val top = grouped.take(5)
-        val otherAmount = grouped.drop(5).sumOf { it.second }
-        if (otherAmount > 0.0) {
-            (top + listOf("其他" to otherAmount)).sortedByDescending { it.second }
-        } else {
-            top
-        }
-    } else {
-        grouped
+    val otherEntries = grouped.filter { it.first == "其他" || it.first == "其它" }
+    val regularEntries = grouped.filter { it.first != "other" && it.first != "其他" && it.first != "其它" }.sortedByDescending { it.second }
+
+    val dbOtherAmount = otherEntries.sumOf { it.second }
+    val maxRegularCount = if (dbOtherAmount > 0.0) 4 else 5
+    val topRegular = regularEntries.take(maxRegularCount)
+    val overflowAmount = regularEntries.drop(maxRegularCount).sumOf { it.second }
+
+    val totalOtherAmount = dbOtherAmount + overflowAmount
+
+    val finalGrouped = mutableListOf<Pair<String, Double>>()
+    finalGrouped.addAll(topRegular)
+    if (totalOtherAmount > 0.0) {
+        finalGrouped.add("其他" to totalOtherAmount)
     }
+
+    val sortedItems = finalGrouped.sortedByDescending { it.second }
 
     // 严格按占比从大到小生成扇区分片与对应渐进配色
     return sortedItems.mapIndexed { index, (catName, amount) ->
