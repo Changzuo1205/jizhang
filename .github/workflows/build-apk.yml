@@ -20,16 +20,21 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
+
+      # The repository contains gradle-wrapper.properties/jar, but not the
+      # gradlew shell script. Install the exact Gradle version declared by
+      # the wrapper instead of calling ./gradlew.
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.3.1"
+          cache-provider: basic
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Grant Gradle execute permission
-        run: chmod +x ./gradlew
-
       - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+        run: gradle :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
