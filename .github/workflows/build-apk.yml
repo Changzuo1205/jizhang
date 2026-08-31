@@ -3,12 +3,16 @@ name: Build Android APK
 on:
   push:
     branches:
-      - "**"
+      - main
   workflow_dispatch:
+
+# Required for creating a GitHub Release.
+permissions:
+  contents: write
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build and Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -27,8 +31,7 @@ jobs:
           gradle-version: "9.3.1"
           cache-provider: basic
 
-      # The Android hosted runner already contains the SDK. The previous
-      # setup-android step unnecessarily installed legacy SDK tools/emulator.
+      # The Android hosted runner already contains the Android SDK.
       - name: Create debug keystore
         run: |
           keytool -genkeypair -v \
@@ -44,10 +47,34 @@ jobs:
       - name: Build Debug APK
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: jizhang-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 30
+      - name: Find APK
+        id: apk
+        run: |
+          APK=$(find app/build/outputs/apk/debug -name '*.apk' -type f | head -n 1)
+          test -n "$APK"
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          echo "APK: $APK"
+
+      - name: Read app version
+        id: version
+        run: |
+          VERSION=$(sed -n 's/.*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          if [ -z "$VERSION" ]; then
+            VERSION="0.0.0"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      # Every push gets a unique Release, even when versionName has not changed.
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ steps.version.outputs.version }}-build.${{ github.run_number }}"
+          TITLE="Jizhang v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})"
+
+          gh release create "$TAG" \
+            "${{ steps.apk.outputs.path }}#jizhang-${TAG}.apk" \
+            --target "${{ github.sha }}" \
+            --title "$TITLE" \
+            --generate-notes
